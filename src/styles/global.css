@@ -1169,16 +1169,55 @@ main {
   overflow: hidden;
   min-width: 0;
   margin: 0 0 14px;
+  aspect-ratio: var(--gallery-aspect, 16 / 10);
   break-inside: avoid;
   border: 1px solid var(--border);
+  background:
+    linear-gradient(
+      110deg,
+      transparent 18%,
+      color-mix(in srgb, var(--fg) 8%, transparent) 38%,
+      transparent 58%
+    ),
+    var(--surface);
+  background-size: 240% 100%, auto;
+  color: inherit;
+  text-decoration: none;
+  animation: gallery-placeholder 1.7s linear infinite;
+}
+
+.waterfall-item[data-gallery-open] {
+  cursor: zoom-in;
+}
+
+.waterfall-item.is-loaded,
+.waterfall-item.is-error {
   background: var(--surface);
+  animation: none;
 }
 
 .waterfall-item img {
   display: block;
   width: 100%;
-  height: auto;
-  transition: transform 220ms ease;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition:
+    opacity 260ms ease,
+    transform 220ms ease;
+}
+
+.waterfall-item.is-loaded > img,
+.waterfall-item.is-error > img {
+  opacity: 1;
+}
+
+.waterfall-item noscript {
+  display: contents;
+}
+
+.waterfall-item noscript img {
+  opacity: 1;
 }
 
 .waterfall-item::after {
@@ -1226,9 +1265,104 @@ main {
   color: var(--muted);
 }
 
-.gallery-sentinel {
-  width: 100%;
-  height: 1px;
+body.gallery-lightbox-open {
+  overflow: hidden;
+}
+
+.gallery-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: clamp(56px, 7vw, 96px) clamp(16px, 4vw, 64px);
+  background: rgba(4, 4, 4, 0.94);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  backdrop-filter: blur(16px);
+}
+
+.gallery-lightbox[hidden] {
+  display: none;
+}
+
+.gallery-lightbox.is-open {
+  opacity: 1;
+}
+
+.gallery-lightbox-figure {
+  display: grid;
+  max-width: min(94vw, 1800px);
+  max-height: calc(100dvh - 96px);
+  justify-items: center;
+  gap: 12px;
+  margin: 0;
+  transform: scale(0.985);
+  transition: transform 220ms ease;
+}
+
+.gallery-lightbox.is-open .gallery-lightbox-figure {
+  transform: scale(1);
+}
+
+.gallery-lightbox-figure img {
+  display: block;
+  width: auto;
+  max-width: min(94vw, 1800px);
+  height: auto;
+  max-height: calc(100dvh - 136px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #0b0b0b;
+  object-fit: contain;
+}
+
+.gallery-lightbox-figure figcaption {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+}
+
+.gallery-lightbox-close {
+  position: fixed;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.gallery-lightbox-close span:last-child {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.gallery-lightbox-close:hover,
+.gallery-lightbox-close:focus-visible {
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.18);
+  outline: none;
+}
+
+@keyframes gallery-placeholder {
+  from {
+    background-position: 120% 0, 0 0;
+  }
+
+  to {
+    background-position: -120% 0, 0 0;
+  }
 }
 
 .not-found-code {
@@ -1365,6 +1499,24 @@ main {
     margin-bottom: 12px;
   }
 
+  .gallery-lightbox {
+    padding: 64px 10px 18px;
+  }
+
+  .gallery-lightbox-figure,
+  .gallery-lightbox-figure img {
+    max-width: 100%;
+  }
+
+  .gallery-lightbox-figure img {
+    max-height: calc(100dvh - 116px);
+  }
+
+  .gallery-lightbox-close {
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+  }
+
   .container {
     width: min(100% - 32px, 760px);
   }
@@ -1447,5 +1599,15 @@ main {
 @media (prefers-reduced-motion: reduce) {
   .search-island.is-arriving {
     animation: none;
+  }
+
+  .waterfall-item {
+    animation: none;
+  }
+
+  .gallery-lightbox,
+  .gallery-lightbox-figure,
+  .waterfall-item img {
+    transition: none;
   }
 }

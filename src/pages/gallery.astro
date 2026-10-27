@@ -1,5 +1,5 @@
 ---
-import { readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPublishedPosts } from "../lib/blog";
@@ -8,6 +8,20 @@ import { SITE } from "../site.config";
 const posts = await getPublishedPosts();
 const galleryDirectory = path.join(process.cwd(), "public", "gallery");
 const galleryExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"]);
+
+const readPngDimensions = (filePath: string) => {
+  try {
+    const header = readFileSync(filePath).subarray(0, 24);
+    if (header.toString("ascii", 1, 4) !== "PNG") return null;
+
+    return {
+      width: header.readUInt32BE(16),
+      height: header.readUInt32BE(20),
+    };
+  } catch {
+    return null;
+  }
+};
 
 const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
   .filter(
@@ -22,12 +36,16 @@ const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
     const date = dateMatch
       ? `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`
       : null;
+    const dimensions = readPngDimensions(path.join(galleryDirectory, fileName));
 
     return {
       title: date ? `渔图 · ${date}` : "渔图",
       cover: src,
       href: src,
       sortKey: dateMatch ? dateMatch[0] : "",
+      isGallery: true,
+      width: dimensions?.width,
+      height: dimensions?.height,
     };
   });
 
@@ -38,12 +56,14 @@ const coverImages = posts
     cover: post.data.cover!,
     href: `/blog/${post.id}/`,
     sortKey: post.data.pubDate.toISOString(),
+    isGallery: false,
+    width: undefined,
+    height: undefined,
   }));
 
 const images = [...galleryImages, ...coverImages].sort((a, b) =>
   b.sortKey.localeCompare(a.sortKey),
 );
-const initialImages = images.slice(0, 6);
 ---
 
 <BaseLayout
@@ -55,80 +75,168 @@ const initialImages = images.slice(0, 6);
     {
       images.length > 0 ? (
         <div class="waterfall-grid" data-gallery-grid>
-          {initialImages.map((image) => (
-            <a class="waterfall-item" href={image.href}>
-              <img
-                src={image.cover}
-                alt={image.title}
-                loading="lazy"
-                decoding="async"
-              />
-              <span>{image.title}</span>
-            </a>
-          ))}
+          {images.map((image) => {
+            const aspect =
+              image.width && image.height
+                ? `${image.width} / ${image.height}`
+                : "16 / 10";
+
+            return (
+              <a
+                class="waterfall-item"
+                href={image.href}
+                data-gallery-open={image.isGallery ? "true" : undefined}
+                data-gallery-title={image.title}
+                style={`--gallery-aspect: ${aspect}`}
+              >
+                <img
+                  data-gallery-src={image.cover}
+                  alt={image.title}
+                  width={image.width}
+                  height={image.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+                <noscript>
+                  <img
+                    src={image.cover}
+                    alt={image.title}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </noscript>
+                <span>{image.title}</span>
+              </a>
+            );
+          })}
         </div>
       ) : (
         <p class="gallery-empty">还没有可以展示的图片。</p>
       )
     }
-    <div class="gallery-sentinel" data-gallery-sentinel aria-hidden="true"></div>
   </section>
 
-  <script define:vars={{ galleryItems: images, initialCount: initialImages.length }}>
+  <div
+    class="gallery-lightbox"
+    data-gallery-lightbox
+    role="dialog"
+    aria-modal="true"
+    aria-label="图片预览"
+    hidden
+  >
+    <button
+      class="gallery-lightbox-close"
+      type="button"
+      data-gallery-lightbox-close
+      aria-label="关闭图片预览"
+    >
+      <span>关闭</span>
+      <span aria-hidden="true">×</span>
+    </button>
+    <figure class="gallery-lightbox-figure">
+      <img data-gallery-lightbox-image alt="" />
+      <figcaption data-gallery-lightbox-caption></figcaption>
+    </figure>
+  </div>
+
+  <script>
     const grid = document.querySelector("[data-gallery-grid]");
-    const sentinel = document.querySelector("[data-gallery-sentinel]");
-    const batchSize = 6;
-    let cursor = initialCount;
-    let loading = false;
-    let observer;
+    const lazyImages = Array.from(
+      document.querySelectorAll("[data-gallery-src]"),
+    );
+    const lightbox = document.querySelector("[data-gallery-lightbox]");
+    const lightboxImage = document.querySelector("[data-gallery-lightbox-image]");
+    const lightboxCaption = document.querySelector(
+      "[data-gallery-lightbox-caption]",
+    );
+    const closeButton = document.querySelector("[data-gallery-lightbox-close]");
+    let activeTrigger = null;
+    let closeTimer = null;
 
-    const createItem = (image) => {
-      const link = document.createElement("a");
-      const img = document.createElement("img");
-      const label = document.createElement("span");
-
-      link.className = "waterfall-item";
-      link.href = image.href;
-      img.src = image.cover;
-      img.alt = image.title;
-      img.loading = "lazy";
-      img.decoding = "async";
-      label.textContent = image.title;
-      link.append(img, label);
-      return link;
+    const markImageLoaded = (image) => {
+      image.closest(".waterfall-item")?.classList.add("is-loaded");
     };
 
-    const appendBatch = () => {
-      if (!grid || !sentinel || loading || cursor >= galleryItems.length) {
-        observer?.disconnect();
-        return;
-      }
+    const loadImage = (image) => {
+      const src = image.dataset.gallerySrc;
+      if (!src) return;
 
-      loading = true;
-      requestAnimationFrame(() => {
-        const nextItems = galleryItems.slice(cursor, cursor + batchSize);
-        const fragment = document.createDocumentFragment();
-        nextItems.forEach((image) => fragment.append(createItem(image)));
-        grid.append(fragment);
-        cursor += nextItems.length;
-        loading = false;
-
-        if (cursor >= galleryItems.length) observer?.disconnect();
-      });
+      image.addEventListener("load", () => markImageLoaded(image), { once: true });
+      image.addEventListener(
+        "error",
+        () => image.closest(".waterfall-item")?.classList.add("is-error"),
+        { once: true },
+      );
+      image.src = src;
+      delete image.dataset.gallerySrc;
     };
 
-    if (grid && sentinel && cursor < galleryItems.length) {
-      if ("IntersectionObserver" in window) {
-        observer = new IntersectionObserver(
-          (entries) => {
-            if (entries.some((entry) => entry.isIntersecting)) appendBatch();
-          },
-          { rootMargin: "600px 0px" },
-        );
-        observer.observe(sentinel);
-      } else {
-        appendBatch();
-      }
+    if ("IntersectionObserver" in window) {
+      const lazyObserver = new IntersectionObserver(
+        (entries, observer) => {
+          entries.forEach((entry) => {
+            if (!entry.isIntersecting) return;
+            loadImage(entry.target);
+            observer.unobserve(entry.target);
+          });
+        },
+        { rootMargin: "480px 0px" },
+      );
+
+      lazyImages.forEach((image) => lazyObserver.observe(image));
+    } else {
+      lazyImages.forEach(loadImage);
     }
+
+    const closeLightbox = () => {
+      if (!lightbox || lightbox.hidden) return;
+
+      lightbox.classList.remove("is-open");
+      document.body.classList.remove("gallery-lightbox-open");
+      window.clearTimeout(closeTimer);
+      closeTimer = window.setTimeout(() => {
+        lightbox.hidden = true;
+        if (lightboxImage) lightboxImage.removeAttribute("src");
+      }, 180);
+      activeTrigger?.focus();
+    };
+
+    const openLightbox = (trigger) => {
+      if (!lightbox || !lightboxImage || !lightboxCaption || !closeButton) return;
+
+      activeTrigger = trigger;
+      window.clearTimeout(closeTimer);
+      lightboxImage.src = trigger.href;
+      lightboxImage.alt = trigger.dataset.galleryTitle || "渔情图库图片";
+      lightboxCaption.textContent = trigger.dataset.galleryTitle || "";
+      lightbox.hidden = false;
+      document.body.classList.add("gallery-lightbox-open");
+      requestAnimationFrame(() => lightbox.classList.add("is-open"));
+      closeButton.focus();
+    };
+
+    grid?.addEventListener("click", (event) => {
+      const trigger = event.target.closest("[data-gallery-open]");
+      if (!trigger) return;
+
+      event.preventDefault();
+      openLightbox(trigger);
+    });
+
+    closeButton?.addEventListener("click", closeLightbox);
+    lightbox?.addEventListener("click", (event) => {
+      if (event.target === lightbox) closeLightbox();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (!lightbox || lightbox.hidden) return;
+
+      if (event.key === "Escape") {
+        closeLightbox();
+      } else if (event.key === "Tab") {
+        event.preventDefault();
+        closeButton?.focus();
+      }
+    });
+    window.addEventListener("pagehide", closeLightbox);
   </script>
 </BaseLayout>
