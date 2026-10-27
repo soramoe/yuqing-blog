@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#171612"/>
+      <stop offset="1" stop-color="#302c25"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#f5efe3" stroke-opacity=".06"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="999" cy="102" r="190" fill="#f3a74b" opacity=".18"/>
+  <text x="92" y="288" fill="#f5efe3" font-family="'Noto Serif SC', 'Songti SC', Georgia, serif" font-size="112" font-weight="700">渔情</text>
+  <text x="96" y="356" fill="#f3a74b" font-family="'Noto Sans SC', Arial, sans-serif" font-size="30" letter-spacing="7">小耗子有渔情</text>
+  <path d="M96 416h350" stroke="#f5efe3" stroke-opacity=".35" stroke-width="2"/>
+  <text x="96" y="474" fill="#c9c2b6" font-family="'Noto Sans SC', Arial, sans-serif" font-size="24">喜欢用 AI 折腾点小玩意的小耗子</text>
+</svg>

@@ -1,0 +1,50 @@
+---
+const repo = import.meta.env.PUBLIC_GISCUS_REPO;
+const repoId = import.meta.env.PUBLIC_GISCUS_REPO_ID;
+const category = import.meta.env.PUBLIC_GISCUS_CATEGORY;
+const categoryId = import.meta.env.PUBLIC_GISCUS_CATEGORY_ID;
+const configured = Boolean(repo && repoId && category && categoryId);
+---
+
+<section class="comments" aria-labelledby="comments-title">
+  <div class="comments-heading">
+    <p class="eyebrow">DISCUSSION</p>
+    <h2 id="comments-title">留下你的想法</h2>
+  </div>
+
+  {configured ? (
+    <>
+      <div class="giscus"></div>
+      <script
+        is:inline
+        define:vars={{ repo, repoId, category, categoryId }}
+      >
+        const script = document.createElement("script");
+        script.src = "https://giscus.app/client.js";
+        script.async = true;
+        script.crossOrigin = "anonymous";
+        script.setAttribute("data-repo", repo);
+        script.setAttribute("data-repo-id", repoId);
+        script.setAttribute("data-category", category);
+        script.setAttribute("data-category-id", categoryId);
+        script.setAttribute("data-mapping", "pathname");
+        script.setAttribute("data-strict", "0");
+        script.setAttribute("data-reactions-enabled", "1");
+        script.setAttribute("data-emit-metadata", "0");
+        script.setAttribute("data-input-position", "top");
+        script.setAttribute("data-theme", "preferred_color_scheme");
+        script.setAttribute("data-lang", "zh-CN");
+        script.setAttribute("data-loading", "lazy");
+        document.querySelector(".giscus")?.appendChild(script);
+      </script>
+    </>
+  ) : (
+    <div class="comments-placeholder">
+      <strong>评论组件已经预留</strong>
+      <p>
+        填写项目根目录的 <code>.env</code> 后，文章底部会自动加载 Giscus
+        评论。参数可以从 <a href="https://giscus.app/zh-CN" target="_blank" rel="noreferrer">Giscus 配置页</a> 获取。
+      </p>
+    </div>
+  )}
+</section>

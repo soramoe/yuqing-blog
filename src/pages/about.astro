@@ -1,0 +1,41 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SITE } from "../site.config";
+---
+
+<BaseLayout title="关于" description={`关于${SITE.name}和作者${SITE.author.name}。`}>
+  <section class="container about-layout">
+    <div class="about-title">
+      <p class="eyebrow">ABOUT THIS SPACE</p>
+      <h1>关于<br />{SITE.name}</h1>
+    </div>
+
+    <div class="about-content prose">
+      <p class="lead">
+        {SITE.tagline}。
+      </p>
+      <p>
+        {SITE.about}
+      </p>
+
+      <h2>渔情是什么</h2>
+      <p>
+        渔情是一个正在长出来的小空间，也是一颗想做 AI 工作室的种子。
+        这里会慢慢放上小耗子折腾过的小玩意、过程和想法。
+      </p>
+
+      <h2>关于作者</h2>
+      <p>
+        <strong>{SITE.author.name}</strong>
+        <br />
+        作者简介：{SITE.author.bio}
+      </p>
+
+      <h2>保持联系</h2>
+      <p>
+        你可以通过 <a href="/rss.xml">RSS</a> 订阅更新。
+        也可以在任意文章下方留下评论——在配置 Giscus 之后。
+      </p>
+    </div>
+  </section>
+</BaseLayout>

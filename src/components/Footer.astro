@@ -1,0 +1,18 @@
+---
+import { SITE } from "../site.config";
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div>
+      <strong>{SITE.name}</strong>
+      <p>{SITE.tagline}。</p>
+    </div>
+    <div class="footer-meta">
+      <a href="/rss.xml">RSS</a>
+      <span>© {year} {SITE.name}</span>
+    </div>
+  </div>
+</footer>

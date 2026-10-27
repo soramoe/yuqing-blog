@@ -1,0 +1,96 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import PostCard from "../components/PostCard.astro";
+import { formatDate, getPublishedPosts } from "../lib/blog";
+import { SITE } from "../site.config";
+
+const posts = await getPublishedPosts();
+const [featured, ...recentPosts] = posts;
+---
+
+<BaseLayout title={SITE.name} description={SITE.description}>
+  <section class="container hero">
+    <div class="hero-copy">
+      <p class="eyebrow">AI STUDIO · PERSONAL NOTES · SINCE 2026</p>
+      <h1>
+        小耗子有
+        <span class="mark">渔情。</span>
+      </h1>
+      <p class="hero-description">
+        喜欢用 AI 折腾点小玩意，也想做个 AI 工作室叫渔情。
+        先在这里留下一些过程和想法。
+      </p>
+      <div class="hero-actions">
+        <a class="button button-primary" href="/blog/">看看文章 <span>↗</span></a>
+        <a class="button button-ghost" href="/about/">认识小耗子</a>
+      </div>
+    </div>
+
+    <aside class="hero-index" aria-label="博客概览">
+      <div class="hero-index-head">
+        <span>THE INDEX</span>
+        <span>NO. 001</span>
+      </div>
+      <p class="hero-index-number">{String(posts.length).padStart(2, "0")}</p>
+      <p class="hero-index-label">篇公开文章</p>
+      <div class="hero-index-line"></div>
+      <p>
+        用 AI 做点有趣的小东西。<br />
+        慢慢更新，认真记录。
+      </p>
+    </aside>
+  </section>
+
+  {featured && (
+    <section class="container featured-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">FEATURED NOTE</p>
+          <h2>最近记录</h2>
+        </div>
+        <span class="issue-mark">ISSUE / {formatDate(featured.data.pubDate)}</span>
+      </div>
+
+      <a class="featured-post" href={`/blog/${featured.id}/`}>
+        <div class="featured-visual" aria-hidden="true">
+          <span class="visual-orbit"></span>
+          <span class="visual-word">NOTES</span>
+          <span class="visual-caption">READ · THINK · BUILD</span>
+        </div>
+        <div class="featured-content">
+          <div class="tag-list">
+            {featured.data.tags.map((tag) => <span class="tag">#{tag}</span>)}
+          </div>
+          <h3>{featured.data.title}</h3>
+          <p>{featured.data.description}</p>
+          <span class="text-link">阅读全文 <span aria-hidden="true">↗</span></span>
+        </div>
+      </a>
+    </section>
+  )}
+
+  {recentPosts.length > 0 && (
+    <section class="container posts-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">RECENT WRITING</p>
+          <h2>近期文章</h2>
+        </div>
+        <a class="text-link" href="/blog/">全部文章 <span>→</span></a>
+      </div>
+
+      <div class="post-grid">
+        {recentPosts.map((post, index) => (
+          <PostCard post={post} index={index} />
+        ))}
+      </div>
+    </section>
+  )}
+
+  <section class="container manifesto">
+    <p class="eyebrow">ABOUT YUQING</p>
+    <p class="manifesto-text">
+      {SITE.about}
+    </p>
+  </section>
+</BaseLayout>

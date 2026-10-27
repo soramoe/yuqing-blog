@@ -1,0 +1,118 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SITE } from "../site.config";
+---
+
+<BaseLayout title="搜索" description={`搜索${SITE.name}的全部文章。`}>
+  <section class="container search-page">
+    <div class="page-heading search-heading">
+      <p class="eyebrow">SEARCH THE ARCHIVE</p>
+      <h1>搜索文章</h1>
+      <p>输入标题或正文中的关键词。</p>
+    </div>
+
+    <form class="search-box" role="search" id="search-form">
+      <label for="search-input">搜索关键词</label>
+      <div class="search-input-row">
+        <input
+          id="search-input"
+          name="q"
+          type="search"
+          placeholder="例如：Astro、写作、部署"
+          autocomplete="off"
+          autofocus
+        />
+        <span aria-hidden="true">⌕</span>
+      </div>
+    </form>
+
+    <p id="search-status" class="search-status" aria-live="polite">
+      输入关键词开始搜索。
+    </p>
+    <ol id="search-results" class="search-results"></ol>
+  </section>
+
+  <script>
+    const form = document.querySelector<HTMLFormElement>("#search-form");
+    const input = document.querySelector<HTMLInputElement>("#search-input");
+    const status = document.querySelector<HTMLParagraphElement>("#search-status");
+    const results = document.querySelector<HTMLOListElement>("#search-results");
+    let pagefind: {
+      init: () => Promise<void>;
+      search: (query: string) => Promise<{ results: unknown[] }>;
+    } | null = null;
+    let timer: number | undefined;
+
+    async function loadPagefind() {
+      if (pagefind) return pagefind;
+
+      try {
+        pagefind = await import(/* @vite-ignore */ "/pagefind/pagefind.js");
+        await pagefind.init();
+        return pagefind;
+      } catch {
+        if (status) {
+          status.textContent =
+            "搜索索引尚未生成。运行 pnpm build 后，在本地预览中即可搜索。";
+        }
+        return null;
+      }
+    }
+
+    async function runSearch(query: string) {
+      if (!results || !status) return;
+      results.replaceChildren();
+
+      if (query.trim().length < 2) {
+        status.textContent = "至少输入两个字符。";
+        return;
+      }
+
+      const engine = await loadPagefind();
+      if (!engine) return;
+
+      status.textContent = "正在搜索…";
+      const search = await engine.search(query);
+
+      if (search.results.length === 0) {
+        status.textContent = `没有找到与“${query}”相关的内容。`;
+        return;
+      }
+
+      status.textContent = `找到 ${search.results.length} 个结果`;
+
+      for (const rawResult of search.results) {
+        const result = rawResult as {
+          data: () => Promise<{
+            url: string;
+            meta: { title?: string };
+            excerpt: string;
+          }>;
+        };
+        const data = await result.data();
+        const item = document.createElement("li");
+        const link = document.createElement("a");
+        const title = document.createElement("h2");
+        const excerpt = document.createElement("p");
+
+        link.href = data.url;
+        title.textContent = data.meta.title || "未命名文章";
+        excerpt.innerHTML = data.excerpt;
+        link.append(title, excerpt);
+        item.append(link);
+        results.append(item);
+      }
+    }
+
+    input?.addEventListener("input", () => {
+      window.clearTimeout(timer);
+      const query = input.value;
+      timer = window.setTimeout(() => void runSearch(query), 220);
+    });
+
+    form?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      void runSearch(input?.value ?? "");
+    });
+  </script>
+</BaseLayout>
