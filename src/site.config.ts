@@ -2,6 +2,7 @@ export const SITE = {
   name: "渔情",
   tagline: "小耗子有渔情",
   url: "https://xhz6.com",
+  github: "https://github.com/soramoe/yuqing-blog",
   description:
     "小耗子有渔情。喜欢用 AI 折腾点小玩意，也想做个 AI 工作室叫渔情。",
   about:

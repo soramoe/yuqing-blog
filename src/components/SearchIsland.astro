@@ -1,0 +1,211 @@
+---
+import {
+  formatDate,
+  getPublishedPosts,
+  getReadingTime,
+} from "../lib/blog";
+
+const posts = await getPublishedPosts();
+const searchItems = posts.map((post) => ({
+  title: post.data.title,
+  description: post.data.description,
+  category: post.data.category,
+  tags: post.data.tags,
+  body: post.body ?? "",
+  url: `/blog/${post.id}/`,
+  date: formatDate(post.data.pubDate),
+  readingTime: getReadingTime(post.body),
+}));
+
+const quickLinks = [
+  { href: "/", label: "首页" },
+  { href: "/blog/", label: "博客" },
+  { href: "/gallery/", label: "图库" },
+  { href: "/about/", label: "关于" },
+  { href: "/rss.xml", label: "RSS" },
+];
+const shouldIntro =
+  Astro.url.pathname === "/blog/" || Astro.url.pathname === "/blog";
+---
+
+<aside
+  class:list={["search-island", { "is-arriving": shouldIntro }]}
+  data-search-island
+  aria-label="博客搜索和快捷导航"
+>
+  <button
+    class="search-island-trigger"
+    type="button"
+    aria-expanded="false"
+    aria-controls="search-island-panel"
+    data-island-trigger
+  >
+    <span class="island-signal" aria-hidden="true"></span>
+    <span class="island-title">搜索渔情</span>
+    <span class="island-shortcut" aria-hidden="true">/</span>
+  </button>
+
+  <div
+    class="search-island-panel"
+    id="search-island-panel"
+    aria-hidden="true"
+    data-island-panel
+  >
+    <div class="search-island-panel-inner">
+      <form class="island-search-form" role="search" data-island-form>
+        <span aria-hidden="true">⌕</span>
+        <label class="sr-only" for="island-search-input">搜索博客</label>
+        <input
+          id="island-search-input"
+          name="q"
+          type="search"
+          placeholder="输入关键词直接搜索"
+          autocomplete="off"
+          data-island-input
+        />
+        <button type="submit">搜索</button>
+      </form>
+
+      <div
+        class="island-search-results"
+        aria-live="polite"
+        data-island-results
+      >
+        <p class="island-result-state" data-island-result-state>
+          输入关键词，结果会直接显示在这里。
+        </p>
+        <ol class="island-result-list" data-island-result-list hidden></ol>
+      </div>
+
+      <nav class="island-nav" aria-label="快捷导航">
+        {quickLinks.map((item) => <a href={item.href}>{item.label}</a>)}
+      </nav>
+    </div>
+  </div>
+</aside>
+
+<script define:vars={{ searchItems }}>
+  const island = document.querySelector("[data-search-island]");
+  const trigger = island?.querySelector("[data-island-trigger]");
+  const panel = island?.querySelector("[data-island-panel]");
+  const form = island?.querySelector("[data-island-form]");
+  const input = island?.querySelector("[data-island-input]");
+  const resultState = island?.querySelector("[data-island-result-state]");
+  const resultList = island?.querySelector("[data-island-result-list]");
+
+  const items = searchItems.map((item) => ({
+    ...item,
+    searchable: [
+      item.title,
+      item.description,
+      item.category,
+      item.tags.join(" "),
+      item.body,
+    ]
+      .join(" ")
+      .toLocaleLowerCase("zh-CN"),
+  }));
+
+  let timer;
+
+  const setOpen = (open) => {
+    if (!island || !trigger || !panel) return;
+    island.classList.toggle("is-open", open);
+    trigger.setAttribute("aria-expanded", String(open));
+    panel.setAttribute("aria-hidden", String(!open));
+
+    if (open) {
+      requestAnimationFrame(() => input?.focus());
+    }
+  };
+
+  const renderResults = (query) => {
+    if (!input || !resultState || !resultList) return;
+
+    const normalized = query.trim().toLocaleLowerCase("zh-CN");
+    resultList.replaceChildren();
+
+    if (!normalized) {
+      resultState.textContent = "输入关键词，结果会直接显示在这里。";
+      resultList.hidden = true;
+      return;
+    }
+
+    const terms = normalized.split(/\s+/);
+    const matches = items
+      .filter((item) =>
+        terms.every((term) => item.searchable.includes(term)),
+      )
+      .slice(0, 6);
+
+    if (matches.length === 0) {
+      resultState.textContent = `没有找到与“${query.trim()}”相关的文章。`;
+      resultList.hidden = true;
+      return;
+    }
+
+    resultState.textContent = `找到 ${matches.length} 篇文章`;
+    resultList.hidden = false;
+
+    for (const item of matches) {
+      const row = document.createElement("li");
+      const link = document.createElement("a");
+      const title = document.createElement("strong");
+      const description = document.createElement("span");
+      const meta = document.createElement("small");
+
+      link.className = "island-result-link";
+      link.href = item.url;
+      title.className = "island-result-title";
+      title.textContent = item.title;
+      description.className = "island-result-description";
+      description.textContent = item.description;
+      meta.className = "island-result-meta";
+      meta.textContent = `${item.category} · ${item.date} · ${item.readingTime} MIN`;
+
+      link.append(title, description, meta);
+      row.append(link);
+      resultList.append(row);
+    }
+  };
+
+  if (island && trigger && panel && form && input) {
+    trigger.addEventListener("click", () => {
+      setOpen(!island.classList.contains("is-open"));
+    });
+
+    input.addEventListener("input", () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => renderResults(input.value), 90);
+    });
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      window.clearTimeout(timer);
+      renderResults(input.value);
+    });
+
+    document.addEventListener("pointerdown", (event) => {
+      if (event.target instanceof Node && !island.contains(event.target)) {
+        setOpen(false);
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        trigger.focus();
+      }
+
+      const target = event.target;
+      const isTyping =
+        target instanceof HTMLElement &&
+        (target.matches("input, textarea, select") || target.isContentEditable);
+
+      if (event.key === "/" && !isTyping) {
+        event.preventDefault();
+        setOpen(true);
+      }
+    });
+  }
+</script>

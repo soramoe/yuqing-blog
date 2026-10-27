@@ -1,0 +1,134 @@
+---
+import { readdirSync } from "node:fs";
+import path from "node:path";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getPublishedPosts } from "../lib/blog";
+import { SITE } from "../site.config";
+
+const posts = await getPublishedPosts();
+const galleryDirectory = path.join(process.cwd(), "public", "gallery");
+const galleryExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"]);
+
+const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
+  .filter(
+    (entry) =>
+      entry.isFile() &&
+      galleryExtensions.has(path.extname(entry.name).toLowerCase()),
+  )
+  .map((entry) => {
+    const fileName = entry.name;
+    const src = `/gallery/${fileName}`;
+    const dateMatch = fileName.match(/^(\d{4})(\d{2})(\d{2})_/);
+    const date = dateMatch
+      ? `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`
+      : null;
+
+    return {
+      title: date ? `渔图 · ${date}` : "渔图",
+      cover: src,
+      href: src,
+      sortKey: dateMatch ? dateMatch[0] : "",
+    };
+  });
+
+const coverImages = posts
+  .filter((post) => Boolean(post.data.cover))
+  .map((post) => ({
+    title: post.data.title,
+    cover: post.data.cover!,
+    href: `/blog/${post.id}/`,
+    sortKey: post.data.pubDate.toISOString(),
+  }));
+
+const images = [...galleryImages, ...coverImages].sort((a, b) =>
+  b.sortKey.localeCompare(a.sortKey),
+);
+const initialImages = images.slice(0, 6);
+---
+
+<BaseLayout
+  title="图库"
+  description={`${SITE.name}的封面与视觉记录。`}
+  bodyClass="page-gallery"
+>
+  <section class="container gallery-page" aria-label="图库">
+    {
+      images.length > 0 ? (
+        <div class="waterfall-grid" data-gallery-grid>
+          {initialImages.map((image) => (
+            <a class="waterfall-item" href={image.href}>
+              <img
+                src={image.cover}
+                alt={image.title}
+                loading="lazy"
+                decoding="async"
+              />
+              <span>{image.title}</span>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p class="gallery-empty">还没有可以展示的图片。</p>
+      )
+    }
+    <div class="gallery-sentinel" data-gallery-sentinel aria-hidden="true"></div>
+  </section>
+
+  <script define:vars={{ galleryItems: images, initialCount: initialImages.length }}>
+    const grid = document.querySelector("[data-gallery-grid]");
+    const sentinel = document.querySelector("[data-gallery-sentinel]");
+    const batchSize = 6;
+    let cursor = initialCount;
+    let loading = false;
+    let observer;
+
+    const createItem = (image) => {
+      const link = document.createElement("a");
+      const img = document.createElement("img");
+      const label = document.createElement("span");
+
+      link.className = "waterfall-item";
+      link.href = image.href;
+      img.src = image.cover;
+      img.alt = image.title;
+      img.loading = "lazy";
+      img.decoding = "async";
+      label.textContent = image.title;
+      link.append(img, label);
+      return link;
+    };
+
+    const appendBatch = () => {
+      if (!grid || !sentinel || loading || cursor >= galleryItems.length) {
+        observer?.disconnect();
+        return;
+      }
+
+      loading = true;
+      requestAnimationFrame(() => {
+        const nextItems = galleryItems.slice(cursor, cursor + batchSize);
+        const fragment = document.createDocumentFragment();
+        nextItems.forEach((image) => fragment.append(createItem(image)));
+        grid.append(fragment);
+        cursor += nextItems.length;
+        loading = false;
+
+        if (cursor >= galleryItems.length) observer?.disconnect();
+      });
+    };
+
+    if (grid && sentinel && cursor < galleryItems.length) {
+      if ("IntersectionObserver" in window) {
+        observer = new IntersectionObserver(
+          (entries) => {
+            if (entries.some((entry) => entry.isIntersecting)) appendBatch();
+          },
+          { rootMargin: "600px 0px" },
+        );
+        observer.observe(sentinel);
+      } else {
+        appendBatch();
+      }
+    }
+  </script>
+</BaseLayout>

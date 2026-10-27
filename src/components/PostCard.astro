@@ -8,28 +8,53 @@ interface Props {
 }
 
 const { post, index = 0 } = Astro.props;
-const readingTime = getReadingTime(post.body);
 ---
 
-<article class="post-card" style={`--card-index: ${index}`}>
-  <div class="post-card-top">
-    <time datetime={post.data.pubDate.toISOString()}>
-      {formatDate(post.data.pubDate)}
-    </time>
-    <span>{readingTime} 分钟阅读</span>
-  </div>
-  <h3>
-    <a href={`/blog/${post.id}/`}>{post.data.title}</a>
-  </h3>
-  <p>{post.data.description}</p>
-  <div class="post-card-footer">
-    <div class="tag-list" aria-label="文章标签">
-      {post.data.tags.slice(0, 3).map((tag) => (
-        <a href={`/tags/${tag}/`} class="tag">#{tag}</a>
-      ))}
+<article
+  class="post-card"
+  style={`--reveal-delay: ${Math.min(index, 5) * 55}ms`}
+>
+  <a
+    class="post-link"
+    href={`/blog/${post.id}/`}
+    title={post.data.title}
+  >
+    <div class="post-cover">
+      {
+        post.data.cover ? (
+          <img
+            src={post.data.cover}
+            alt=""
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div class="cover-fallback" aria-hidden="true">
+            <span class="cover-label">FIELD NOTE</span>
+            <span class="cover-glyph">
+              {post.data.tags[0]?.slice(0, 1) ?? "渔"}
+            </span>
+            <span class="cover-tag">
+              {post.data.tags[0] ? `#${post.data.tags[0]}` : "YUQING"}
+            </span>
+          </div>
+        )
+      }
+      <span class="post-open" aria-hidden="true">↗</span>
     </div>
-    <a class="text-link" href={`/blog/${post.id}/`} aria-label={`阅读 ${post.data.title}`}>
-      阅读 <span aria-hidden="true">↗</span>
-    </a>
-  </div>
+
+    <div class="post-body">
+      <div class="post-card-top">
+        <time datetime={post.data.pubDate.toISOString()}>
+          {formatDate(post.data.pubDate)}
+        </time>
+        <span>{getReadingTime(post.body)} MIN</span>
+      </div>
+      <h2>{post.data.title}</h2>
+      <div class="post-categories" aria-label="文章分类">
+        <span class="post-category-label">分类</span>
+        <span>{post.data.category}</span>
+      </div>
+    </div>
+  </a>
 </article>

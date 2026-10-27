@@ -7,14 +7,40 @@ import { SITE } from "../../site.config";
 const posts = await getPublishedPosts();
 ---
 
-<BaseLayout title="文章" description={`${SITE.name}的全部文章归档。`}>
-  <section class="container page-heading">
-    <p class="eyebrow">ALL WRITING</p>
-    <h1>文章归档</h1>
-    <p>技术、写作与生活里那些值得认真对待的问题。</p>
-  </section>
-
-  <section class="container archive-list">
+<BaseLayout
+  title="博客"
+  description={`${SITE.name}的全部博客文章。`}
+  bodyClass="page-blog"
+>
+  <section
+    class="blog-card-grid lazy-card-grid post-grid"
+    data-lazy-cards
+  >
     {posts.map((post, index) => <PostCard post={post} index={index} />)}
   </section>
+
+  <script>
+    const grid = document.querySelector<HTMLElement>("[data-lazy-cards]");
+
+    if (grid) {
+      const cards = Array.from(grid.querySelectorAll<HTMLElement>(".post-card"));
+
+      if ("IntersectionObserver" in window) {
+        const observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              if (!entry.isIntersecting) continue;
+              entry.target.classList.add("is-loaded");
+              observer.unobserve(entry.target);
+            }
+          },
+          { rootMargin: "180px 0px" },
+        );
+
+        cards.forEach((card) => observer.observe(card));
+      } else {
+        cards.forEach((card) => card.classList.add("is-loaded"));
+      }
+    }
+  </script>
 </BaseLayout>

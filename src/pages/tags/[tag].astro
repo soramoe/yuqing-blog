@@ -31,7 +31,7 @@ const { tag, posts } = Astro.props;
     <p>共 {posts.length} 篇文章</p>
   </section>
 
-  <section class="container archive-list">
+  <section class="container post-grid archive-grid">
     {posts.map((post, index) => <PostCard post={post} index={index} />)}
   </section>
 </BaseLayout>

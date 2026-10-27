@@ -5,14 +5,16 @@ const year = new Date().getFullYear();
 ---
 
 <footer class="site-footer">
+  <div class="container footer-lead">
+    <span class="footer-index">EOB / {year}</span>
+    <p>{SITE.tagline}</p>
+  </div>
   <div class="container footer-inner">
-    <div>
-      <strong>{SITE.name}</strong>
-      <p>{SITE.tagline}。</p>
-    </div>
+    <a class="footer-brand" href="/">{SITE.name}<span>.</span></a>
     <div class="footer-meta">
-      <a href="/rss.xml">RSS</a>
-      <span>© {year} {SITE.name}</span>
+      <a href="/rss.xml">RSS FEED</a>
+      <a href={SITE.github}>GITHUB</a>
+      <span>© {year}</span>
     </div>
   </div>
 </footer>
