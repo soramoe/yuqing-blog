@@ -46,4 +46,4 @@ pnpm preview
 - Build output directory: `dist`
 - Node.js: 22 或更高版本
 
-当前使用的站点地址是 `https://yuqing.pages.dev`。绑定正式域名后，请同时修改 `astro.config.mjs` 和 `src/site.config.ts` 中的地址。
+当前使用的正式站点地址是 `https://yuqing.xhz6.com`。如需更换域名，请同时修改 `astro.config.mjs` 和 `src/site.config.ts` 中的地址。
