@@ -4,10 +4,11 @@ import { readdirSync } from "node:fs";
 import path from "node:path";
 import GalleryLightbox from "../components/GalleryLightbox.astro";
 import { formatDate, getPublishedPosts, getReadingTime } from "../lib/blog";
+import { getResponsiveImage } from "../lib/images";
 import { SITE } from "../site.config";
 
 const posts = await getPublishedPosts();
-const latestPosts = posts.slice(0, 3);
+const latestPosts = posts.slice(0, 4);
 const galleryDirectory = path.join(process.cwd(), "public", "gallery");
 const galleryExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"]);
 
@@ -24,9 +25,12 @@ const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
       ? `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`
       : null;
     const title = date ? `渔图 · ${date}` : "渔情图库";
+    const responsive = getResponsiveImage(`/gallery/${fileName}`, [480, 960]);
 
     return {
       src: `/gallery/${fileName}`,
+      preview: responsive.src,
+      srcSet: responsive.srcSet,
       title,
       alt: title,
       sortKey: dateMatch ? dateMatch[0] : "",
@@ -47,6 +51,8 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
   schemaType="WebSite"
   bodyClass="page-home"
 >
+  <h1 class="sr-only">{SITE.name} · {SITE.tagline}</h1>
+
   <section class="container home-columns" aria-label="首页内容">
     <div class="home-gallery">
       <div class="home-column-head">
@@ -71,11 +77,20 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                   data-home-gallery-item
                 >
                   <img
-                    src={image.src}
-                    alt={image.alt}
+                    alt=""
                     loading={index === 0 ? "eager" : "lazy"}
+                    fetchpriority={index === 0 ? "high" : "auto"}
                     decoding="async"
+                    data-home-gallery-image
                   />
+                  <noscript>
+                    <img
+                      src={image.src}
+                      alt={image.alt}
+                      loading={index === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                    />
+                  </noscript>
                   <span class="home-gallery-caption">
                     <span data-home-gallery-title>{image.title}</span>
                     <span aria-hidden="true">↗</span>
@@ -130,7 +145,14 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                   </span>
                   <span class="home-post-thumb" aria-hidden="true">
                     {post.data.cover ? (
-                      <img src={post.data.cover} alt="" loading="lazy" decoding="async" />
+                      <img
+                        src={getResponsiveImage(post.data.cover, [480, 960]).src}
+                        srcset={getResponsiveImage(post.data.cover, [480, 960]).srcSet}
+                        sizes="88px"
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                      />
                     ) : (
                       <span>{post.data.category.slice(0, 1)}</span>
                     )}
@@ -239,6 +261,8 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
       try {
         const images = JSON.parse(dataElement.textContent || "[]") as Array<{
           src: string;
+          preview: string;
+          srcSet: string;
           title: string;
           alt: string;
         }>;
@@ -250,7 +274,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
 
         galleryItems.forEach((item, index) => {
           const image = images[index];
-          const picture = item.querySelector("img");
+          const picture = item.querySelector("[data-home-gallery-image]");
           const caption = item.querySelector("[data-home-gallery-title]");
           if (!image || !picture) return;
 
@@ -261,7 +285,9 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
           item.setAttribute("aria-label", `${image.title}，打开图片预览`);
           item.dataset.galleryTitle = image.title;
           if (caption) caption.textContent = image.title;
-          picture.setAttribute("src", image.src);
+          picture.setAttribute("src", image.preview);
+          picture.setAttribute("srcset", image.srcSet);
+          picture.setAttribute("sizes", "(max-width: 600px) 44vw, 24vw");
           picture.setAttribute("alt", image.alt);
           if (picture.complete && picture.naturalWidth > 0) {
             requestAnimationFrame(reveal);
@@ -442,6 +468,10 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     transition:
       opacity 260ms ease,
       transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .home-gallery-item noscript {
+    display: contents;
   }
 
   :global(.js) .home-gallery-item img {

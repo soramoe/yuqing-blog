@@ -7,6 +7,7 @@ import {
   getPublishedPosts,
   getReadingTime,
 } from "../../lib/blog";
+import { getResponsiveImage } from "../../lib/images";
 import { SITE } from "../../site.config";
 
 export async function getStaticPaths() {
@@ -23,6 +24,7 @@ interface Props {
 }
 
 const { post } = Astro.props;
+const allPosts = await getPublishedPosts();
 const { Content, headings } = await render(post);
 const tocHeadings = headings.filter(
   (heading) => heading.depth === 2 || heading.depth === 3,
@@ -30,6 +32,22 @@ const tocHeadings = headings.filter(
 const titleParts = post.data.title.split("：");
 const titleLead = titleParts.length > 1 ? `${titleParts[0]}：` : "";
 const titleRest = titleParts.slice(1).join("：");
+const cover = post.data.cover
+  ? getResponsiveImage(post.data.cover, [480, 960, 1440])
+  : null;
+const relatedPosts = allPosts
+  .filter((item) => item.id !== post.id)
+  .sort((a, b) => {
+    const categoryDifference =
+      Number(b.data.category === post.data.category) -
+      Number(a.data.category === post.data.category);
+    return (
+      categoryDifference ||
+      b.data.pubDate.valueOf() - a.data.pubDate.valueOf() ||
+      a.id.localeCompare(b.id)
+    );
+  })
+  .slice(0, 3);
 ---
 
 <BaseLayout
@@ -77,6 +95,21 @@ const titleRest = titleParts.slice(1).join("：");
           <span>更新于 {formatDate(post.data.updatedDate)}</span>
         )}
       </div>
+      {
+        cover && (
+          <figure class="article-cover">
+            <img
+              src={cover.src}
+              srcset={cover.srcSet}
+              sizes="(max-width: 820px) calc(100vw - 32px), 960px"
+              alt=""
+              loading="eager"
+              fetchpriority="high"
+              decoding="async"
+            />
+          </figure>
+        )
+      }
     </header>
 
     <div class="article-grid">
@@ -109,6 +142,26 @@ const titleRest = titleParts.slice(1).join("：");
         <Content />
       </div>
     </div>
+
+    {
+      relatedPosts.length > 0 && (
+        <section class="related-posts" aria-labelledby="related-title">
+          <div class="related-heading">
+            <p class="eyebrow">CONTINUE READING</p>
+            <h2 id="related-title">继续阅读</h2>
+          </div>
+          <div class="related-grid">
+            {relatedPosts.map((item) => (
+              <a href={`/blog/${item.id}/`}>
+                <span>{item.data.category}</span>
+                <strong>{item.data.title}</strong>
+                <small>{formatDate(item.data.pubDate)} · {getReadingTime(item.body)} MIN</small>
+              </a>
+            ))}
+          </div>
+        </section>
+      )
+    }
 
     <Comments />
   </article>

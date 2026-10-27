@@ -4,6 +4,7 @@ import path from "node:path";
 import GalleryLightbox from "../components/GalleryLightbox.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPublishedPosts } from "../lib/blog";
+import { getResponsiveImage } from "../lib/images";
 import { SITE } from "../site.config";
 
 const posts = await getPublishedPosts();
@@ -73,15 +74,18 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
   schemaType="CollectionPage"
   bodyClass="page-gallery"
 >
+  <h1 class="sr-only">{SITE.name}图库</h1>
+
   <section class="container gallery-page" aria-label="图库">
     {
       images.length > 0 ? (
         <div class="waterfall-grid" data-gallery-grid>
-          {images.map((image) => {
+          {images.map((image, index) => {
             const aspect =
               image.width && image.height
                 ? `${image.width} / ${image.height}`
                 : "16 / 10";
+            const responsive = getResponsiveImage(image.cover, [480, 960]);
 
             return (
               <a
@@ -92,21 +96,17 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
                 style={`--gallery-aspect: ${aspect}`}
               >
                 <img
-                  data-gallery-src={image.cover}
+                  data-gallery-image
+                  src={responsive.src}
+                  srcset={responsive.srcSet}
+                  sizes="(max-width: 820px) 50vw, (max-width: 1200px) 33vw, 25vw"
                   alt={image.title}
                   width={image.width}
                   height={image.height}
-                  loading="lazy"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchpriority={index === 0 ? "high" : "auto"}
                   decoding="async"
                 />
-                <noscript>
-                  <img
-                    src={image.cover}
-                    alt={image.title}
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </noscript>
                 <span>{image.title}</span>
               </a>
             );
@@ -121,43 +121,21 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
   <GalleryLightbox />
 
   <script>
-    const lazyImages = Array.from(
-      document.querySelectorAll("[data-gallery-src]"),
-    );
-
     const markImageLoaded = (image) => {
       image.closest(".waterfall-item")?.classList.add("is-loaded");
     };
 
-    const loadImage = (image) => {
-      const src = image.dataset.gallerySrc;
-      if (!src) return;
-
-      image.addEventListener("load", () => markImageLoaded(image), { once: true });
-      image.addEventListener(
-        "error",
-        () => image.closest(".waterfall-item")?.classList.add("is-error"),
-        { once: true },
-      );
-      image.src = src;
-      delete image.dataset.gallerySrc;
-    };
-
-    if ("IntersectionObserver" in window) {
-      const lazyObserver = new IntersectionObserver(
-        (entries, observer) => {
-          entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            loadImage(entry.target);
-            observer.unobserve(entry.target);
-          });
-        },
-        { rootMargin: "480px 0px" },
-      );
-
-      lazyImages.forEach((image) => lazyObserver.observe(image));
-    } else {
-      lazyImages.forEach(loadImage);
+    for (const image of document.querySelectorAll("[data-gallery-image]")) {
+      if (image.complete) {
+        markImageLoaded(image);
+      } else {
+        image.addEventListener("load", () => markImageLoaded(image), { once: true });
+        image.addEventListener(
+          "error",
+          () => image.closest(".waterfall-item")?.classList.add("is-error"),
+          { once: true },
+        );
+      }
     }
   </script>
 </BaseLayout>

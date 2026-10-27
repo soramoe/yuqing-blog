@@ -1,6 +1,7 @@
 ---
 import type { BlogPost } from "../lib/blog";
 import { formatDate, getReadingTime } from "../lib/blog";
+import { getResponsiveImage } from "../lib/images";
 
 interface Props {
   post: BlogPost;
@@ -8,6 +9,9 @@ interface Props {
 }
 
 const { post, index = 0 } = Astro.props;
+const cover = post.data.cover
+  ? getResponsiveImage(post.data.cover, [480, 960, 1440])
+  : null;
 ---
 
 <article
@@ -21,11 +25,14 @@ const { post, index = 0 } = Astro.props;
       aria-label={`阅读《${post.data.title}》`}
     >
       {
-        post.data.cover ? (
+        post.data.cover && cover ? (
           <img
-            src={post.data.cover}
+            src={cover.src}
+            srcset={cover.srcSet}
+            sizes="(max-width: 520px) 50vw, (max-width: 820px) 33vw, 20vw"
             alt=""
-            loading="lazy"
+            loading={index === 0 ? "eager" : "lazy"}
+            fetchpriority={index === 0 ? "high" : "auto"}
             decoding="async"
           />
         ) : (

@@ -1,66 +1,594 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { getPublishedPosts } from "../lib/blog";
 import { SITE } from "../site.config";
+
+const posts = await getPublishedPosts();
+const categoryCount = new Set(posts.map((post) => post.data.category)).size;
+const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
 ---
 
 <BaseLayout
   title="关于"
   description={`关于${SITE.name}和作者${SITE.author.name}。`}
   schemaType="AboutPage"
+  bodyClass="page-about"
 >
-  <section class="container about-page">
+  <div class="container about-shell">
     <div class="page-topline">
       <p class="eyebrow">ABOUT / PROFILE</p>
-      <span>EST. 2026</span>
+      <span>EST. 2026 · BUILT IN PUBLIC</span>
     </div>
 
-    <div class="about-hero">
-      <h1>关于<br /><em>{SITE.name}</em></h1>
-      <p>{SITE.tagline}。</p>
-    </div>
+    <header class="about-hero">
+      <div class="about-hero-copy">
+        <p class="eyebrow">PERSONAL STUDIO / IN PROGRESS</p>
+        <h1>
+          <span>关于</span>
+          <em>{SITE.name}。</em>
+        </h1>
+        <p class="about-lead">{SITE.about}</p>
+        <div class="about-actions">
+          <a class="button button-primary" href="/blog/">读最近的笔记 <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href={SITE.github} target="_blank" rel="noreferrer">看看 GitHub ↗</a>
+        </div>
+      </div>
 
-    <div class="about-grid">
-      <aside class="about-facts">
-        <dl>
-          <div>
-            <dt>NAME</dt>
-            <dd>{SITE.author.name}</dd>
+      <aside class="about-signal-card" aria-label="渔情当前状态">
+        <div class="about-signal-top">
+          <span>SIGNAL / 001</span>
+          <span class="about-live"><i aria-hidden="true"></i> BUILDING</span>
+        </div>
+        <div class="about-orbit" aria-hidden="true">
+          <span class="about-orbit-label orbit-make">MAKE</span>
+          <span class="about-orbit-label orbit-learn">LEARN</span>
+          <span class="about-orbit-label orbit-share">SHARE</span>
+          <div class="about-orbit-core">
+            <strong>渔</strong>
+            <small>{SITE.tagline}</small>
           </div>
-          <div>
-            <dt>FOCUS</dt>
-            <dd>AI / Making</dd>
-          </div>
-          <div>
-            <dt>STATUS</dt>
-            <dd><i aria-hidden="true"></i> Building</dd>
-          </div>
-          <div>
-            <dt>CONTACT</dt>
-            <dd><a href="/rss.xml">RSS ↗</a></dd>
-          </div>
-        </dl>
+        </div>
+        <div class="about-signal-foot">
+          <span>AI / NOTES / SMALL THINGS</span>
+          <span>2026</span>
+        </div>
+      </aside>
+    </header>
+
+    <dl class="about-metrics" aria-label="渔情内容统计">
+      <div>
+        <dt>ARTICLES</dt>
+        <dd>{String(posts.length).padStart(2, "0")}</dd>
+        <span>篇文章</span>
+      </div>
+      <div>
+        <dt>CATEGORIES</dt>
+        <dd>{String(categoryCount).padStart(2, "0")}</dd>
+        <span>个分类</span>
+      </div>
+      <div>
+        <dt>TAGS</dt>
+        <dd>{String(tagCount).padStart(2, "0")}</dd>
+        <span>个标签</span>
+      </div>
+    </dl>
+
+    <section class="about-story" aria-labelledby="about-story-title">
+      <aside class="about-side-label">
+        <span>01 / WHY</span>
+        <p>一个还在长出来的小工作室。</p>
       </aside>
 
-      <div class="about-content prose">
-        <p class="lead">{SITE.about}</p>
-
-        <h2>渔情是什么</h2>
-        <p>
+      <div class="about-story-content">
+        <h2 id="about-story-title">
+          把折腾过的东西，<br />
+          <span>认真留下来。</span>
+        </h2>
+        <p class="about-statement">
           渔情是一个正在长出来的小空间，也是一颗想做 AI 工作室的种子。
           这里会慢慢放上小耗子折腾过的小玩意、过程和想法。
         </p>
 
-        <h2>关于作者</h2>
-        <p>
-          <strong>{SITE.author.name}</strong>。作者简介：{SITE.author.bio}
-        </p>
+        <div class="about-principles">
+          <article>
+            <span>MAKE / 01</span>
+            <h3>做点小玩意</h3>
+            <p>从一个小问题出发，把想法做成能跑、能看、也能继续修改的东西。</p>
+          </article>
+          <article>
+            <span>LEARN / 02</span>
+            <h3>把过程写下来</h3>
+            <p>记录尝试、失败和最后的判断。结论重要，怎么走到结论也同样重要。</p>
+          </article>
+          <article>
+            <span>SHARE / 03</span>
+            <h3>让作品见面</h3>
+            <p>不把东西一直留在草稿箱里。上线、被使用、收到反馈，项目才算真正开始。</p>
+          </article>
+        </div>
+      </div>
+    </section>
 
-        <h2>保持联系</h2>
+    <section class="about-author" aria-labelledby="about-author-title">
+      <div class="about-author-mark" aria-hidden="true">小</div>
+      <div class="about-author-copy">
+        <p class="eyebrow">AUTHOR / BUILDER</p>
+        <h2 id="about-author-title">{SITE.author.name}</h2>
         <p>
-          你可以通过 <a href="/rss.xml">RSS</a> 订阅更新。
-          也可以在任意文章下方留下评论——在配置 Giscus 之后。
+          喜欢用 AI 折腾点小玩意的小耗子。作者简介还在继续补，这个页面也一样。
         </p>
       </div>
-    </div>
-  </section>
+      <div class="about-author-links">
+        <a href="/rss.xml">RSS <span aria-hidden="true">↗</span></a>
+        <a href={SITE.github} target="_blank" rel="noreferrer">GITHUB <span aria-hidden="true">↗</span></a>
+        <a href="/gallery/">图库 <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+  </div>
 </BaseLayout>
+
+<style>
+  .page-about main {
+    padding-block: 42px 88px;
+  }
+
+  .about-shell {
+    --about-gutter: clamp(20px, 4vw, 56px);
+  }
+
+  .about-hero {
+    display: grid;
+    align-items: stretch;
+    gap: clamp(28px, 4vw, 56px);
+    padding-block: 58px 48px;
+    grid-template-columns: minmax(0, 1.12fr) minmax(310px, 0.68fr);
+  }
+
+  .about-hero-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .about-hero h1 {
+    display: grid;
+    margin: 22px 0 26px;
+    font-size: clamp(4.6rem, 8vw, 7.4rem);
+    font-weight: 800;
+    letter-spacing: -0.075em;
+    line-height: 0.82;
+  }
+
+  .about-hero h1 span,
+  .about-hero h1 em {
+    display: block;
+    white-space: nowrap;
+  }
+
+  .about-hero h1 em {
+    color: var(--accent);
+    font-style: normal;
+  }
+
+  .about-lead {
+    max-width: 660px;
+    margin: 0;
+    font-size: clamp(1.05rem, 1.7vw, 1.35rem);
+    line-height: 1.75;
+  }
+
+  .about-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 18px 24px;
+    margin-top: 32px;
+  }
+
+  .about-actions .button {
+    font-size: 0.74rem;
+  }
+
+  .about-signal-card {
+    position: relative;
+    display: flex;
+    min-height: 390px;
+    overflow: hidden;
+    flex-direction: column;
+    padding: 14px;
+    border: 1px solid var(--border);
+    background:
+      linear-gradient(color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(90deg, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),
+      color-mix(in srgb, var(--surface) 80%, transparent);
+    background-size: 34px 34px, 34px 34px, auto;
+  }
+
+  .about-signal-card::after {
+    position: absolute;
+    inset: 8px;
+    border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+    content: "";
+    pointer-events: none;
+  }
+
+  .about-signal-top,
+  .about-signal-foot {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+  }
+
+  .about-live {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text);
+  }
+
+  .about-live i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+  }
+
+  .about-orbit {
+    position: relative;
+    display: grid;
+    width: min(100%, 270px);
+    aspect-ratio: 1;
+    margin: auto;
+    place-items: center;
+  }
+
+  .about-orbit::before,
+  .about-orbit::after {
+    position: absolute;
+    border: 1px solid var(--strong-border);
+    border-radius: 50%;
+    content: "";
+  }
+
+  .about-orbit::before {
+    inset: 11%;
+  }
+
+  .about-orbit::after {
+    inset: 25%;
+    border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+  }
+
+  .about-orbit-core {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    width: 104px;
+    height: 104px;
+    place-content: center;
+    border: 1px solid var(--accent);
+    border-radius: 50%;
+    background: var(--background);
+    color: var(--accent);
+    text-align: center;
+  }
+
+  .about-orbit-core strong {
+    font-size: 2.8rem;
+    line-height: 0.9;
+  }
+
+  .about-orbit-core small {
+    margin-top: 7px;
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    font-size: 0.46rem;
+    letter-spacing: 0.05em;
+  }
+
+  .about-orbit-label {
+    position: absolute;
+    z-index: 1;
+    padding: 3px 7px;
+    background: var(--surface);
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.08em;
+  }
+
+  .orbit-make {
+    top: 5%;
+    left: 47%;
+  }
+
+  .orbit-learn {
+    right: 0;
+    bottom: 27%;
+  }
+
+  .orbit-share {
+    bottom: 8%;
+    left: 5%;
+  }
+
+  .about-metrics {
+    display: grid;
+    margin: 0;
+    border-top: 1px solid var(--strong-border);
+    border-left: 1px solid var(--border);
+    border-bottom: 1px solid var(--strong-border);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .about-metrics > div {
+    display: grid;
+    gap: 6px;
+    padding: 16px 18px;
+    border-right: 1px solid var(--border);
+    grid-template-columns: 1fr auto;
+  }
+
+  .about-metrics dt {
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+  }
+
+  .about-metrics dd {
+    margin: 0;
+    font-family: Consolas, monospace;
+    font-size: 1.5rem;
+    line-height: 1;
+    grid-row: span 2;
+  }
+
+  .about-metrics span {
+    color: var(--muted);
+    font-size: 0.68rem;
+  }
+
+  .about-story {
+    display: grid;
+    gap: clamp(36px, 6vw, 86px);
+    padding-block: 78px 70px;
+    grid-template-columns: minmax(150px, 0.26fr) minmax(0, 1fr);
+  }
+
+  .about-side-label {
+    padding-top: 7px;
+    border-top: 1px solid var(--strong-border);
+  }
+
+  .about-side-label span {
+    color: var(--accent);
+    font-family: Consolas, monospace;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+  }
+
+  .about-side-label p {
+    max-width: 160px;
+    margin: 14px 0 0;
+    color: var(--muted);
+    font-size: 0.76rem;
+    line-height: 1.7;
+  }
+
+  .about-story-content h2 {
+    margin: 0;
+    font-size: clamp(2.2rem, 4.8vw, 4.4rem);
+    letter-spacing: -0.06em;
+    line-height: 1.05;
+  }
+
+  .about-story-content h2 span {
+    color: var(--accent);
+  }
+
+  .about-statement {
+    max-width: 740px;
+    margin: 28px 0 44px;
+    color: var(--muted);
+    font-family: Georgia, "Songti SC", serif;
+    font-size: clamp(1.05rem, 1.6vw, 1.28rem);
+    line-height: 1.9;
+  }
+
+  .about-principles {
+    display: grid;
+    border-top: 1px solid var(--border);
+    border-left: 1px solid var(--border);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .about-principles article {
+    min-height: 190px;
+    padding: 18px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .about-principles article > span {
+    color: var(--accent);
+    font-family: Consolas, monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.06em;
+  }
+
+  .about-principles h3 {
+    margin: 35px 0 9px;
+    font-size: 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  .about-principles p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.76rem;
+    line-height: 1.75;
+  }
+
+  .about-author {
+    display: grid;
+    align-items: center;
+    gap: 22px;
+    padding-block: 26px;
+    border-top: 1px solid var(--strong-border);
+    border-bottom: 1px solid var(--strong-border);
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+  }
+
+  .about-author-mark {
+    display: grid;
+    width: 64px;
+    height: 64px;
+    place-items: center;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+
+  .about-author-copy h2 {
+    margin: 5px 0 5px;
+    font-size: 1.5rem;
+    letter-spacing: -0.035em;
+  }
+
+  .about-author-copy > p:last-child {
+    max-width: 580px;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.78rem;
+  }
+
+  .about-author-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .about-author-links a {
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.05em;
+  }
+
+  .about-author-links a:hover {
+    border-color: var(--strong-border);
+    color: var(--text);
+  }
+
+  .about-author-links span {
+    color: var(--accent);
+  }
+
+  @media (max-width: 980px) {
+    .about-hero {
+      grid-template-columns: 1fr;
+    }
+
+    .about-signal-card {
+      min-height: 340px;
+    }
+
+    .about-orbit {
+      width: min(100%, 240px);
+    }
+
+    .about-story {
+      gap: 26px;
+      grid-template-columns: 1fr;
+    }
+
+    .about-side-label {
+      max-width: 360px;
+    }
+
+    .about-side-label p {
+      max-width: none;
+    }
+
+    .about-author {
+      align-items: start;
+      grid-template-columns: 64px minmax(0, 1fr);
+    }
+
+    .about-author-links {
+      justify-content: flex-start;
+      grid-column: 2;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .page-about main {
+      padding-top: 30px;
+    }
+
+    .about-hero {
+      gap: 30px;
+      padding-block: 40px 36px;
+    }
+
+    .about-hero h1 {
+      margin-block: 18px 22px;
+      font-size: clamp(4rem, 22vw, 5.6rem);
+    }
+
+    .about-signal-card {
+      min-height: 310px;
+    }
+
+    .about-metrics {
+      grid-template-columns: 1fr;
+    }
+
+    .about-metrics > div {
+      grid-template-columns: 1fr auto;
+    }
+
+    .about-story {
+      padding-block: 48px;
+    }
+
+    .about-story-content h2 {
+      font-size: clamp(2.2rem, 11vw, 3.2rem);
+    }
+
+    .about-principles {
+      grid-template-columns: 1fr;
+    }
+
+    .about-principles article {
+      min-height: 0;
+    }
+
+    .about-author {
+      grid-template-columns: 52px minmax(0, 1fr);
+    }
+
+    .about-author-mark {
+      width: 52px;
+      height: 52px;
+    }
+
+    .about-author-links {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

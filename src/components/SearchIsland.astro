@@ -6,12 +6,11 @@ import {
 } from "../lib/blog";
 
 const posts = await getPublishedPosts();
-const searchItems = posts.map((post) => ({
+const searchFallbackItems = posts.map((post) => ({
   title: post.data.title,
   description: post.data.description,
   category: post.data.category,
   tags: post.data.tags,
-  body: post.body ?? "",
   url: `/blog/${post.id}/`,
   date: formatDate(post.data.pubDate),
   readingTime: getReadingTime(post.body),
@@ -26,6 +25,7 @@ const quickLinks = [
 ];
 const shouldIntro =
   Astro.url.pathname === "/blog/" || Astro.url.pathname === "/blog";
+const enablePagefind = import.meta.env.PROD;
 ---
 
 <aside
@@ -84,7 +84,7 @@ const shouldIntro =
   </div>
 </aside>
 
-<script define:vars={{ searchItems }}>
+<script define:vars={{ searchFallbackItems, enablePagefind }}>
   const island = document.querySelector("[data-search-island]");
   const trigger = island?.querySelector("[data-island-trigger]");
   const panel = island?.querySelector("[data-island-panel]");
@@ -93,20 +93,36 @@ const shouldIntro =
   const resultState = island?.querySelector("[data-island-result-state]");
   const resultList = island?.querySelector("[data-island-result-list]");
 
-  const items = searchItems.map((item) => ({
+  const fallbackItems = searchFallbackItems.map((item) => ({
     ...item,
     searchable: [
       item.title,
       item.description,
       item.category,
       item.tags.join(" "),
-      item.body,
     ]
       .join(" ")
       .toLocaleLowerCase("zh-CN"),
   }));
 
   let timer;
+  let searchVersion = 0;
+  let pagefindPromise;
+
+  const loadPagefind = () => {
+    if (!pagefindPromise) {
+      pagefindPromise = (async () => {
+        if (!enablePagefind) {
+          throw new Error("Pagefind is only available in production builds.");
+        }
+        const modulePath = "/pagefind/pagefind.js";
+        const pagefind = await import(/* @vite-ignore */ modulePath);
+        await pagefind.options?.({ excerptLength: 28 });
+        return pagefind;
+      })();
+    }
+    return pagefindPromise;
+  };
 
   const setOpen = (open) => {
     if (!island || !trigger || !panel) return;
@@ -116,13 +132,31 @@ const shouldIntro =
 
     if (open) {
       requestAnimationFrame(() => input?.focus());
+      void loadPagefind().catch(() => undefined);
     }
   };
 
-  const renderResults = (query) => {
+  const getExcerptText = (excerpt) => {
+    if (!excerpt) return "";
+    const parsed = new DOMParser().parseFromString(excerpt, "text/html");
+    return parsed.body.textContent?.replace(/\s+/g, " ").trim() ?? "";
+  };
+
+  const getFallbackMatches = (terms) =>
+    fallbackItems
+      .filter((item) => terms.every((term) => item.searchable.includes(term)))
+      .map((item) => ({
+        title: item.title,
+        description: item.description,
+        meta: `${item.category} · ${item.date} · ${item.readingTime} MIN`,
+        url: item.url,
+      }));
+
+  const renderResults = async (query) => {
     if (!input || !resultState || !resultList) return;
 
     const normalized = query.trim().toLocaleLowerCase("zh-CN");
+    const version = ++searchVersion;
     resultList.replaceChildren();
 
     if (!normalized) {
@@ -132,11 +166,27 @@ const shouldIntro =
     }
 
     const terms = normalized.split(/\s+/);
-    const matches = items
-      .filter((item) =>
-        terms.every((term) => item.searchable.includes(term)),
-      )
-      .slice(0, 6);
+    resultState.textContent = "正在搜索…";
+    resultList.hidden = true;
+
+    let matches;
+    try {
+      const pagefind = await loadPagefind();
+      const search = await pagefind.search(normalized);
+      const resultData = await Promise.all(
+        search.results.slice(0, 6).map((result) => result.data()),
+      );
+      matches = resultData.map((result) => ({
+        title: result.meta?.title || "未命名文章",
+        description: getExcerptText(result.excerpt),
+        meta: "BLOG ARTICLE",
+        url: result.url,
+      }));
+    } catch {
+      matches = getFallbackMatches(terms).slice(0, 6);
+    }
+
+    if (version !== searchVersion) return;
 
     if (matches.length === 0) {
       resultState.textContent = `没有找到与“${query.trim()}”相关的文章。`;
@@ -161,7 +211,7 @@ const shouldIntro =
       description.className = "island-result-description";
       description.textContent = item.description;
       meta.className = "island-result-meta";
-      meta.textContent = `${item.category} · ${item.date} · ${item.readingTime} MIN`;
+      meta.textContent = item.meta;
 
       link.append(title, description, meta);
       row.append(link);
@@ -176,13 +226,13 @@ const shouldIntro =
 
     input.addEventListener("input", () => {
       window.clearTimeout(timer);
-      timer = window.setTimeout(() => renderResults(input.value), 90);
+      timer = window.setTimeout(() => void renderResults(input.value), 90);
     });
 
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       window.clearTimeout(timer);
-      renderResults(input.value);
+      void renderResults(input.value);
     });
 
     document.addEventListener("pointerdown", (event) => {

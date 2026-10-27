@@ -8,9 +8,11 @@ export async function getPublishedPosts(): Promise<BlogPost[]> {
     ({ data }) => import.meta.env.DEV || !data.draft,
   );
 
-  return posts.sort(
-    (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
-  );
+  return posts.sort((a, b) => {
+    const dateDifference =
+      b.data.pubDate.valueOf() - a.data.pubDate.valueOf();
+    return dateDifference || a.id.localeCompare(b.id);
+  });
 }
 
 export function formatDate(date: Date): string {
