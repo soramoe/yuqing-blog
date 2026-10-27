@@ -10,8 +10,12 @@ interface Props {
   description?: string;
   image?: string;
   type?: "website" | "article";
+  schemaType?: "WebSite" | "WebPage" | "AboutPage" | "Blog" | "CollectionPage";
   publishedTime?: Date;
   updatedTime?: Date;
+  section?: string;
+  keywords?: string[];
+  noindex?: boolean;
   bodyClass?: string;
 }
 
@@ -20,32 +24,96 @@ const {
   description = SITE.description,
   image = "/og-default.svg",
   type = "website",
+  schemaType = "WebPage",
   publishedTime,
   updatedTime,
+  section,
+  keywords = [],
+  noindex = false,
   bodyClass,
 } = Astro.props;
 
 const siteName = SITE.name;
 const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
-const canonical = new URL(Astro.url.pathname, Astro.site ?? Astro.url);
+const siteUrl = new URL("/", Astro.site ?? Astro.url);
+const canonical = new URL(Astro.url.pathname, siteUrl);
 const socialImage = new URL(image, Astro.site ?? Astro.url);
 const rssUrl = new URL("/rss.xml", Astro.site ?? Astro.url);
+const aboutUrl = new URL("/about/", siteUrl);
 const showSearchIsland = Astro.url.pathname.startsWith("/blog/");
+const websiteId = new URL("/#website", siteUrl).toString();
 
-const structuredData = {
-  "@context": "https://schema.org",
-  "@type": type === "article" ? "BlogPosting" : "WebSite",
-  headline: title,
-  name: title,
-  description,
-  url: canonical.toString(),
-  ...(type === "article" && publishedTime
-    ? {
-        datePublished: publishedTime.toISOString(),
-        dateModified: (updatedTime ?? publishedTime).toISOString(),
-      }
-    : {}),
+const websiteEntity = {
+  "@type": "WebSite",
+  "@id": websiteId,
+  name: siteName,
+  url: siteUrl.toString(),
+  inLanguage: "zh-CN",
 };
+const publisherEntity = {
+  "@type": "Organization",
+  name: siteName,
+  url: siteUrl.toString(),
+};
+
+const structuredData = noindex
+  ? null
+  : type === "article"
+    ? {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "@id": `${canonical.toString()}#article`,
+        mainEntityOfPage: {
+          "@type": "WebPage",
+          "@id": canonical.toString(),
+        },
+        headline: title,
+        name: title,
+        description,
+        url: canonical.toString(),
+        image: {
+          "@type": "ImageObject",
+          url: socialImage.toString(),
+        },
+        author: {
+          "@type": "Person",
+          name: SITE.author.name,
+          url: aboutUrl.toString(),
+        },
+        publisher: publisherEntity,
+        inLanguage: "zh-CN",
+        ...(publishedTime
+          ? {
+              datePublished: publishedTime.toISOString(),
+              dateModified: (updatedTime ?? publishedTime).toISOString(),
+            }
+          : {}),
+        ...(section ? { articleSection: section } : {}),
+        ...(keywords.length > 0 ? { keywords } : {}),
+        isPartOf: websiteEntity,
+      }
+    : schemaType === "WebSite"
+      ? {
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          "@id": websiteId,
+          name: pageTitle,
+          alternateName: SITE.tagline,
+          description,
+          url: canonical.toString(),
+          inLanguage: "zh-CN",
+          publisher: publisherEntity,
+        }
+      : {
+          "@context": "https://schema.org",
+          "@type": schemaType,
+          "@id": `${canonical.toString()}#${schemaType}`,
+          name: pageTitle,
+          description,
+          url: canonical.toString(),
+          inLanguage: "zh-CN",
+          isPartOf: websiteEntity,
+        };
 ---
 
 <!doctype html>
@@ -54,9 +122,11 @@ const structuredData = {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="description" content={description} />
     <meta name="theme-color" content="#10110f" />
-    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex, follow" />}
+    {!noindex && <link rel="canonical" href={canonical} />}
     <link
       rel="alternate"
       type="application/rss+xml"
@@ -76,7 +146,14 @@ const structuredData = {
     <meta name="twitter:image" content={socialImage} />
 
     <title>{pageTitle}</title>
-    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    {
+      structuredData && (
+        <script
+          type="application/ld+json"
+          set:html={JSON.stringify(structuredData)}
+        />
+      )
+    }
     <script is:inline>
       (() => {
         document.documentElement.classList.add("js");

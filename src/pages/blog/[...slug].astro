@@ -39,6 +39,8 @@ const titleRest = titleParts.slice(1).join("：");
   type="article"
   publishedTime={post.data.pubDate}
   updatedTime={post.data.updatedDate}
+  section={post.data.category}
+  keywords={post.data.tags}
 >
   <article class="container article-page" data-pagefind-body>
     <header class="article-header">

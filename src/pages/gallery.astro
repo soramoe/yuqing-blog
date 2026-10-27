@@ -1,6 +1,7 @@
 ---
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import GalleryLightbox from "../components/GalleryLightbox.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPublishedPosts } from "../lib/blog";
 import { SITE } from "../site.config";
@@ -69,6 +70,7 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
 <BaseLayout
   title="图库"
   description={`${SITE.name}的封面与视觉记录。`}
+  schemaType="CollectionPage"
   bodyClass="page-gallery"
 >
   <section class="container gallery-page" aria-label="图库">
@@ -116,42 +118,12 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
     }
   </section>
 
-  <div
-    class="gallery-lightbox"
-    data-gallery-lightbox
-    role="dialog"
-    aria-modal="true"
-    aria-label="图片预览"
-    hidden
-  >
-    <button
-      class="gallery-lightbox-close"
-      type="button"
-      data-gallery-lightbox-close
-      aria-label="关闭图片预览"
-    >
-      <span>关闭</span>
-      <span aria-hidden="true">×</span>
-    </button>
-    <figure class="gallery-lightbox-figure">
-      <img data-gallery-lightbox-image alt="" />
-      <figcaption data-gallery-lightbox-caption></figcaption>
-    </figure>
-  </div>
+  <GalleryLightbox />
 
   <script>
-    const grid = document.querySelector("[data-gallery-grid]");
     const lazyImages = Array.from(
       document.querySelectorAll("[data-gallery-src]"),
     );
-    const lightbox = document.querySelector("[data-gallery-lightbox]");
-    const lightboxImage = document.querySelector("[data-gallery-lightbox-image]");
-    const lightboxCaption = document.querySelector(
-      "[data-gallery-lightbox-caption]",
-    );
-    const closeButton = document.querySelector("[data-gallery-lightbox-close]");
-    let activeTrigger = null;
-    let closeTimer = null;
 
     const markImageLoaded = (image) => {
       image.closest(".waterfall-item")?.classList.add("is-loaded");
@@ -187,56 +159,5 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
     } else {
       lazyImages.forEach(loadImage);
     }
-
-    const closeLightbox = () => {
-      if (!lightbox || lightbox.hidden) return;
-
-      lightbox.classList.remove("is-open");
-      document.body.classList.remove("gallery-lightbox-open");
-      window.clearTimeout(closeTimer);
-      closeTimer = window.setTimeout(() => {
-        lightbox.hidden = true;
-        if (lightboxImage) lightboxImage.removeAttribute("src");
-      }, 180);
-      activeTrigger?.focus();
-    };
-
-    const openLightbox = (trigger) => {
-      if (!lightbox || !lightboxImage || !lightboxCaption || !closeButton) return;
-
-      activeTrigger = trigger;
-      window.clearTimeout(closeTimer);
-      lightboxImage.src = trigger.href;
-      lightboxImage.alt = trigger.dataset.galleryTitle || "渔情图库图片";
-      lightboxCaption.textContent = trigger.dataset.galleryTitle || "";
-      lightbox.hidden = false;
-      document.body.classList.add("gallery-lightbox-open");
-      requestAnimationFrame(() => lightbox.classList.add("is-open"));
-      closeButton.focus();
-    };
-
-    grid?.addEventListener("click", (event) => {
-      const trigger = event.target.closest("[data-gallery-open]");
-      if (!trigger) return;
-
-      event.preventDefault();
-      openLightbox(trigger);
-    });
-
-    closeButton?.addEventListener("click", closeLightbox);
-    lightbox?.addEventListener("click", (event) => {
-      if (event.target === lightbox) closeLightbox();
-    });
-    document.addEventListener("keydown", (event) => {
-      if (!lightbox || lightbox.hidden) return;
-
-      if (event.key === "Escape") {
-        closeLightbox();
-      } else if (event.key === "Tab") {
-        event.preventDefault();
-        closeButton?.focus();
-      }
-    });
-    window.addEventListener("pagehide", closeLightbox);
   </script>
 </BaseLayout>

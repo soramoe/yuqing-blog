@@ -24,7 +24,11 @@ interface Props {
 const { tag, posts } = Astro.props;
 ---
 
-<BaseLayout title={`#${tag}`} description={`标签 #${tag} 下的全部文章。`}>
+<BaseLayout
+  title={`#${tag}`}
+  description={`标签 #${tag} 下的全部文章。`}
+  schemaType="CollectionPage"
+>
   <section class="container page-heading">
     <p class="eyebrow">TOPIC</p>
     <h1>#{tag}</h1>

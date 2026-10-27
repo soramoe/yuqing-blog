@@ -1,0 +1,50 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import PostCard from "../../components/PostCard.astro";
+import { getPublishedPosts, type BlogPost } from "../../lib/blog";
+
+export async function getStaticPaths() {
+  const posts = await getPublishedPosts();
+  const categories = [...new Set(posts.map((post) => post.data.category))];
+
+  return categories.map((category) => ({
+    params: { category },
+    props: {
+      category,
+      posts: posts.filter((post) => post.data.category === category),
+    },
+  }));
+}
+
+interface Props {
+  category: string;
+  posts: BlogPost[];
+}
+
+const { category, posts } = Astro.props;
+---
+
+<BaseLayout
+  title={`分类：${category}`}
+  description={`渔情博客中「${category}」分类下的全部文章。`}
+  schemaType="CollectionPage"
+  bodyClass="page-blog"
+>
+  <div class="blog-page">
+    <header class="blog-heading category-heading">
+      <div class="blog-heading-title">
+        <p class="eyebrow">CATEGORY</p>
+        <h1>{category}</h1>
+        <p>共 {posts.length} 篇文章</p>
+      </div>
+      <a class="text-link" href="/blog/">← 返回全部文章</a>
+    </header>
+
+    <section
+      class="blog-card-grid post-grid archive-grid"
+      aria-label={`${category}分类下的文章`}
+    >
+      {posts.map((post, index) => <PostCard post={post} index={index} />)}
+    </section>
+  </div>
+</BaseLayout>

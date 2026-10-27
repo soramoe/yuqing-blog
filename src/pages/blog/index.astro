@@ -5,42 +5,163 @@ import { getPublishedPosts } from "../../lib/blog";
 import { SITE } from "../../site.config";
 
 const posts = await getPublishedPosts();
+const categoryCounts = Array.from(
+  posts.reduce((counts, post) => {
+    counts.set(post.data.category, (counts.get(post.data.category) ?? 0) + 1);
+    return counts;
+  }, new Map<string, number>()),
+);
+const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
+const initialPostCount = 9;
 ---
 
 <BaseLayout
   title="博客"
   description={`${SITE.name}的全部博客文章。`}
+  schemaType="Blog"
   bodyClass="page-blog"
 >
-  <section
-    class="blog-card-grid lazy-card-grid post-grid"
-    data-lazy-cards
-  >
-    {posts.map((post, index) => <PostCard post={post} index={index} />)}
-  </section>
+  <div class="blog-page">
+    <header class="blog-heading">
+      <div class="blog-heading-title">
+        <div class="blog-title-line">
+          <p class="eyebrow">WRITING ARCHIVE</p>
+          <h1>博客</h1>
+        </div>
+        <p>{SITE.description}</p>
+      </div>
+      <div class="blog-heading-side">
+        <dl class="blog-stats" aria-label="博客统计">
+          <div>
+            <dt>文章</dt>
+            <dd>{String(posts.length).padStart(2, "0")}</dd>
+          </div>
+          <div>
+            <dt>分类</dt>
+            <dd>{String(categoryCounts.length).padStart(2, "0")}</dd>
+          </div>
+          <div>
+            <dt>标签</dt>
+            <dd>{String(tagCount).padStart(2, "0")}</dd>
+          </div>
+        </dl>
+        {
+          posts.length > 0 && (
+            <nav class="blog-category-nav" aria-label="按分类浏览">
+              <span>分类</span>
+              {categoryCounts.map(([category, count]) => (
+                <a href={`/categories/${encodeURIComponent(category)}/`}>
+                  {category} <small>{count}</small>
+                </a>
+              ))}
+            </nav>
+          )
+        }
+      </div>
+    </header>
+
+    {
+      posts.length > 0 ? (
+        <>
+          <section
+            class="blog-card-grid lazy-card-grid post-grid"
+            id="article-list"
+            aria-label="全部文章"
+            data-lazy-cards
+          >
+            {posts.map((post, index) => (
+              <PostCard post={post} index={index} />
+            ))}
+          </section>
+
+          {
+            posts.length > initialPostCount && (
+              <div class="blog-load-more">
+                <button type="button" data-load-more>
+                  加载更多文章
+                </button>
+                <span data-load-status aria-live="polite">
+                  已显示 {initialPostCount} / {posts.length}
+                </span>
+              </div>
+            )
+          }
+        </>
+      ) : (
+        <section class="blog-empty" aria-labelledby="blog-empty-title">
+          <p class="eyebrow">NOTHING HERE YET</p>
+          <h2 id="blog-empty-title">文章还在路上。</h2>
+          <p>先去图库看看，或者从关于页面认识渔情。</p>
+          <div>
+            <a href="/gallery/">浏览图库 ↗</a>
+            <a href="/about/">关于渔情 ↗</a>
+          </div>
+        </section>
+      )
+    }
+  </div>
 
   <script>
     const grid = document.querySelector<HTMLElement>("[data-lazy-cards]");
+    const batchSize = 9;
+    let visibleCount = batchSize;
+    let observer: IntersectionObserver | null = null;
 
     if (grid) {
       const cards = Array.from(grid.querySelectorAll<HTMLElement>(".post-card"));
+      const loadMoreButton = document.querySelector<HTMLButtonElement>(
+        "[data-load-more]",
+      );
+      const loadStatus = document.querySelector<HTMLElement>(
+        "[data-load-status]",
+      );
 
       if ("IntersectionObserver" in window) {
-        const observer = new IntersectionObserver(
+        observer = new IntersectionObserver(
           (entries) => {
             for (const entry of entries) {
               if (!entry.isIntersecting) continue;
               entry.target.classList.add("is-loaded");
-              observer.unobserve(entry.target);
+              observer?.unobserve(entry.target);
             }
           },
           { rootMargin: "180px 0px" },
         );
-
-        cards.forEach((card) => observer.observe(card));
-      } else {
-        cards.forEach((card) => card.classList.add("is-loaded"));
       }
+
+      const revealCard = (card: HTMLElement) => {
+        if (observer) {
+          observer.observe(card);
+        } else {
+          card.classList.add("is-loaded");
+        }
+      };
+
+      if (cards.length > batchSize) {
+        cards.slice(batchSize).forEach((card) => {
+          card.hidden = true;
+        });
+      }
+
+      cards.slice(0, batchSize).forEach(revealCard);
+
+      loadMoreButton?.addEventListener("click", () => {
+        const nextCount = Math.min(cards.length, visibleCount + batchSize);
+        const nextCards = cards.slice(visibleCount, nextCount);
+
+        nextCards.forEach((card) => {
+          card.hidden = false;
+          revealCard(card);
+        });
+
+        visibleCount = nextCount;
+        if (loadStatus) {
+          loadStatus.textContent = `已显示 ${visibleCount} / ${cards.length}`;
+        }
+        if (visibleCount >= cards.length) {
+          loadMoreButton.hidden = true;
+        }
+      });
     }
   </script>
 </BaseLayout>

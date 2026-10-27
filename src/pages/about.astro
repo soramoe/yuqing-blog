@@ -3,7 +3,11 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { SITE } from "../site.config";
 ---
 
-<BaseLayout title="关于" description={`关于${SITE.name}和作者${SITE.author.name}。`}>
+<BaseLayout
+  title="关于"
+  description={`关于${SITE.name}和作者${SITE.author.name}。`}
+  schemaType="AboutPage"
+>
   <section class="container about-page">
     <div class="page-topline">
       <p class="eyebrow">ABOUT / PROFILE</p>

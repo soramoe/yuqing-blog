@@ -14,12 +14,12 @@ const { post, index = 0 } = Astro.props;
   class="post-card"
   style={`--reveal-delay: ${Math.min(index, 5) * 55}ms`}
 >
-  <a
-    class="post-link"
-    href={`/blog/${post.id}/`}
-    title={post.data.title}
-  >
-    <div class="post-cover">
+  <div class="post-cover">
+    <a
+      class="post-cover-link"
+      href={`/blog/${post.id}/`}
+      aria-label={`阅读《${post.data.title}》`}
+    >
       {
         post.data.cover ? (
           <img
@@ -41,20 +41,42 @@ const { post, index = 0 } = Astro.props;
         )
       }
       <span class="post-open" aria-hidden="true">↗</span>
-    </div>
+    </a>
+  </div>
 
-    <div class="post-body">
-      <div class="post-card-top">
-        <time datetime={post.data.pubDate.toISOString()}>
-          {formatDate(post.data.pubDate)}
-        </time>
-        <span>{getReadingTime(post.body)} MIN</span>
-      </div>
-      <h2>{post.data.title}</h2>
-      <div class="post-categories" aria-label="文章分类">
+  <div class="post-body">
+    <div class="post-card-top">
+      <time datetime={post.data.pubDate.toISOString()}>
+        {formatDate(post.data.pubDate)}
+      </time>
+      <span>{getReadingTime(post.body)} MIN</span>
+    </div>
+    <h2>
+      <a href={`/blog/${post.id}/`} title={post.data.title}>
+        {post.data.title}
+      </a>
+    </h2>
+    <p class="post-description">{post.data.description}</p>
+    <div class="post-card-footer">
+      <a
+        class="post-categories"
+        href={`/categories/${encodeURIComponent(post.data.category)}/`}
+        aria-label={`查看${post.data.category}分类`}
+      >
         <span class="post-category-label">分类</span>
         <span>{post.data.category}</span>
-      </div>
+      </a>
+      {
+        post.data.tags.length > 0 && (
+          <div class="tag-list" aria-label="文章标签">
+            {post.data.tags.map((tag) => (
+              <a class="tag" href={`/tags/${encodeURIComponent(tag)}/`}>
+                #{tag}
+              </a>
+            ))}
+          </div>
+        )
+      }
     </div>
-  </a>
+  </div>
 </article>
