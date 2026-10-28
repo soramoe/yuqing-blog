@@ -83,6 +83,24 @@ import AuthLayout from "../components/AuthLayout.astro";
     status.dataset.state = state;
   };
 
+  const authErrorMessage = (
+    payload: { error?: string; message?: string },
+    fallback: string,
+  ) => {
+    const message = payload.message || payload.error || fallback;
+    const normalized = message.toLowerCase();
+    if (normalized.includes("invalid otp")) {
+      return "验证码不正确或已过期，请重新输入。";
+    }
+    if (normalized.includes("too many attempts")) {
+      return "验证码尝试次数过多，请重新发送。";
+    }
+    if (normalized.includes("rate limit")) {
+      return "操作太频繁，请稍后再试。";
+    }
+    return message;
+  };
+
   let countdownTimer = 0;
   const startCooldown = (seconds: number) => {
     window.clearInterval(countdownTimer);
@@ -134,7 +152,7 @@ import AuthLayout from "../components/AuthLayout.astro";
         message?: string;
       };
       if (!response.ok) {
-        throw new Error(payload.message || payload.error || "验证码发送失败。");
+        throw new Error(authErrorMessage(payload, "验证码发送失败。"));
       }
       if (codeForm) codeForm.hidden = false;
       if (codeInput) {
@@ -205,7 +223,7 @@ import AuthLayout from "../components/AuthLayout.astro";
         message?: string;
       };
       if (!response.ok) {
-        throw new Error(payload.message || payload.error || "验证码验证失败。");
+        throw new Error(authErrorMessage(payload, "验证码验证失败。"));
       }
       window.location.replace(callbackURL);
     } catch (error) {
