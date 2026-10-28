@@ -1,0 +1,197 @@
+---
+import AuthLayout from "../components/AuthLayout.astro";
+import "../styles/points.css";
+---
+
+<AuthLayout
+  title="签到与积分"
+  description="每天签到领取积分，并查看你的积分流水。"
+  eyebrow="POINTS CENTER"
+>
+  <p class="points-loading" data-points-loading>正在读取积分账户…</p>
+
+  <div class="points-dashboard" data-points-content hidden>
+    <section class="points-balance-card" aria-label="积分余额">
+      <span>当前积分</span>
+      <strong data-points-balance>0</strong>
+      <small>累计获得 <b data-points-earned>0</b> 分</small>
+    </section>
+
+    <section class="points-checkin-card">
+      <div>
+        <p class="eyebrow">DAILY CHECK-IN</p>
+        <h2 data-points-date>今日签到</h2>
+        <p>
+          每天可签到一次，每次获得
+          <strong data-checkin-reward>5</strong> 积分。连续签到天数会保留记录。
+        </p>
+      </div>
+      <div class="points-checkin-action">
+        <span>连续签到 <strong data-points-streak>0</strong> 天</span>
+        <button type="button" data-checkin-button>签到 +5</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="points-history" data-points-history hidden>
+    <div class="points-history-heading">
+      <p class="eyebrow">POINT LEDGER</p>
+      <h2>积分流水</h2>
+    </div>
+    <ol data-points-transactions></ol>
+  </section>
+
+  <p class="auth-status" data-points-status aria-live="polite"></p>
+  <div class="points-links">
+    <a class="auth-back" href="/account/">← 返回账户</a>
+    <a class="auth-back" href="/">返回网站</a>
+  </div>
+</AuthLayout>
+
+<script>
+  import { authClient } from "../lib/auth-client";
+  import type { PointsSummary, PointTransactionItem } from "../lib/points";
+
+  const loading = document.querySelector<HTMLElement>("[data-points-loading]");
+  const content = document.querySelector<HTMLElement>("[data-points-content]");
+  const history = document.querySelector<HTMLElement>("[data-points-history]");
+  const balance = document.querySelector<HTMLElement>("[data-points-balance]");
+  const earned = document.querySelector<HTMLElement>("[data-points-earned]");
+  const streak = document.querySelector<HTMLElement>("[data-points-streak]");
+  const reward = document.querySelector<HTMLElement>("[data-checkin-reward]");
+  const dateLabel = document.querySelector<HTMLElement>("[data-points-date]");
+  const checkin = document.querySelector<HTMLButtonElement>("[data-checkin-button]");
+  const transactionList = document.querySelector<HTMLElement>(
+    "[data-points-transactions]",
+  );
+  const status = document.querySelector<HTMLElement>("[data-points-status]");
+
+  const setStatus = (message = "", state: "idle" | "error" = "idle") => {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+    status.hidden = !message;
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const renderTransaction = (item: PointTransactionItem) => {
+    const row = document.createElement("li");
+    const main = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = item.description;
+    const time = document.createElement("time");
+    time.dateTime = new Date(item.createdAt).toISOString();
+    time.textContent = formatDate(item.createdAt);
+    main.append(title, time);
+
+    const amount = document.createElement("span");
+    amount.className = item.amount >= 0 ? "is-positive" : "is-negative";
+    amount.textContent = `${item.amount >= 0 ? "+" : ""}${item.amount}`;
+
+    const remaining = document.createElement("small");
+    remaining.textContent = `余额 ${item.balanceAfter}`;
+    row.append(main, amount, remaining);
+    return row;
+  };
+
+  const renderSummary = (summary: PointsSummary) => {
+    if (balance) balance.textContent = String(summary.balance);
+    if (earned) earned.textContent = String(summary.totalEarned);
+    if (streak) streak.textContent = String(summary.streak);
+    if (reward) reward.textContent = String(summary.checkinReward);
+    if (checkin) {
+      checkin.disabled = summary.checkedInToday;
+      checkin.textContent = summary.checkedInToday
+        ? "今日已签到"
+        : `签到 +${summary.checkinReward}`;
+    }
+    if (dateLabel) {
+      dateLabel.textContent = new Intl.DateTimeFormat("zh-CN", {
+        timeZone: "Asia/Shanghai",
+        month: "long",
+        day: "numeric",
+        weekday: "long",
+      }).format(new Date());
+    }
+
+    if (transactionList) {
+      transactionList.replaceChildren();
+      if (summary.transactions.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "points-empty";
+        empty.textContent = "还没有积分记录，完成第一次签到后会显示在这里。";
+        transactionList.append(empty);
+      } else {
+        summary.transactions.forEach((item) =>
+          transactionList.append(renderTransaction(item)),
+        );
+      }
+    }
+  };
+
+  const loadPoints = async () => {
+    const response = await fetch("/api/points", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as PointsSummary & {
+      error?: string;
+    };
+    if (!response.ok) throw new Error(payload.error || "积分读取失败。");
+    renderSummary(payload);
+    loading?.setAttribute("hidden", "");
+    content?.removeAttribute("hidden");
+    history?.removeAttribute("hidden");
+  };
+
+  void authClient.getSession().then(async ({ data }) => {
+    if (!data?.user) {
+      window.location.replace("/login/?next=%2Fpoints%2F");
+      return;
+    }
+    try {
+      await loadPoints();
+    } catch (error) {
+      loading?.setAttribute("hidden", "");
+      setStatus(
+        error instanceof Error ? error.message : "积分读取失败。",
+        "error",
+      );
+    }
+  });
+
+  checkin?.addEventListener("click", async () => {
+    if (!checkin) return;
+    checkin.disabled = true;
+    setStatus("正在签到…");
+    try {
+      const response = await fetch("/api/points/check-in", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        earned?: number;
+        summary?: PointsSummary;
+      };
+      if (!response.ok) {
+        if (payload.summary) renderSummary(payload.summary);
+        throw new Error(payload.error || "签到失败。");
+      }
+      if (payload.summary) renderSummary(payload.summary);
+      setStatus(`签到成功，获得 ${payload.earned ?? 5} 积分。`);
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "签到失败，请稍后重试。",
+        "error",
+      );
+      if (!checkin.disabled) checkin.disabled = false;
+    }
+  });
+</script>

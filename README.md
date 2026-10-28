@@ -54,6 +54,8 @@ pnpm preview
 
 站长可在 `/admin/comments/` 审核评论。`COMMENT_ADMIN_USER_IDS` 支持用逗号分隔多个用户 ID，权限只会在服务端校验。
 
+登录用户可在 `/points/` 每日签到。积分奖励由服务端固定发放，余额账户与不可变流水记录保存在 D1。
+
 ## 部署
 
 推荐部署到 Cloudflare Pages：

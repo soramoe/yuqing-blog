@@ -1,0 +1,193 @@
+.page-auth .points-dashboard {
+  display: grid;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.points-balance-card {
+  display: grid;
+  gap: 2px;
+  padding: 22px;
+  border: 1px solid var(--strong-border);
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 64%
+    ),
+    var(--surface);
+}
+
+.points-balance-card > span,
+.points-balance-card small {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.62rem;
+}
+
+.points-balance-card > strong {
+  color: var(--accent);
+  font-size: clamp(2.6rem, 7vw, 4.5rem);
+  letter-spacing: -0.07em;
+  line-height: 1;
+}
+
+.points-balance-card b {
+  color: var(--text);
+}
+
+.points-checkin-card {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px;
+  border: 1px solid var(--border);
+}
+
+.points-checkin-card h2,
+.points-history-heading h2 {
+  margin: 5px 0 10px;
+  font-size: 1.25rem;
+}
+
+.points-checkin-card p:not(.eyebrow) {
+  max-width: 340px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.7;
+}
+
+.points-checkin-card p strong {
+  color: var(--accent);
+}
+
+.points-checkin-action {
+  display: grid;
+  min-width: 150px;
+  gap: 10px;
+  text-align: right;
+}
+
+.points-checkin-action > span {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.58rem;
+}
+
+.points-checkin-action strong {
+  color: var(--accent);
+}
+
+.points-checkin-action button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--text);
+  background: var(--text);
+  color: var(--background);
+  cursor: pointer;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.points-checkin-action button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.points-checkin-action button:disabled {
+  cursor: default;
+  opacity: 0.58;
+}
+
+.points-history {
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--strong-border);
+}
+
+.points-history-heading h2 {
+  margin-bottom: 16px;
+}
+
+.points-history ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.points-history li {
+  display: grid;
+  align-items: center;
+  gap: 14px;
+  padding-block: 12px;
+  border-bottom: 1px solid var(--border);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.points-history li > div {
+  display: grid;
+  gap: 2px;
+}
+
+.points-history li strong {
+  font-size: 0.74rem;
+}
+
+.points-history time,
+.points-history small {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.56rem;
+}
+
+.points-history li > span {
+  color: var(--accent);
+  font-family: Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.points-history li > span.is-negative {
+  color: #e38276;
+}
+
+.points-empty {
+  display: block !important;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.points-links {
+  display: flex;
+  gap: 20px;
+  margin-top: 28px;
+}
+
+.page-auth .points-links .auth-back {
+  margin-top: 0;
+}
+
+@media (max-width: 620px) {
+  .points-checkin-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .points-checkin-action {
+    min-width: 0;
+    text-align: left;
+  }
+
+  .points-history li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .points-history li small {
+    grid-column: 1 / -1;
+  }
+}

@@ -214,6 +214,16 @@
   margin: 0;
 }
 
+.account-meta a {
+  border-bottom: 1px solid currentColor;
+  color: var(--accent);
+}
+
+.account-actions {
+  display: flex;
+  gap: 10px;
+}
+
 @media (max-width: 720px) {
   .page-auth main {
     padding-block: 32px 70px;

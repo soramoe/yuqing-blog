@@ -30,14 +30,17 @@ import AuthLayout from "../components/AuthLayout.astro";
         <dd data-account-created></dd>
       </div>
       <div>
-        <dt>后续功能</dt>
-        <dd>评论、签到与积分</dd>
+        <dt>积分</dt>
+        <dd><a href="/points/">进入签到中心</a></dd>
       </div>
     </dl>
 
-    <button class="auth-button auth-button-secondary" type="button" data-sign-out>
-      退出登录
-    </button>
+    <div class="account-actions">
+      <a class="auth-button" href="/points/">签到与积分</a>
+      <button class="auth-button auth-button-secondary" type="button" data-sign-out>
+        退出登录
+      </button>
+    </div>
   </div>
 
   <p class="auth-status" data-account-status aria-live="polite"></p>
