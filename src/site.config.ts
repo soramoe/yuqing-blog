@@ -1,15 +1,15 @@
 export const SITE = {
   name: "渔情",
-  tagline: "小耗子有渔情",
+  tagline: "秘密",
   url: "https://xhz6.com",
   mediaBaseUrl: "https://media.xhz6.com",
   github: "https://github.com/soramoe/yuqing-blog",
   description:
-    "小耗子有渔情。喜欢用 AI 折腾点小玩意，也想做个 AI 工作室叫渔情。",
+    "渔情，一个懒惰人类和AI共同创建的网站，主要内容是AI和游戏相关。",
   about:
-    "喜欢用AI折腾点小玩意的小耗子，想做个AI工作室叫渔情，有个很爱的姑娘。",
+    "喜欢用AI折腾点小玩意的懒惰人类，想做个AI工作室叫渔情，有个很爱的姑娘。",
   author: {
-    name: "小耗子",
-    bio: "以后再补。",
+    name: "秘密",
+    bio: "是懒惰的人类，嘿嘿嘿。",
   },
 } as const;
