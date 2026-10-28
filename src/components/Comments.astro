@@ -1,50 +1,399 @@
 ---
-const repo = import.meta.env.PUBLIC_GISCUS_REPO;
-const repoId = import.meta.env.PUBLIC_GISCUS_REPO_ID;
-const category = import.meta.env.PUBLIC_GISCUS_CATEGORY;
-const categoryId = import.meta.env.PUBLIC_GISCUS_CATEGORY_ID;
-const configured = Boolean(repo && repoId && category && categoryId);
+interface Props {
+  postSlug: string;
+}
+
+const { postSlug } = Astro.props;
+const loginHref = `/login/?next=${encodeURIComponent(Astro.url.pathname)}`;
 ---
 
-<section class="comments" aria-labelledby="comments-title">
+<section
+  class="comments"
+  aria-labelledby="comments-title"
+  data-comments
+  data-post-slug={postSlug}
+>
   <div class="comments-heading">
-    <p class="eyebrow">DISCUSSION</p>
-    <h2 id="comments-title">留下你的想法</h2>
+    <div>
+      <p class="eyebrow">DISCUSSION</p>
+      <h2 id="comments-title">评论</h2>
+    </div>
+    <span class="comments-count" data-comment-count>正在读取</span>
   </div>
 
-  {configured ? (
-    <>
-      <div class="giscus"></div>
-      <script
-        is:inline
-        define:vars={{ repo, repoId, category, categoryId }}
-      >
-        const script = document.createElement("script");
-        script.src = "https://giscus.app/client.js";
-        script.async = true;
-        script.crossOrigin = "anonymous";
-        script.setAttribute("data-repo", repo);
-        script.setAttribute("data-repo-id", repoId);
-        script.setAttribute("data-category", category);
-        script.setAttribute("data-category-id", categoryId);
-        script.setAttribute("data-mapping", "pathname");
-        script.setAttribute("data-strict", "0");
-        script.setAttribute("data-reactions-enabled", "1");
-        script.setAttribute("data-emit-metadata", "0");
-        script.setAttribute("data-input-position", "top");
-        script.setAttribute("data-theme", "preferred_color_scheme");
-        script.setAttribute("data-lang", "zh-CN");
-        script.setAttribute("data-loading", "lazy");
-        document.querySelector(".giscus")?.appendChild(script);
-      </script>
-    </>
-  ) : (
-    <div class="comments-placeholder">
-      <strong>评论组件已经预留</strong>
-      <p>
-        填写项目根目录的 <code>.env</code> 后，文章底部会自动加载 Giscus
-        评论。参数可以从 <a href="https://giscus.app/zh-CN" target="_blank" rel="noreferrer">Giscus 配置页</a> 获取。
-      </p>
+  <div class="comment-composer">
+    <div class="comment-signin" data-comment-signin>
+      <div>
+        <strong>登录后参与讨论</strong>
+        <p>评论会绑定你的渔情账号，昵称与头像会公开显示。</p>
+      </div>
+      <a class="comment-signin-link" href={loginHref}>使用 GitHub 登录</a>
     </div>
-  )}
+
+    <form class="comment-form" data-comment-form hidden>
+      <div class="comment-form-head">
+        <div class="comment-current-user">
+          <span class="comment-avatar" data-current-avatar aria-hidden="true">渔</span>
+          <div>
+            <strong data-current-name>已登录</strong>
+            <span>发表你的评论</span>
+          </div>
+        </div>
+        <button class="comment-reply-cancel" type="button" data-reply-cancel hidden>
+          取消回复
+        </button>
+      </div>
+
+      <p class="comment-reply-note" data-reply-note hidden></p>
+      <label class="sr-only" for={`comment-body-${postSlug}`}>评论内容</label>
+      <textarea
+        id={`comment-body-${postSlug}`}
+        name="body"
+        maxlength="1200"
+        rows="5"
+        placeholder="写下你的想法…"
+        data-comment-body
+        required></textarea>
+
+      <div class="comment-form-foot">
+        <span data-comment-hint>支持换行，最多 1200 字。</span>
+        <div>
+          <span class="comment-length" data-comment-length>0 / 1200</span>
+          <button class="comment-submit" type="submit" data-comment-submit disabled>
+            发表评论
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <p class="comment-status" data-comment-status aria-live="polite">
+    正在加载评论…
+  </p>
+  <div class="comment-list" data-comment-list></div>
+  <button class="comment-load-more" type="button" data-comment-more hidden>
+    加载更早的评论
+  </button>
+
+  <noscript>
+    <p class="comment-status">评论功能需要启用 JavaScript。</p>
+  </noscript>
 </section>
+
+<script>
+  import { authClient } from "../lib/auth-client";
+  import {
+    COMMENT_MAX_LENGTH,
+    type CommentApiItem,
+    type CommentApiResponse,
+  } from "../lib/comment-utils";
+
+  const root = document.querySelector<HTMLElement>("[data-comments]");
+  const postSlug = root?.dataset.postSlug;
+  const signin = root?.querySelector<HTMLElement>("[data-comment-signin]");
+  const form = root?.querySelector<HTMLFormElement>("[data-comment-form]");
+  const textarea = root?.querySelector<HTMLTextAreaElement>("[data-comment-body]");
+  const submit = root?.querySelector<HTMLButtonElement>("[data-comment-submit]");
+  const length = root?.querySelector<HTMLElement>("[data-comment-length]");
+  const hint = root?.querySelector<HTMLElement>("[data-comment-hint]");
+  const status = root?.querySelector<HTMLElement>("[data-comment-status]");
+  const list = root?.querySelector<HTMLElement>("[data-comment-list]");
+  const count = root?.querySelector<HTMLElement>("[data-comment-count]");
+  const loadMore = root?.querySelector<HTMLButtonElement>("[data-comment-more]");
+  const currentName = root?.querySelector<HTMLElement>("[data-current-name]");
+  const currentAvatar = root?.querySelector<HTMLElement>("[data-current-avatar]");
+  const replyNote = root?.querySelector<HTMLElement>("[data-reply-note]");
+  const replyCancel = root?.querySelector<HTMLButtonElement>("[data-reply-cancel]");
+
+  let currentUser: { id: string; name: string; image?: string | null } | null = null;
+  let replyTarget: { id: string; name: string } | null = null;
+  let nextCursor: string | null = null;
+  let loadedComments = 0;
+
+  const setStatus = (message = "", state: "idle" | "error" = "idle") => {
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.state = state;
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const avatarElement = (name: string, image: string | null) => {
+    if (image && /^https:\/\//i.test(image)) {
+      const img = document.createElement("img");
+      img.src = image;
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.referrerPolicy = "no-referrer";
+      return img;
+    }
+    return document.createTextNode(name.slice(0, 1) || "渔");
+  };
+
+  const clearReply = () => {
+    replyTarget = null;
+    if (replyNote) {
+      replyNote.hidden = true;
+      replyNote.textContent = "";
+    }
+    if (replyCancel) replyCancel.hidden = true;
+  };
+
+  const renderComment = (comment: CommentApiItem) => {
+    const article = document.createElement("article");
+    article.className = "comment-item";
+    article.dataset.commentId = comment.id;
+
+    const avatar = document.createElement("div");
+    avatar.className = "comment-avatar";
+    avatar.setAttribute("aria-hidden", "true");
+    avatar.append(avatarElement(comment.user.name, comment.user.image));
+
+    const content = document.createElement("div");
+    content.className = "comment-content";
+
+    const meta = document.createElement("header");
+    meta.className = "comment-meta";
+    const author = document.createElement("strong");
+    author.textContent = comment.user.name;
+    const time = document.createElement("time");
+    time.dateTime = new Date(comment.createdAt).toISOString();
+    time.textContent = formatDate(comment.createdAt);
+    meta.append(author, time);
+
+    content.append(meta);
+
+    if (comment.replyToName) {
+      const replying = document.createElement("p");
+      replying.className = "comment-replying";
+      replying.textContent = `回复 @${comment.replyToName}`;
+      content.append(replying);
+    }
+
+    const body = document.createElement("p");
+    body.className = "comment-body";
+    body.textContent = comment.body;
+    content.append(body);
+
+    const actions = document.createElement("div");
+    actions.className = "comment-actions";
+
+    if (currentUser) {
+      const reply = document.createElement("button");
+      reply.type = "button";
+      reply.textContent = "回复";
+      reply.dataset.replyId = comment.id;
+      reply.dataset.replyName = comment.user.name;
+      actions.append(reply);
+    }
+
+    if (comment.canDelete) {
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.textContent = "删除";
+      remove.dataset.deleteId = comment.id;
+      actions.append(remove);
+    }
+
+    if (actions.childElementCount > 0) content.append(actions);
+    article.append(avatar, content);
+    return article;
+  };
+
+  const renderComments = (
+    comments: CommentApiItem[],
+    append: boolean,
+    total?: number,
+  ) => {
+    if (!list) return;
+    if (!append) list.replaceChildren();
+
+    comments.forEach((comment) => list.append(renderComment(comment)));
+    loadedComments += comments.length;
+
+    if (count && typeof total === "number") {
+      count.textContent = `${total} 条`;
+    }
+    if (loadMore) loadMore.hidden = !nextCursor;
+  };
+
+  const readComments = async (cursor?: string | null) => {
+    if (!postSlug) return;
+    const params = new URLSearchParams({ post: postSlug });
+    if (cursor) params.set("cursor", cursor);
+
+    const response = await fetch(`/api/comments?${params}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as CommentApiResponse & {
+      error?: string;
+    };
+    if (!response.ok) throw new Error(payload.error || "评论加载失败。");
+
+    nextCursor = payload.nextCursor;
+    renderComments(payload.comments, Boolean(cursor), payload.total);
+  };
+
+  const refreshComments = async () => {
+    loadedComments = 0;
+    nextCursor = null;
+    setStatus("正在加载评论…");
+    try {
+      await readComments();
+      setStatus(loadedComments === 0 ? "还没有评论，来写下第一条吧。" : "");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "评论加载失败，请稍后重试。",
+        "error",
+      );
+    }
+  };
+
+  const updateLength = () => {
+    if (!textarea) return;
+    const current = Array.from(textarea.value).length;
+    if (length) length.textContent = `${current} / ${COMMENT_MAX_LENGTH}`;
+    if (submit) {
+      submit.disabled =
+        !currentUser || current === 0 || current > COMMENT_MAX_LENGTH;
+    }
+  };
+
+  void authClient
+    .getSession()
+    .then(({ data }) => {
+      if (!data?.user || !form || !signin || !textarea) return;
+      currentUser = data.user;
+      signin.hidden = true;
+      form.hidden = false;
+      if (currentName) currentName.textContent = data.user.name;
+      if (currentAvatar && data.user.image) {
+        currentAvatar.replaceChildren(
+          avatarElement(data.user.name, data.user.image),
+        );
+      } else if (currentAvatar) {
+        currentAvatar.textContent = data.user.name.slice(0, 1) || "渔";
+      }
+      updateLength();
+    })
+    .catch(() => undefined)
+    .finally(() => void refreshComments());
+
+  textarea?.addEventListener("input", updateLength);
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!postSlug || !textarea || !submit) return;
+    const body = textarea.value.trim();
+    if (!body) return;
+
+    submit.disabled = true;
+    setStatus("正在发表评论…");
+    try {
+      const response = await fetch("/api/comments", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postSlug,
+          body,
+          parentId: replyTarget?.id ?? null,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "评论发表失败。");
+
+      textarea.value = "";
+      clearReply();
+      updateLength();
+      await refreshComments();
+      if (hint) hint.textContent = "评论已发表。";
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "评论发表失败，请稍后重试。",
+        "error",
+      );
+    } finally {
+      updateLength();
+    }
+  });
+
+  loadMore?.addEventListener("click", async () => {
+    if (!nextCursor) return;
+    loadMore.disabled = true;
+    setStatus("正在加载更早的评论…");
+    try {
+      const cursor = nextCursor;
+      await readComments(cursor);
+      setStatus("");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "评论加载失败。",
+        "error",
+      );
+    } finally {
+      loadMore.disabled = false;
+    }
+  });
+
+  list?.addEventListener("click", async (event) => {
+    const target = event.target as HTMLElement;
+    const replyButton = target.closest<HTMLButtonElement>("[data-reply-id]");
+    if (replyButton && textarea) {
+      replyTarget = {
+        id: replyButton.dataset.replyId ?? "",
+        name: replyButton.dataset.replyName ?? "",
+      };
+      if (replyNote) {
+        replyNote.hidden = false;
+        replyNote.textContent = `正在回复 @${replyTarget.name}`;
+      }
+      if (replyCancel) replyCancel.hidden = false;
+      textarea.focus();
+      return;
+    }
+
+    const deleteButton = target.closest<HTMLButtonElement>("[data-delete-id]");
+    if (!deleteButton) return;
+    if (!window.confirm("确定删除这条评论吗？")) return;
+
+    deleteButton.disabled = true;
+    try {
+      const response = await fetch(
+        `/api/comments/${encodeURIComponent(deleteButton.dataset.deleteId ?? "")}`,
+        {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        },
+      );
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        throw new Error(payload.error || "删除失败。");
+      }
+      await refreshComments();
+    } catch (error) {
+      deleteButton.disabled = false;
+      setStatus(
+        error instanceof Error ? error.message : "删除失败，请稍后重试。",
+        "error",
+      );
+    }
+  });
+
+  replyCancel?.addEventListener("click", () => {
+    clearReply();
+    textarea?.focus();
+  });
+
+</script>

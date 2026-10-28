@@ -1,6 +1,6 @@
 # 渔情
 
-小耗子有渔情。一个可以持续二开的静态博客，基于 Astro、MDX、Tailwind CSS、Pagefind 和 Giscus。
+小耗子有渔情。一个可以持续二开的静态博客，基于 Astro、MDX、Tailwind CSS、Pagefind 和 Cloudflare D1。
 
 ## 本地开发
 
@@ -48,7 +48,9 @@ pnpm preview
 
 ## 评论
 
-复制 `.env.example` 为 `.env`，按照 [Giscus](https://giscus.app/zh-CN) 生成的参数填写，然后重新构建。
+评论区使用登录用户身份写入 Cloudflare D1。公开读取评论不需要登录，发表和删除评论需要 GitHub 登录。评论接口位于 `functions/api/comments/`，数据表迁移位于 `migrations/`。
+
+本地开发时复制 `.env.example` 为 `.dev.vars` 并填写登录配置。正式环境的密钥应通过 Cloudflare Pages 的“变量和密钥”页面配置，不要提交到 Git。
 
 ## 部署
 

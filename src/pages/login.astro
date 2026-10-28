@@ -29,6 +29,9 @@ import AuthLayout from "../components/AuthLayout.astro";
 
   const button = document.querySelector<HTMLButtonElement>("[data-github-login]");
   const status = document.querySelector<HTMLElement>("[data-auth-status]");
+  const next = new URLSearchParams(window.location.search).get("next");
+  const callbackURL =
+    next?.startsWith("/") && !next.startsWith("//") ? next : "/account/";
 
   const setStatus = (message: string, state: "idle" | "error" = "idle") => {
     if (!status) return;
@@ -37,7 +40,7 @@ import AuthLayout from "../components/AuthLayout.astro";
   };
 
   void authClient.getSession().then(({ data }) => {
-    if (data?.user) window.location.replace("/account/");
+    if (data?.user) window.location.replace(callbackURL);
   });
 
   button?.addEventListener("click", async () => {
@@ -46,7 +49,7 @@ import AuthLayout from "../components/AuthLayout.astro";
 
     const { error } = await authClient.signIn.social({
       provider: "github",
-      callbackURL: "/account/",
+      callbackURL,
     });
 
     if (error) {
