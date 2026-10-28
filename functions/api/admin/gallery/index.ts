@@ -20,7 +20,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     return json({ error: "你没有图库管理权限。" }, 403);
   }
 
-  const status = new URL(request.url).searchParams.get("status") ?? "pending";
+  const status = new URL(request.url).searchParams.get("status") ?? "all";
   if (!["pending", "approved", "rejected", "deleted", "all"].includes(status)) {
     return json({ error: "图库状态无效。" }, 400);
   }

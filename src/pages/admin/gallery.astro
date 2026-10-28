@@ -73,7 +73,7 @@ const staticItems = [
             <p class="eyebrow">BUILT-IN GALLERY</p>
             <h2 id="static-gallery-title">内置图库</h2>
           </div>
-          <span class="admin-gallery-note">从图库移除不会删除文章封面文件</span>
+          <span class="admin-gallery-note">仓库内置项目；新上传请查看下方投稿记录</span>
         </div>
         <div class="admin-static-gallery-list" data-admin-static-list></div>
       </section>
@@ -82,16 +82,16 @@ const staticItems = [
         <div class="admin-gallery-section-heading">
           <div>
             <p class="eyebrow">REVIEW QUEUE</p>
-            <h2>投稿记录</h2>
+            <h2>在线投稿与站长上传</h2>
           </div>
           <label>
             <span class="sr-only">筛选状态</span>
             <select data-admin-gallery-filter>
+              <option value="all">全部</option>
               <option value="pending">待审核</option>
               <option value="approved">已发布</option>
               <option value="rejected">已拒绝</option>
               <option value="deleted">已删除</option>
-              <option value="all">全部</option>
             </select>
           </label>
         </div>
@@ -302,7 +302,7 @@ const staticItems = [
 
   const loadImages = async () => {
     setStatus("正在读取图库记录…");
-    const selectedStatus = filter?.value || "pending";
+    const selectedStatus = filter?.value || "all";
     const response = await fetch(
       `/api/admin/gallery?status=${encodeURIComponent(selectedStatus)}`,
       {
@@ -369,7 +369,7 @@ const staticItems = [
   gateRetry?.addEventListener("click", () => window.location.reload());
   filter?.addEventListener("change", () => void loadImages());
   window.addEventListener("gallery-uploaded", () => {
-    if (filter) filter.value = "approved";
+    if (filter) filter.value = "all";
     void loadImages();
   });
 
