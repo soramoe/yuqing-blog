@@ -131,12 +131,12 @@ https://media.xhz6.com/gallery/某张图片-1920.webp
 为了避免旧收藏、搜索结果或外部引用返回原图，在 Pages 中添加了旧路径重定向：
 
 ```text
-/gallery/* /gallery/ 302
-/covers/* /gallery/ 302
-/media/optimized/* /gallery/ 302
+/gallery/:file /gallery/ 302
+/covers/:file /gallery/ 302
+/media/optimized/:section/:file /gallery/ 302
 ```
 
-这里使用临时重定向而不是永久重定向，因为迁移刚完成时还可能继续调整最终地址。先用 302 把旧请求收回正常页面，比长期承诺一个临时目标更稳妥。
+这里使用参数匹配具体的旧文件名，而不是直接写 `/gallery/*`。后者会连 `/gallery/` 首页本身也一起匹配，导致首页反复重定向到自己。使用临时重定向而不是永久重定向，则是因为迁移刚完成时还可能继续调整最终地址；先用 302 把旧请求收回正常页面，比长期承诺一个临时目标更稳妥。
 
 另外，Cloudflare 之前缓存过一部分旧图片。即使代码已经删除了文件，缓存仍可能在短时间里返回旧的 200 响应。
 
