@@ -41,7 +41,7 @@ const { category, posts } = Astro.props;
     </header>
 
     <section
-      class="blog-card-grid post-grid archive-grid"
+      class="blog-card-grid post-grid"
       aria-label={`${category}分类下的文章`}
     >
       {posts.map((post, index) => <PostCard post={post} index={index} />)}
