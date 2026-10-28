@@ -40,7 +40,8 @@ const canonical = new URL(Astro.url.pathname, siteUrl);
 const socialImage = new URL(image, Astro.site ?? Astro.url);
 const rssUrl = new URL("/rss.xml", Astro.site ?? Astro.url);
 const aboutUrl = new URL("/about/", siteUrl);
-const showSearchIsland = Astro.url.pathname.startsWith("/blog/");
+const showSearchIsland =
+  type !== "article" && Astro.url.pathname.startsWith("/blog/");
 const websiteId = new URL("/#website", siteUrl).toString();
 
 const websiteEntity = {
