@@ -53,15 +53,50 @@
   line-height: 1.7;
 }
 
-.auth-orbit {
-  width: 170px;
-  height: 170px;
-  margin: 28px auto;
-  border: 1px solid var(--accent);
-  border-radius: 50%;
-  box-shadow:
-    0 0 0 28px color-mix(in srgb, var(--accent) 5%, transparent),
-    0 0 0 58px color-mix(in srgb, var(--accent) 3%, transparent);
+.auth-tide-mark {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 230px);
+  margin: 28px auto 18px;
+  color: var(--accent);
+}
+
+.auth-tide-mark svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.auth-tide-mark path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.auth-tide-mark path:nth-child(2) {
+  opacity: 0.58;
+}
+
+.auth-tide-mark path:nth-child(3) {
+  opacity: 0.28;
+}
+
+.auth-tide-mark circle {
+  fill: var(--background);
+  stroke: currentColor;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.auth-tide-mark > span {
+  display: block;
+  margin-top: 10px;
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-align: right;
 }
 
 .auth-card {
@@ -245,12 +280,17 @@
     margin-top: 24px;
   }
 
-  .auth-orbit {
+  .auth-tide-mark {
     position: absolute;
-    top: -60px;
-    right: -24px;
-    width: 150px;
-    height: 150px;
+    top: -46px;
+    right: -20px;
+    width: 190px;
+    margin: 0;
+    opacity: 0.62;
+  }
+
+  .auth-tide-mark > span {
+    display: none;
   }
 
   .auth-card {

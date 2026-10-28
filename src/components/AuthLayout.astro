@@ -21,7 +21,17 @@ const { title, description, eyebrow } = Astro.props;
     <aside class="auth-intro" aria-hidden="true">
       <span class="auth-index">AUTH / 001</span>
       <p>一个账号，连接之后的评论、签到与积分。</p>
-      <span class="auth-orbit"></span>
+      <div class="auth-tide-mark" aria-hidden="true">
+        <svg viewBox="0 0 260 180" role="presentation">
+          <path d="M4 55 C42 18 74 20 112 55 S180 92 246 40" />
+          <path d="M4 92 C42 55 74 57 112 92 S180 129 246 77" />
+          <path d="M4 129 C42 92 74 94 112 129 S180 166 246 114" />
+          <circle cx="112" cy="55" r="3" />
+          <circle cx="112" cy="92" r="2" />
+          <circle cx="112" cy="129" r="2" />
+        </svg>
+        <span>YQ / TIDE SIGNAL</span>
+      </div>
     </aside>
 
     <section class="auth-card" aria-labelledby="auth-title">
