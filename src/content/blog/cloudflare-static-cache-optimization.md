@@ -4,6 +4,7 @@ description: "记录一次 Astro 静态博客的实际性能排查：压缩、�
 pubDate: 2026-10-28
 category: "日常"
 tags: ["Cloudflare", "Astro", "缓存", "性能", "部署"]
+cover: "/gallery/20261027_050242_80858373fd28_1.png"
 draft: false
 ---
 

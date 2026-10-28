@@ -4,6 +4,7 @@ description: "从 Pages 本地图片迁到 R2 自定义域名，记录 57 个 We
 pubDate: 2026-10-28
 category: "日常"
 tags: ["Cloudflare", "R2", "Astro", "部署", "性能"]
+cover: "/gallery/20261027_043757_c4eb2d2aae11_1.png"
 draft: false
 ---
 
