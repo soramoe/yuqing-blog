@@ -117,7 +117,7 @@ const structuredData = noindex
 ---
 
 <!doctype html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -157,8 +157,6 @@ const structuredData = noindex
     <script is:inline>
       (() => {
         document.documentElement.classList.add("js");
-        const saved = localStorage.getItem("yuqing-theme-v2");
-        document.documentElement.dataset.theme = saved || "dark";
       })();
     </script>
   </head>
@@ -170,16 +168,5 @@ const structuredData = noindex
       <slot />
     </main>
     <Footer />
-
-    <script>
-      const toggle = document.querySelector<HTMLButtonElement>("#theme-toggle");
-
-      toggle?.addEventListener("click", () => {
-        const root = document.documentElement;
-        const next = root.dataset.theme === "dark" ? "light" : "dark";
-        root.dataset.theme = next;
-        localStorage.setItem("yuqing-theme-v2", next);
-      });
-    </script>
   </body>
 </html>

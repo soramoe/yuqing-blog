@@ -1,19 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  color-scheme: light;
-  --sidebar-width: 250px;
-  --background: #fafafa;
-  --surface: #f0f1ef;
-  --text: #171717;
-  --muted: #6c6f6a;
-  --border: #d8dad5;
-  --strong-border: #b5b8b1;
-  --accent: #1858d8;
-}
-
-[data-theme="dark"] {
   color-scheme: dark;
+  --sidebar-width: 250px;
   --background: #10110f;
   --surface: #171815;
   --text: #eef0e9;
@@ -136,28 +125,6 @@ input {
   color: var(--muted);
   font-family: Consolas, monospace;
   font-size: 0.65rem;
-}
-
-.theme-toggle {
-  width: 36px;
-  height: 36px;
-  margin-top: auto;
-  border: 1px solid var(--strong-border);
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.theme-icon-dark {
-  display: none;
-}
-
-[data-theme="dark"] .theme-icon-light {
-  display: none;
-}
-
-[data-theme="dark"] .theme-icon-dark {
-  display: inline;
 }
 
 .sr-only {
@@ -2157,10 +2124,6 @@ body.gallery-lightbox-open {
     display: none;
   }
 
-  .theme-toggle {
-    margin: 0;
-  }
-
   main {
     padding-block: 42px 70px;
   }
@@ -2279,11 +2242,6 @@ body.gallery-lightbox-open {
     font-size: 0.76rem;
   }
 
-  .theme-toggle {
-    width: 44px;
-    height: 44px;
-  }
-
   .hero-copy h1 {
     font-size: 3.6rem;
   }
@@ -2345,12 +2303,6 @@ body.gallery-lightbox-open {
   .site-nav a {
     padding-inline: 3px;
     font-size: 0.7rem;
-  }
-
-  .theme-toggle {
-    width: 44px;
-    height: 44px;
-    flex: 0 0 44px;
   }
 
   .blog-page .post-grid:not(.archive-grid) {
