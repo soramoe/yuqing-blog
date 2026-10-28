@@ -161,7 +161,7 @@ const structuredData = noindex
       })();
     </script>
   </head>
-  <body class={bodyClass}>
+  <body class:list={[bodyClass, { "has-search-island": showSearchIsland }]}>
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     {showSearchIsland && <SearchIsland />}
     <Header />

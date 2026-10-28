@@ -2084,17 +2084,24 @@ body.gallery-lightbox-open {
 @media (max-width: 820px) {
   body {
     display: block;
+  }
+
+  body.has-search-island {
     padding-top: 56px;
   }
 
   .site-header {
     position: sticky;
-    top: 56px;
+    top: 0;
     width: 100%;
     height: auto;
     padding: 0 16px;
     border-right: 0;
     border-bottom: 1px solid var(--border);
+  }
+
+  body.has-search-island .site-header {
+    top: 56px;
   }
 
   .site-header .container {
