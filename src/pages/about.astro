@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import ArrowUpRight from "../components/ArrowUpRight.astro";
 import { getPublishedPosts } from "../lib/blog";
 import { SITE } from "../site.config";
 
@@ -29,8 +30,8 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
         </h1>
         <p class="about-lead">{SITE.about}</p>
         <div class="about-actions">
-          <a class="button button-primary" href="/blog/">读最近的笔记 <span aria-hidden="true">↗</span></a>
-          <a class="text-link" href={SITE.github} target="_blank" rel="noreferrer">看看 GitHub ↗</a>
+          <a class="button button-primary" href="/blog/">读最近的笔记 <span aria-hidden="true"><ArrowUpRight /></span></a>
+          <a class="text-link" href={SITE.github} target="_blank" rel="noreferrer">看看 GitHub <ArrowUpRight /></a>
         </div>
       </div>
 
@@ -119,9 +120,9 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
         </p>
       </div>
       <div class="about-author-links">
-        <a href="/rss.xml">RSS <span aria-hidden="true">↗</span></a>
-        <a href={SITE.github} target="_blank" rel="noreferrer">GITHUB <span aria-hidden="true">↗</span></a>
-        <a href="/gallery/">图库 <span aria-hidden="true">↗</span></a>
+        <a href="/rss.xml">RSS <span aria-hidden="true"><ArrowUpRight /></span></a>
+        <a href={SITE.github} target="_blank" rel="noreferrer">GITHUB <span aria-hidden="true"><ArrowUpRight /></span></a>
+        <a href="/gallery/">图库 <span aria-hidden="true"><ArrowUpRight /></span></a>
       </div>
     </section>
   </div>

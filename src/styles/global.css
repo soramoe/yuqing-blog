@@ -16,6 +16,14 @@
   box-sizing: border-box;
 }
 
+.ui-arrow {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  vertical-align: -0.1em;
+}
+
 html {
   background: var(--background);
   scroll-behavior: smooth;

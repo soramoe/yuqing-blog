@@ -1,5 +1,6 @@
 ---
 import GalleryLightbox from "../components/GalleryLightbox.astro";
+import ArrowUpRight from "../components/ArrowUpRight.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPostPublishedAt, getPublishedPosts } from "../lib/blog";
 import { galleryImages as localGalleryImages } from "../lib/gallery";
@@ -42,7 +43,7 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
 
   <div class="container gallery-page-toolbar">
     <span>公开投稿经站长审核后显示</span>
-    <a href="/upload/">投稿图片 <span aria-hidden="true">↗</span></a>
+    <a href="/upload/">投稿图片 <span aria-hidden="true"><ArrowUpRight /></span></a>
   </div>
 
   <section class="container gallery-page" aria-label="图库">

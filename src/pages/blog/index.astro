@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import ArrowUpRight from "../../components/ArrowUpRight.astro";
 import PostCard from "../../components/PostCard.astro";
 import { getPublishedPosts } from "../../lib/blog";
 import { SITE } from "../../site.config";
@@ -93,8 +94,8 @@ const initialPostCount = 9;
           <h2 id="blog-empty-title">文章还在路上。</h2>
           <p>先去图库看看，或者从关于页面认识渔情。</p>
           <div>
-            <a href="/gallery/">浏览图库 ↗</a>
-            <a href="/about/">关于渔情 ↗</a>
+            <a href="/gallery/">浏览图库 <ArrowUpRight /></a>
+            <a href="/about/">关于渔情 <ArrowUpRight /></a>
           </div>
         </section>
       )

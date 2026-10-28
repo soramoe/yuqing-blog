@@ -6,6 +6,7 @@ import {
   getReadingTime,
 } from "../lib/blog";
 import { getResponsiveImage } from "../lib/images";
+import ArrowUpRight from "./ArrowUpRight.astro";
 
 interface Props {
   post: BlogPost;
@@ -52,7 +53,7 @@ const cover = post.data.cover
           </div>
         )
       }
-      <span class="post-open" aria-hidden="true">↗</span>
+      <span class="post-open" aria-hidden="true"><ArrowUpRight /></span>
     </a>
   </div>
 

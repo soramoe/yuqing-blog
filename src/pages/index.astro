@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import ArrowUpRight from "../components/ArrowUpRight.astro";
 import GalleryLightbox from "../components/GalleryLightbox.astro";
 import {
   formatDate,
@@ -47,7 +48,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
           <p class="eyebrow">VISUAL LOG</p>
           <h2>最近的光影</h2>
         </div>
-        <a class="column-link" href="/gallery/">全部图库 <span aria-hidden="true">↗</span></a>
+        <a class="column-link" href="/gallery/">全部图库 <span aria-hidden="true"><ArrowUpRight /></span></a>
       </div>
 
       {
@@ -74,7 +75,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                 />
                 <span class="home-gallery-caption">
                   <span>{image.title}</span>
-                  <span aria-hidden="true">↗</span>
+                  <span aria-hidden="true"><ArrowUpRight /></span>
                 </span>
               </a>
             ))}
@@ -91,7 +92,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
           <p class="eyebrow">LATEST WRITING</p>
           <h2>最近写的</h2>
         </div>
-        <a class="column-link" href="/blog/">全部文章 <span aria-hidden="true">↗</span></a>
+        <a class="column-link" href="/blog/">全部文章 <span aria-hidden="true"><ArrowUpRight /></span></a>
       </div>
 
       {
@@ -132,7 +133,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                       <span>{post.data.category.slice(0, 1)}</span>
                     )}
                   </span>
-                  <span class="home-post-arrow" aria-hidden="true">↗</span>
+                  <span class="home-post-arrow" aria-hidden="true"><ArrowUpRight /></span>
                 </a>
               </li>
             ))}
@@ -198,17 +199,17 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
       <a href="/blog/">
         <span>01 / ARCHIVE</span>
         <strong>全部文章</strong>
-        <small>{String(posts.length).padStart(2, "0")} 篇记录 <b aria-hidden="true">↗</b></small>
+        <small>{String(posts.length).padStart(2, "0")} 篇记录 <b aria-hidden="true"><ArrowUpRight /></b></small>
       </a>
       <a href="/gallery/">
         <span>02 / VISUAL LOG</span>
         <strong>完整图库</strong>
-        <small>{String(galleryImages.length).padStart(2, "0")} 张图片 <b aria-hidden="true">↗</b></small>
+        <small>{String(galleryImages.length).padStart(2, "0")} 张图片 <b aria-hidden="true"><ArrowUpRight /></b></small>
       </a>
       <a href="/about/">
         <span>03 / ABOUT</span>
         <strong>关于渔情</strong>
-        <small>认识这里 <b aria-hidden="true">↗</b></small>
+        <small>认识这里 <b aria-hidden="true"><ArrowUpRight /></b></small>
       </a>
     </nav>
 
