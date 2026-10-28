@@ -55,15 +55,41 @@
   border: 1px dashed var(--strong-border);
 }
 
+.admin-access .eyebrow {
+  margin: 0 0 12px;
+}
+
+.admin-access > strong {
+  display: block;
+  font-size: 1.1rem;
+}
+
 .admin-access p {
   margin: 8px 0 18px;
   color: var(--muted);
   font-size: 0.78rem;
 }
 
+.admin-access-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
 .admin-access a {
   border-bottom: 1px solid currentColor;
   color: var(--accent);
+  font-size: 0.72rem;
+}
+
+.admin-access button {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
   font-size: 0.72rem;
 }
 

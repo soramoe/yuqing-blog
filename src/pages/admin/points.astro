@@ -27,9 +27,17 @@ import "../../styles/admin-points.css";
     </p>
 
     <div class="admin-points-denied" data-admin-points-denied hidden>
-      <strong>你没有积分管理权限</strong>
-      <p>该页面只对站长账号开放。</p>
-      <a href="/login/?next=%2Fadmin%2Fpoints%2F">切换登录账号</a>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-admin-points-gate-title>请先登录</strong>
+      <p data-admin-points-gate-copy>登录后才能进入积分管理。</p>
+      <div class="admin-points-gate-actions">
+        <a href="/login/?next=%2Fadmin%2Fpoints%2F" data-admin-points-gate-link>
+          使用 GitHub 登录
+        </a>
+        <button type="button" data-admin-points-gate-retry hidden>
+          重新加载
+        </button>
+      </div>
     </div>
 
     <div data-admin-points-content hidden>
@@ -120,6 +128,15 @@ import "../../styles/admin-points.css";
     AdminPointsResponse,
   } from "../../lib/admin-points";
 
+  class AdminRequestError extends Error {
+    constructor(
+      message: string,
+      readonly status: number,
+    ) {
+      super(message);
+    }
+  }
+
   const denied = document.querySelector<HTMLElement>(
     "[data-admin-points-denied]",
   );
@@ -128,6 +145,18 @@ import "../../styles/admin-points.css";
   );
   const status = document.querySelector<HTMLElement>(
     "[data-admin-points-status]",
+  );
+  const gateTitle = document.querySelector<HTMLElement>(
+    "[data-admin-points-gate-title]",
+  );
+  const gateCopy = document.querySelector<HTMLElement>(
+    "[data-admin-points-gate-copy]",
+  );
+  const gateLink = document.querySelector<HTMLAnchorElement>(
+    "[data-admin-points-gate-link]",
+  );
+  const gateRetry = document.querySelector<HTMLButtonElement>(
+    "[data-admin-points-gate-retry]",
   );
   const searchForm = document.querySelector<HTMLFormElement>(
     "[data-points-user-search]",
@@ -169,6 +198,20 @@ import "../../styles/admin-points.css";
     status.textContent = message;
     status.hidden = !message;
     status.dataset.state = state;
+  };
+
+  const showGate = (
+    title: string,
+    copy: string,
+    action: "login" | "retry" = "login",
+  ) => {
+    if (content) content.hidden = true;
+    if (denied) denied.hidden = false;
+    if (gateTitle) gateTitle.textContent = title;
+    if (gateCopy) gateCopy.textContent = copy;
+    if (gateLink) gateLink.hidden = action !== "login";
+    if (gateRetry) gateRetry.hidden = action !== "retry";
+    setStatus("");
   };
 
   const formatDate = (timestamp: number) =>
@@ -256,7 +299,12 @@ import "../../styles/admin-points.css";
     const payload = (await response.json()) as AdminPointsResponse & {
       error?: string;
     };
-    if (!response.ok) throw new Error(payload.error || "用户积分读取失败。");
+    if (!response.ok) {
+      throw new AdminRequestError(
+        payload.error || "用户积分读取失败。",
+        response.status,
+      );
+    }
 
     if (usersList) {
       usersList.replaceChildren();
@@ -354,7 +402,12 @@ import "../../styles/admin-points.css";
         error?: string;
         balance?: number;
       };
-      if (!response.ok) throw new Error(payload.error || "积分调整失败。");
+      if (!response.ok) {
+        throw new AdminRequestError(
+          payload.error || "积分调整失败。",
+          response.status,
+        );
+      }
 
       amountInput.value = "";
       reasonInput.value = "";
@@ -421,22 +474,53 @@ import "../../styles/admin-points.css";
     ?.querySelector<HTMLButtonElement>('[data-adjust-mode="debit"]')
     ?.addEventListener("click", () => void submitAdjustment("debit"));
 
-  void authClient.getSession().then(async ({ data }) => {
-    if (!data?.user) {
-      window.location.replace("/login/?next=%2Fadmin%2Fpoints%2F");
-      return;
-    }
-    try {
-      await loadUsers();
-      if (denied) denied.hidden = true;
-      if (content) content.hidden = false;
-    } catch (error) {
-      if (denied) denied.hidden = false;
-      if (content) content.hidden = true;
-      setStatus(
-        error instanceof Error ? error.message : "权限验证失败。",
-        "error",
+  gateRetry?.addEventListener("click", () => window.location.reload());
+
+  void authClient
+    .getSession()
+    .then(async ({ data }) => {
+      if (!data?.user) {
+        showGate(
+          "请先登录",
+          "登录后才能进入积分管理，登录成功会自动返回这里。",
+        );
+        return;
+      }
+
+      try {
+        await loadUsers();
+        if (denied) denied.hidden = true;
+        if (content) content.hidden = false;
+      } catch (error) {
+        if (error instanceof AdminRequestError && error.status === 403) {
+          showGate(
+            "没有积分管理权限",
+            "当前账号不是站长。可以切换为绑定管理员权限的 GitHub 账号。",
+          );
+        } else if (
+          error instanceof AdminRequestError &&
+          error.status === 401
+        ) {
+          showGate(
+            "登录已过期",
+            "请重新登录，完成后会自动回到积分管理页。",
+          );
+        } else {
+          showGate(
+            "暂时无法读取用户积分",
+            error instanceof Error
+              ? error.message
+              : "连接服务器失败，请稍后重试。",
+            "retry",
+          );
+        }
+      }
+    })
+    .catch(() => {
+      showGate(
+        "无法验证登录状态",
+        "浏览器没有取得登录状态。请检查网络后重新加载。",
+        "retry",
       );
-    }
-  });
+    });
 </script>
