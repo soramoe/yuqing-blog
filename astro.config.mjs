@@ -5,6 +5,10 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   site: "https://xhz6.com",
+  prefetch: {
+    prefetchAll: true,
+    defaultStrategy: "hover",
+  },
   integrations: [mdx(), sitemap()],
   vite: {
     plugins: [tailwindcss()],

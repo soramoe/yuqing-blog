@@ -53,6 +53,16 @@
 
     activeTrigger = trigger;
     window.clearTimeout(closeTimer);
+    const srcSet = trigger.dataset.gallerySrcset;
+    const sizes = trigger.dataset.gallerySizes;
+
+    if (srcSet) {
+      lightboxImage.sizes = sizes || "100vw";
+      lightboxImage.srcset = srcSet;
+    } else {
+      lightboxImage.removeAttribute("sizes");
+      lightboxImage.removeAttribute("srcset");
+    }
     lightboxImage.src = trigger.getAttribute("href") || "";
     lightboxImage.alt = trigger.dataset.galleryTitle || "渔情图库图片";
     lightboxCaption.textContent = trigger.dataset.galleryTitle || "";

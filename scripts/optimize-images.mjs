@@ -5,9 +5,9 @@ import sharp from "sharp";
 const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
 const groups = [
   {
-    source: path.join(process.cwd(), "public", "gallery"),
+    source: path.join(process.cwd(), "assets", "gallery"),
     output: path.join(process.cwd(), "public", "media", "optimized", "gallery"),
-    widths: [480, 960],
+    widths: [480, 960, 1920],
   },
   {
     source: path.join(process.cwd(), "public", "covers"),

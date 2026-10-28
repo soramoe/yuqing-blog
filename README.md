@@ -25,6 +25,12 @@ draft: false
 ---
 ```
 
+## 新增图库图片
+
+把原始图片放入 `assets/gallery/`，不要直接放入 `public/`。开发或构建前会自动生成
+480、960 和 1920 像素的 WebP 版本到 `public/media/optimized/gallery/`，其中
+1920 版本用于灯箱预览。优化产物已加入 `.gitignore`，不需要手动提交。
+
 ## 构建与预览
 
 ```powershell

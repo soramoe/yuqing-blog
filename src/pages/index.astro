@@ -9,7 +9,7 @@ import { SITE } from "../site.config";
 
 const posts = await getPublishedPosts();
 const latestPosts = posts.slice(0, 4);
-const galleryDirectory = path.join(process.cwd(), "public", "gallery");
+const galleryDirectory = path.join(process.cwd(), "assets", "gallery");
 const galleryExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"]);
 
 const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
@@ -25,12 +25,17 @@ const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
       ? `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`
       : null;
     const title = date ? `渔图 · ${date}` : "渔情图库";
-    const responsive = getResponsiveImage(`/gallery/${fileName}`, [480, 960]);
+    const thumbnail = getResponsiveImage(`/gallery/${fileName}`, [480, 960]);
+    const lightbox = getResponsiveImage(
+      `/gallery/${fileName}`,
+      [480, 960, 1920],
+    );
 
     return {
-      src: `/gallery/${fileName}`,
-      preview: responsive.src,
-      srcSet: responsive.srcSet,
+      href: lightbox.variants.at(-1) ?? lightbox.src,
+      preview: thumbnail.src,
+      srcSet: thumbnail.srcSet,
+      lightboxSrcSet: lightbox.srcSet,
       title,
       alt: title,
       sortKey: dateMatch ? dateMatch[0] : "",
@@ -38,7 +43,7 @@ const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
   })
   .sort((a, b) => b.sortKey.localeCompare(a.sortKey));
 
-const fallbackGalleryImages = galleryImages.slice(0, 4);
+const homeGalleryImages = galleryImages.slice(0, 4);
 const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
   0,
   8,
@@ -64,46 +69,34 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
       </div>
 
       {
-        fallbackGalleryImages.length > 0 ? (
-          <>
-            <div class="home-gallery-grid" data-home-gallery>
-              {fallbackGalleryImages.map((image, index) => (
-                <a
-                  class="home-gallery-item"
-                  href={image.src}
-                  aria-label={`${image.title}，打开图片预览`}
-                  data-gallery-open="true"
-                  data-gallery-title={image.title}
-                  data-home-gallery-item
-                >
-                  <img
-                    alt=""
-                    loading={index === 0 ? "eager" : "lazy"}
-                    fetchpriority={index === 0 ? "high" : "auto"}
-                    decoding="async"
-                    data-home-gallery-image
-                  />
-                  <noscript>
-                    <img
-                      src={image.src}
-                      alt={image.alt}
-                      loading={index === 0 ? "eager" : "lazy"}
-                      decoding="async"
-                    />
-                  </noscript>
-                  <span class="home-gallery-caption">
-                    <span data-home-gallery-title>{image.title}</span>
-                    <span aria-hidden="true">↗</span>
-                  </span>
-                </a>
-              ))}
-            </div>
-            <script
-              type="application/json"
-              id="home-gallery-data"
-              set:html={JSON.stringify(galleryImages)}
-            />
-          </>
+        homeGalleryImages.length > 0 ? (
+          <div class="home-gallery-grid">
+            {homeGalleryImages.map((image, index) => (
+              <a
+                class="home-gallery-item"
+                href={image.href}
+                aria-label={`${image.title}，打开图片预览`}
+                data-gallery-open="true"
+                data-gallery-title={image.title}
+                data-gallery-srcset={image.lightboxSrcSet}
+                data-gallery-sizes="(max-width: 1915px) 94vw, 1800px"
+              >
+                <img
+                  src={image.preview}
+                  srcset={image.srcSet}
+                  sizes="(max-width: 600px) 44vw, 24vw"
+                  alt={image.alt}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchpriority={index === 0 ? "high" : "auto"}
+                  decoding="async"
+                />
+                <span class="home-gallery-caption">
+                  <span>{image.title}</span>
+                  <span aria-hidden="true">↗</span>
+                </span>
+              </a>
+            ))}
+          </div>
         ) : (
           <p class="home-empty">图库里还没有图片。</p>
         )
@@ -250,54 +243,6 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
   </section>
 
   <GalleryLightbox />
-
-  <script>
-    const dataElement = document.querySelector("#home-gallery-data");
-    const galleryItems = Array.from(
-      document.querySelectorAll<HTMLElement>("[data-home-gallery-item]"),
-    );
-
-    if (dataElement && galleryItems.length > 0) {
-      try {
-        const images = JSON.parse(dataElement.textContent || "[]") as Array<{
-          src: string;
-          preview: string;
-          srcSet: string;
-          title: string;
-          alt: string;
-        }>;
-
-        for (let index = images.length - 1; index > 0; index -= 1) {
-          const randomIndex = Math.floor(Math.random() * (index + 1));
-          [images[index], images[randomIndex]] = [images[randomIndex], images[index]];
-        }
-
-        galleryItems.forEach((item, index) => {
-          const image = images[index];
-          const picture = item.querySelector("[data-home-gallery-image]");
-          const caption = item.querySelector("[data-home-gallery-title]");
-          if (!image || !picture) return;
-
-          const reveal = () => item.classList.add("is-ready");
-          picture.addEventListener("load", reveal, { once: true });
-          picture.addEventListener("error", reveal, { once: true });
-          item.setAttribute("href", image.src);
-          item.setAttribute("aria-label", `${image.title}，打开图片预览`);
-          item.dataset.galleryTitle = image.title;
-          if (caption) caption.textContent = image.title;
-          picture.setAttribute("src", image.preview);
-          picture.setAttribute("srcset", image.srcSet);
-          picture.setAttribute("sizes", "(max-width: 600px) 44vw, 24vw");
-          picture.setAttribute("alt", image.alt);
-          if (picture.complete && picture.naturalWidth > 0) {
-            requestAnimationFrame(reveal);
-          }
-        });
-      } catch {
-        galleryItems.forEach((item) => item.classList.add("is-ready"));
-      }
-    }
-  </script>
 
   <script>
     const connectionStatus = document.querySelector("[data-connection-status]");
@@ -472,14 +417,6 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
 
   .home-gallery-item noscript {
     display: contents;
-  }
-
-  :global(.js) .home-gallery-item img {
-    opacity: 0;
-  }
-
-  :global(.js) .home-gallery-item.is-ready img {
-    opacity: 1;
   }
 
   .home-gallery-item:hover img,

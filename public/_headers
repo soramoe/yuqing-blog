@@ -4,8 +4,23 @@
 /media/optimized/*
   Cache-Control: public, max-age=604800
 
-/gallery/*
-  Cache-Control: public, max-age=604800
-
 /covers/*
   Cache-Control: public, max-age=604800
+
+/
+  Cache-Control: public, max-age=0, s-maxage=3600, stale-while-revalidate=86400
+
+/blog/*
+  Cache-Control: public, max-age=0, s-maxage=3600, stale-while-revalidate=86400
+
+/gallery/*
+  Cache-Control: public, max-age=0, s-maxage=3600, stale-while-revalidate=86400
+
+/about/*
+  Cache-Control: public, max-age=0, s-maxage=3600, stale-while-revalidate=86400
+
+/categories/*
+  Cache-Control: public, max-age=0, s-maxage=3600, stale-while-revalidate=86400
+
+/tags/*
+  Cache-Control: public, max-age=0, s-maxage=3600, stale-while-revalidate=86400

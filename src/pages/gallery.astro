@@ -8,7 +8,7 @@ import { getResponsiveImage } from "../lib/images";
 import { SITE } from "../site.config";
 
 const posts = await getPublishedPosts();
-const galleryDirectory = path.join(process.cwd(), "public", "gallery");
+const galleryDirectory = path.join(process.cwd(), "assets", "gallery");
 const galleryExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"]);
 
 const readPngDimensions = (filePath: string) => {
@@ -85,20 +85,33 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
               image.width && image.height
                 ? `${image.width} / ${image.height}`
                 : "16 / 10";
-            const responsive = getResponsiveImage(image.cover, [480, 960]);
+            const thumbnail = getResponsiveImage(image.cover, [480, 960]);
+            const preview = getResponsiveImage(
+              image.cover,
+              [480, 960, 1920],
+            );
+            const previewSrc = preview.variants.at(-1) ?? image.href;
 
             return (
               <a
                 class="waterfall-item"
-                href={image.href}
+                href={image.isGallery ? previewSrc : image.href}
                 data-gallery-open={image.isGallery ? "true" : undefined}
                 data-gallery-title={image.title}
+                data-gallery-srcset={
+                  image.isGallery ? preview.srcSet : undefined
+                }
+                data-gallery-sizes={
+                  image.isGallery
+                    ? "(max-width: 820px) 100vw, (max-width: 1915px) 94vw, 1800px"
+                    : undefined
+                }
                 style={`--gallery-aspect: ${aspect}`}
               >
                 <img
                   data-gallery-image
-                  src={responsive.src}
-                  srcset={responsive.srcSet}
+                  src={thumbnail.src}
+                  srcset={thumbnail.srcSet}
                   sizes="(max-width: 820px) 50vw, (max-width: 1200px) 33vw, 25vw"
                   alt={image.title}
                   width={image.width}

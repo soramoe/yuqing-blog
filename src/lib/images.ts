@@ -3,6 +3,7 @@ const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
 export interface ResponsiveImage {
   src: string;
   srcSet: string;
+  variants: string[];
 }
 
 export function getResponsiveImage(
@@ -13,7 +14,7 @@ export function getResponsiveImage(
   const extension = normalized.match(/\.[^.]+$/)?.[0].toLowerCase() ?? "";
 
   if (!imageExtensions.has(extension)) {
-    return { src: source, srcSet: "" };
+    return { src: source, srcSet: "", variants: [source] };
   }
 
   const pathWithoutExtension = normalized.slice(0, -extension.length);
@@ -27,5 +28,6 @@ export function getResponsiveImage(
     srcSet: variants
       .map((variant, index) => `${variant} ${widths[index]}w`)
       .join(", "),
+    variants,
   };
 }
