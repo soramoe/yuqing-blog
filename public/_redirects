@@ -1,3 +1,3 @@
-/gallery/* /gallery/ 302
-/covers/* /gallery/ 302
-/media/optimized/* /gallery/ 302
+/gallery/:file /gallery/ 302
+/covers/:file /gallery/ 302
+/media/optimized/:section/:file /gallery/ 302
