@@ -57,3 +57,12 @@ export const galleryUploadQuota = sqliteTable(
     }),
   ],
 );
+
+export const galleryHiddenItem = sqliteTable("gallery_hidden_item", {
+  itemKey: text("item_key").primaryKey(),
+  title: text("title").notNull(),
+  hiddenBy: text("hidden_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
+  hiddenAt: integer("hidden_at", { mode: "timestamp_ms" }).notNull(),
+});

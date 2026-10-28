@@ -9,6 +9,7 @@ import { SITE } from "../site.config";
 const posts = await getPublishedPosts();
 const galleryImages = localGalleryImages.map((image) => ({
   ...image,
+  key: `gallery:${image.cover}`,
   href: image.cover,
   isGallery: true,
 }));
@@ -16,6 +17,7 @@ const galleryImages = localGalleryImages.map((image) => ({
 const coverImages = posts
   .filter((post) => Boolean(post.data.cover))
   .map((post) => ({
+    key: `cover:${post.id}`,
     title: post.data.title,
     cover: post.data.cover!,
     href: `/blog/${post.id}/`,
@@ -63,6 +65,7 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
               <a
                 class="waterfall-item"
                 href={image.isGallery ? previewSrc : image.href}
+                data-gallery-record-key={image.key}
                 data-gallery-open={image.isGallery ? "true" : undefined}
                 data-gallery-title={image.title}
                 data-gallery-srcset={
@@ -184,6 +187,21 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
       grid.prepend(fragment);
     };
 
-    void loadOnlineImages();
+    const hideRemovedImages = async () => {
+      const response = await fetch("/api/gallery/hidden", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return;
+      const payload = (await response.json()) as { keys: string[] };
+      const hidden = new Set(payload.keys);
+      document
+        .querySelectorAll<HTMLElement>("[data-gallery-record-key]")
+        .forEach((item) => {
+          if (hidden.has(item.dataset.galleryRecordKey ?? "")) item.remove();
+        });
+    };
+
+    void Promise.all([loadOnlineImages(), hideRemovedImages()]);
   </script>
 </BaseLayout>

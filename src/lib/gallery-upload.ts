@@ -38,6 +38,13 @@ export interface GalleryUploadQuotaInfo {
   requiresReview: boolean;
 }
 
+export interface StaticGalleryItem {
+  key: string;
+  title: string;
+  src: string;
+  kind: "gallery" | "cover";
+}
+
 export function galleryVariantUrls(baseName: string) {
   const base = `${SITE.mediaBaseUrl}/gallery/uploads/${baseName}`;
   return {

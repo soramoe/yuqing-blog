@@ -36,6 +36,13 @@
       "when": 1793187872214,
       "tag": "0004_gallery_uploads",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793188370053,
+      "tag": "0005_hidden_gallery_items",
+      "breakpoints": true
     }
   ]
 }
