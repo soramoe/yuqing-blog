@@ -158,6 +158,101 @@
   color: var(--accent);
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.58rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  height: 1px;
+  flex: 1;
+  background: var(--border);
+  content: "";
+}
+
+.auth-email-form,
+.auth-code-form {
+  display: grid;
+  gap: 10px;
+}
+
+.auth-email-form label,
+.auth-code-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.auth-email-form input,
+.auth-code-form input {
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  outline: none;
+  background: var(--background);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+}
+
+.auth-email-form input:focus,
+.auth-code-form input:focus {
+  border-color: var(--accent);
+}
+
+.auth-email-form button,
+.auth-code-form button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--strong-border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.auth-email-form button:hover,
+.auth-code-form button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.auth-email-form button:disabled,
+.auth-code-form button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.auth-code-form input {
+  min-height: 54px;
+  font-family: Consolas, monospace;
+  font-size: 1.35rem;
+  letter-spacing: 0.25em;
+  text-align: center;
+}
+
+.auth-code-form[hidden] {
+  display: none;
+}
+
+.auth-resend-code {
+  border: 0 !important;
+  border-bottom: 1px solid currentColor !important;
+  justify-self: center;
+  min-height: 26px !important;
+  color: var(--muted) !important;
+  font-size: 0.64rem !important;
+}
+
 .auth-note,
 .auth-status {
   margin: 18px 0 0;
@@ -258,6 +353,106 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.account-login-methods {
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid var(--border);
+}
+
+.account-method-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-block: 11px;
+  border-top: 1px solid var(--border);
+}
+
+.account-method-row > div {
+  display: grid;
+  gap: 3px;
+}
+
+.account-method-row strong {
+  font-size: 0.78rem;
+}
+
+.account-method-row span {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.58rem;
+}
+
+.account-method-row button,
+.account-email-bind-form button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.66rem;
+}
+
+.account-method-row button:hover,
+.account-email-bind-form button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.account-method-row button:disabled,
+.account-email-bind-form button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.account-email-bind-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px dashed var(--strong-border);
+  background: var(--background);
+}
+
+.account-email-bind-form label {
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.account-email-bind-form input {
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.74rem;
+}
+
+.account-email-bind-form input:focus {
+  border-color: var(--accent);
+}
+
+.account-email-bind-form [data-bind-code-wrap] {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.account-email-bind-form [data-bind-code-wrap][hidden],
+.account-email-bind-form[hidden] {
+  display: none;
+}
+
+.account-email-bind-form [data-bind-code] {
+  font-family: Consolas, monospace;
+  letter-spacing: 0.16em;
 }
 
 .account-admin-tools {

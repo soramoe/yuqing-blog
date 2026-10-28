@@ -23,7 +23,7 @@ import AuthLayout from "../components/AuthLayout.astro";
     <dl class="account-meta">
       <div>
         <dt>账号来源</dt>
-        <dd>GitHub</dd>
+        <dd data-account-provider>读取中</dd>
       </div>
       <div>
         <dt>加入时间</dt>
@@ -34,6 +34,62 @@ import AuthLayout from "../components/AuthLayout.astro";
         <dd><a href="/points/">进入签到中心</a></dd>
       </div>
     </dl>
+
+    <section class="account-login-methods" data-account-methods>
+      <div class="account-admin-heading">
+        <div>
+          <p class="eyebrow">SIGN-IN METHODS</p>
+          <h2>登录方式</h2>
+        </div>
+        <span>绑定另一种方式奖励 5 积分</span>
+      </div>
+
+      <div class="account-method-row">
+        <div>
+          <strong>GitHub</strong>
+          <span data-github-method-status>正在读取…</span>
+        </div>
+        <button type="button" data-link-github hidden>绑定 GitHub</button>
+      </div>
+
+      <div class="account-method-row">
+        <div>
+          <strong>邮箱</strong>
+          <span data-email-method-status>正在读取…</span>
+        </div>
+        <button type="button" data-show-email-bind hidden>绑定邮箱</button>
+      </div>
+
+      <form class="account-email-bind-form" data-email-bind-form hidden>
+        <label>
+          <span>邮箱地址</span>
+          <input
+            type="email"
+            maxlength="254"
+            autocomplete="email"
+            placeholder="name@example.com"
+            data-bind-email
+            required
+          />
+        </label>
+        <button type="button" data-bind-send-code>发送验证码</button>
+        <div data-bind-code-wrap hidden>
+          <label>
+            <span>6 位验证码</span>
+            <input
+              type="text"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              placeholder="000000"
+              data-bind-code
+            />
+          </label>
+          <button type="button" data-bind-verify-code>验证并领取积分</button>
+        </div>
+      </form>
+    </section>
 
     <section class="account-admin-tools" data-account-admin hidden>
       <div class="account-admin-heading">
@@ -89,6 +145,37 @@ import AuthLayout from "../components/AuthLayout.astro";
   const adminTools = document.querySelector<HTMLElement>(
     "[data-account-admin]",
   );
+  const provider = document.querySelector<HTMLElement>("[data-account-provider]");
+  const githubMethodStatus = document.querySelector<HTMLElement>(
+    "[data-github-method-status]",
+  );
+  const emailMethodStatus = document.querySelector<HTMLElement>(
+    "[data-email-method-status]",
+  );
+  const linkGitHub = document.querySelector<HTMLButtonElement>(
+    "[data-link-github]",
+  );
+  const showEmailBind = document.querySelector<HTMLButtonElement>(
+    "[data-show-email-bind]",
+  );
+  const emailBindForm = document.querySelector<HTMLFormElement>(
+    "[data-email-bind-form]",
+  );
+  const bindEmail = document.querySelector<HTMLInputElement>(
+    "[data-bind-email]",
+  );
+  const bindSendCode = document.querySelector<HTMLButtonElement>(
+    "[data-bind-send-code]",
+  );
+  const bindCodeWrap = document.querySelector<HTMLElement>(
+    "[data-bind-code-wrap]",
+  );
+  const bindCode = document.querySelector<HTMLInputElement>(
+    "[data-bind-code]",
+  );
+  const bindVerifyCode = document.querySelector<HTMLButtonElement>(
+    "[data-bind-verify-code]",
+  );
 
   const { data, error } = await authClient.getSession();
 
@@ -128,6 +215,71 @@ import AuthLayout from "../components/AuthLayout.astro";
         if (result.isAdmin && adminTools) adminTools.hidden = false;
       })
       .catch(() => undefined);
+
+    const loadSignInMethods = async () => {
+      const response = await fetch("/api/account/logins", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return;
+      const methods = (await response.json()) as {
+        email: string;
+        emailVerified: boolean;
+        hasGitHub: boolean;
+        githubLinkedLater: boolean;
+        emailBindingRewardClaimed: boolean;
+        githubBindingRewardClaimed: boolean;
+        canBindEmail: boolean;
+        canLinkGitHub: boolean;
+      };
+
+      if (provider) {
+        provider.textContent = methods.hasGitHub
+          ? methods.emailVerified
+            ? "GitHub + 邮箱"
+            : "GitHub"
+          : "邮箱";
+      }
+      if (githubMethodStatus) {
+        githubMethodStatus.textContent = methods.hasGitHub
+          ? methods.githubBindingRewardClaimed
+            ? "已绑定，绑定奖励已领取"
+            : "已绑定"
+          : "尚未绑定，绑定后奖励 5 积分";
+      }
+      if (emailMethodStatus) {
+        emailMethodStatus.textContent = methods.emailVerified
+          ? `${methods.email} · 已验证`
+          : `${methods.email} · 等待邮箱绑定`;
+      }
+      if (linkGitHub) linkGitHub.hidden = !methods.canLinkGitHub;
+      if (showEmailBind) showEmailBind.hidden = !methods.canBindEmail;
+      if (bindEmail) bindEmail.value = methods.email;
+
+      if (
+        methods.hasGitHub &&
+        methods.githubLinkedLater &&
+        !methods.githubBindingRewardClaimed
+      ) {
+        const claim = await fetch("/api/account/claim-github-binding", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (claim.ok) {
+          const result = (await claim.json()) as {
+            awarded?: boolean;
+            amount?: number;
+          };
+          if (result.awarded && status) {
+            status.textContent = `GitHub 绑定成功，获得 ${result.amount ?? 5} 积分。`;
+            status.dataset.state = "success";
+          }
+        }
+      }
+    };
+
+    void loadSignInMethods().catch(() => undefined);
   }
 
   signOut?.addEventListener("click", async () => {
@@ -142,5 +294,143 @@ import AuthLayout from "../components/AuthLayout.astro";
       return;
     }
     window.location.replace("/");
+  });
+
+  linkGitHub?.addEventListener("click", async () => {
+    linkGitHub.disabled = true;
+    if (status) status.textContent = "正在跳转到 GitHub…";
+    try {
+      const response = await fetch("/api/auth/link-social", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: "github",
+          callbackURL: "/account/",
+        }),
+      });
+      const payload = (await response.json()) as {
+        url?: string;
+        error?: string;
+        message?: string;
+      };
+      if (!response.ok || !payload.url) {
+        throw new Error(
+          payload.message || payload.error || "无法开始 GitHub 绑定。",
+        );
+      }
+      window.location.assign(payload.url);
+    } catch (error) {
+      linkGitHub.disabled = false;
+      if (status) {
+        status.textContent =
+          error instanceof Error ? error.message : "GitHub 绑定失败。";
+        status.dataset.state = "error";
+      }
+    }
+  });
+
+  showEmailBind?.addEventListener("click", () => {
+    if (emailBindForm) emailBindForm.hidden = false;
+    bindEmail?.focus();
+  });
+
+  bindCode?.addEventListener("input", () => {
+    bindCode.value = bindCode.value.replace(/\D/g, "").slice(0, 6);
+  });
+
+  bindSendCode?.addEventListener("click", async () => {
+    const targetEmail = bindEmail?.value.trim().toLowerCase() ?? "";
+    if (!targetEmail) {
+      if (status) status.textContent = "请输入邮箱地址。";
+      return;
+    }
+    bindSendCode.disabled = true;
+    if (status) {
+      status.textContent = "正在发送验证码…";
+      status.dataset.state = "idle";
+    }
+    try {
+      const response = await fetch("/api/account/bind-email/request", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "验证码发送失败。");
+      }
+      if (bindCodeWrap) bindCodeWrap.hidden = false;
+      if (bindCode) {
+        bindCode.value = "";
+        bindCode.focus();
+      }
+      if (status) {
+        status.textContent = "验证码已发送，请检查邮箱和垃圾箱。";
+        status.dataset.state = "idle";
+      }
+    } catch (error) {
+      if (status) {
+        status.textContent =
+          error instanceof Error ? error.message : "验证码发送失败。";
+        status.dataset.state = "error";
+      }
+    } finally {
+      bindSendCode.disabled = false;
+    }
+  });
+
+  bindVerifyCode?.addEventListener("click", async () => {
+    const targetEmail = bindEmail?.value.trim().toLowerCase() ?? "";
+    const otp = bindCode?.value.trim() ?? "";
+    if (!/^\d{6}$/.test(otp)) {
+      if (status) {
+        status.textContent = "请输入 6 位数字验证码。";
+        status.dataset.state = "error";
+      }
+      return;
+    }
+    bindVerifyCode.disabled = true;
+    if (status) {
+      status.textContent = "正在验证并绑定邮箱…";
+      status.dataset.state = "idle";
+    }
+    try {
+      const response = await fetch("/api/account/bind-email/verify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: targetEmail, otp }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        amount?: number;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "邮箱绑定失败。");
+      }
+      if (status) {
+        status.textContent = `邮箱绑定成功，获得 ${payload.amount ?? 5} 积分。`;
+        status.dataset.state = "success";
+      }
+      window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) {
+      bindVerifyCode.disabled = false;
+      if (status) {
+        status.textContent =
+          error instanceof Error ? error.message : "邮箱绑定失败。";
+        status.dataset.state = "error";
+      }
+    }
   });
 </script>

@@ -1,6 +1,8 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { emailOTP } from "better-auth/plugins";
 import { drizzle } from "drizzle-orm/d1";
+import { sendOtpEmail } from "./email";
 import * as schema from "./auth-schema";
 
 export interface AuthEnv {
@@ -9,6 +11,8 @@ export interface AuthEnv {
   BETTER_AUTH_URL?: string;
   GITHUB_CLIENT_ID?: string;
   GITHUB_CLIENT_SECRET?: string;
+  RESEND_API_KEY?: string;
+  EMAIL_FROM?: string;
 }
 
 export function createAuth(env: AuthEnv, requestUrl: URL) {
@@ -42,6 +46,33 @@ export function createAuth(env: AuthEnv, requestUrl: URL) {
       },
     ),
     socialProviders: github ? { github } : undefined,
+    plugins: [
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 10 * 60,
+        allowedAttempts: 5,
+        storeOTP: "hashed",
+        rateLimit: {
+          window: 60,
+          max: 3,
+        },
+        async sendVerificationOTP({ email, otp, type }) {
+          await sendOtpEmail(env, {
+            email,
+            otp,
+            purpose: type === "email-verification" ? "bind-email" : "login",
+          });
+        },
+      }),
+    ],
+    account: {
+      accountLinking: {
+        enabled: true,
+        disableImplicitLinking: true,
+        allowDifferentEmails: true,
+        trustedProviders: ["github"],
+      },
+    },
     trustedOrigins: [
       "https://xhz6.com",
       "https://www.xhz6.com",

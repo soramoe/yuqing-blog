@@ -7,6 +7,7 @@ export default defineConfig({
     "./src/lib/comment-schema.ts",
     "./src/lib/points-schema.ts",
     "./src/lib/gallery-upload-schema.ts",
+    "./src/lib/account-binding-schema.ts",
   ],
   out: "./migrations",
 });
