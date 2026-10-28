@@ -1,34 +1,38 @@
 ---
+import SnakeGame from "../components/SnakeGame.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { SITE } from "../site.config";
 ---
 
 <BaseLayout
   title="游戏"
-  description={`${SITE.name}的 AI 小游戏。`}
+  description={`${SITE.name}可以直接在浏览器里玩的 AI 小游戏。`}
+  schemaType="CollectionPage"
   bodyClass="page-games"
 >
   <div class="container games-shell">
     <header class="games-intro">
       <div class="page-topline">
         <p class="eyebrow">PLAYGROUND / AI GAMES</p>
-        <span>00 GAMES</span>
+        <span>01 GAME</span>
       </div>
 
       <div class="games-title-row">
         <h1>游戏</h1>
-        <p>可以直接在浏览器里玩的小实验。<br />很快见面。</p>
+        <p>不用跳转，点开就玩。<br />先从一局贪吃蛇开始。</p>
       </div>
     </header>
 
-    <section class="games-empty" aria-labelledby="games-empty-title">
-      <span class="games-empty-number" aria-hidden="true">00</span>
-      <div class="games-empty-copy">
-        <p class="eyebrow">COMING SOON</p>
-        <h2 id="games-empty-title">第一局正在准备</h2>
-        <p>这里会陆续放上可以直接玩的 AI 小游戏，目前还是空的。</p>
+    <section class="games-library" aria-labelledby="games-list-title">
+      <div class="games-list-heading">
+        <div>
+          <p class="eyebrow">PLAYABLE / 01</p>
+          <h2 id="games-list-title">现在可以玩</h2>
+        </div>
+        <span>点开卡片即可开始 · 无需跳转</span>
       </div>
-      <span class="games-empty-line" aria-hidden="true"></span>
+
+      <SnakeGame />
     </section>
   </div>
 </BaseLayout>
@@ -72,73 +76,32 @@ import { SITE } from "../site.config";
     line-height: 1.8;
   }
 
-  .games-empty {
-    position: relative;
+  .games-library {
+    padding-top: 34px;
+  }
+
+  .games-list-heading {
     display: flex;
-    min-height: 390px;
     align-items: flex-end;
-    gap: clamp(28px, 6vw, 84px);
-    overflow: hidden;
-    margin-top: 32px;
-    padding: clamp(28px, 5vw, 58px);
-    border: 1px solid var(--border);
-    background:
-      linear-gradient(var(--border) 1px, transparent 1px),
-      linear-gradient(90deg, var(--border) 1px, transparent 1px),
-      color-mix(in srgb, var(--surface) 72%, transparent);
-    background-size: 42px 42px;
+    justify-content: space-between;
+    gap: 24px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .games-empty::before {
-    position: absolute;
-    top: -72px;
-    right: 11%;
-    width: 230px;
-    height: 230px;
-    border: 1px solid var(--strong-border);
-    border-radius: 50%;
-    content: "";
-    opacity: 0.6;
+  .games-list-heading h2 {
+    margin: 8px 0 0;
+    font-size: clamp(1.45rem, 2.6vw, 2.1rem);
+    letter-spacing: -0.035em;
+    line-height: 1.1;
   }
 
-  .games-empty-number {
-    position: relative;
-    z-index: 1;
-    color: var(--accent);
-    font-family: Consolas, monospace;
-    font-size: clamp(5rem, 12vw, 10rem);
-    line-height: 0.72;
-  }
-
-  .games-empty-copy {
-    position: relative;
-    z-index: 1;
-    max-width: 500px;
-  }
-
-  .games-empty-copy h2 {
-    margin: 10px 0;
-    font-size: clamp(1.8rem, 3.4vw, 2.8rem);
-    letter-spacing: -0.045em;
-    line-height: 1.08;
-  }
-
-  .games-empty-copy > p:last-child {
-    max-width: 430px;
-    margin: 0;
+  .games-list-heading > span {
+    padding-bottom: 2px;
     color: var(--muted);
-    font-size: 0.88rem;
-  }
-
-  .games-empty-line {
-    position: absolute;
-    top: 28px;
-    right: 28px;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    background: var(--accent);
-    box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 12%, transparent);
+    font-family: Consolas, monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.04em;
   }
 
   @media (max-width: 820px) {
@@ -153,10 +116,6 @@ import { SITE } from "../site.config";
     .games-title-row {
       gap: 26px;
       grid-template-columns: 1fr;
-    }
-
-    .games-empty {
-      min-height: 350px;
     }
   }
 
@@ -177,22 +136,17 @@ import { SITE } from "../site.config";
       font-size: 4.2rem;
     }
 
-    .games-empty {
-      min-height: 360px;
-      align-items: flex-start;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 38px;
-      padding: 28px 23px;
+    .games-library {
+      padding-top: 26px;
     }
 
-    .games-empty-number {
-      font-size: 5rem;
+    .games-list-heading {
+      display: grid;
+      gap: 10px;
     }
 
-    .games-empty-line {
-      top: 22px;
-      right: 22px;
+    .games-list-heading > span {
+      line-height: 1.5;
     }
   }
 </style>
