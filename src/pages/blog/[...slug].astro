@@ -32,8 +32,11 @@ const tocHeadings = headings.filter(
 const titleParts = post.data.title.split("：");
 const titleLead = titleParts.length > 1 ? `${titleParts[0]}：` : "";
 const titleRest = titleParts.slice(1).join("：");
+const coverWidths = post.data.cover?.startsWith("/gallery/")
+  ? [480, 960, 1920]
+  : [480, 960, 1440];
 const cover = post.data.cover
-  ? getResponsiveImage(post.data.cover, [480, 960, 1440])
+  ? getResponsiveImage(post.data.cover, coverWidths)
   : null;
 const relatedPosts = allPosts
   .filter((item) => item.id !== post.id)
