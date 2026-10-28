@@ -2,6 +2,8 @@ node_modules/
 dist/
 .astro/
 public/media/optimized/
+media-src/
+media-upload/
 .env
 .env.*
 !.env.example

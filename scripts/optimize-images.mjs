@@ -1,23 +1,28 @@
-import { mkdir, readdir, stat } from "node:fs/promises";
+import { mkdir, readdir, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
 const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
+const sourceRoot = path.join(process.cwd(), "media-src");
+const outputRoot = path.join(process.cwd(), "media-upload");
 const groups = [
   {
-    source: path.join(process.cwd(), "assets", "gallery"),
-    output: path.join(process.cwd(), "public", "media", "optimized", "gallery"),
+    name: "gallery",
+    source: path.join(sourceRoot, "gallery"),
+    output: path.join(outputRoot, "gallery"),
     widths: [480, 960, 1920],
   },
   {
-    source: path.join(process.cwd(), "public", "covers"),
-    output: path.join(process.cwd(), "public", "media", "optimized", "covers"),
+    name: "covers",
+    source: path.join(sourceRoot, "covers"),
+    output: path.join(outputRoot, "covers"),
     widths: [480, 960, 1440],
   },
 ];
 
 let generated = 0;
 let skipped = 0;
+const galleryManifest = [];
 
 for (const group of groups) {
   await mkdir(group.output, { recursive: true });
@@ -31,6 +36,15 @@ for (const group of groups) {
     const sourcePath = path.join(group.source, entry.name);
     const sourceStat = await stat(sourcePath);
     const baseName = path.basename(entry.name, path.extname(entry.name));
+
+    if (group.name === "gallery") {
+      const metadata = await sharp(sourcePath, { failOn: "none" }).metadata();
+      galleryManifest.push({
+        file: entry.name,
+        width: metadata.width,
+        height: metadata.height,
+      });
+    }
 
     for (const width of group.widths) {
       const outputPath = path.join(group.output, `${baseName}-${width}.webp`);
@@ -50,5 +64,10 @@ for (const group of groups) {
     }
   }
 }
+
+await writeFile(
+  path.join(process.cwd(), "src", "data", "gallery.json"),
+  `${JSON.stringify(galleryManifest, null, 2)}\n`,
+);
 
 console.log(`Optimized images: ${generated} generated, ${skipped} cached.`);

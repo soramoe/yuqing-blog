@@ -27,9 +27,15 @@ draft: false
 
 ## 新增图库图片
 
-把原始图片放入 `assets/gallery/`，不要直接放入 `public/`。开发或构建前会自动生成
-480、960 和 1920 像素的 WebP 版本到 `public/media/optimized/gallery/`，其中
-1920 版本用于灯箱预览。优化产物已加入 `.gitignore`，不需要手动提交。
+图库与封面图片由 Cloudflare R2 的 `media.xhz6.com` 提供，不进入网站构建产物。
+
+1. 把原始图片放入本地 `media-src/gallery/` 或 `media-src/covers/`。
+2. 运行 `pnpm optimize:images`，生成 WebP 到 `media-upload/`，并更新
+   `src/data/gallery.json`。
+3. 将 `media-upload/gallery/` 或 `media-upload/covers/` 中新增的文件上传到
+   R2 Bucket `yuqing-media` 的对应目录。
+
+`media-src/` 和 `media-upload/` 不提交到 Git，也不参与 Cloudflare Pages 构建。
 
 ## 构建与预览
 

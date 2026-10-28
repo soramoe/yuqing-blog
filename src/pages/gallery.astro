@@ -1,55 +1,17 @@
 ---
-import { readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
 import GalleryLightbox from "../components/GalleryLightbox.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { getPublishedPosts } from "../lib/blog";
+import { galleryImages as localGalleryImages } from "../lib/gallery";
 import { getResponsiveImage } from "../lib/images";
 import { SITE } from "../site.config";
 
 const posts = await getPublishedPosts();
-const galleryDirectory = path.join(process.cwd(), "assets", "gallery");
-const galleryExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"]);
-
-const readPngDimensions = (filePath: string) => {
-  try {
-    const header = readFileSync(filePath).subarray(0, 24);
-    if (header.toString("ascii", 1, 4) !== "PNG") return null;
-
-    return {
-      width: header.readUInt32BE(16),
-      height: header.readUInt32BE(20),
-    };
-  } catch {
-    return null;
-  }
-};
-
-const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
-  .filter(
-    (entry) =>
-      entry.isFile() &&
-      galleryExtensions.has(path.extname(entry.name).toLowerCase()),
-  )
-  .map((entry) => {
-    const fileName = entry.name;
-    const src = `/gallery/${fileName}`;
-    const dateMatch = fileName.match(/^(\d{4})(\d{2})(\d{2})_/);
-    const date = dateMatch
-      ? `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`
-      : null;
-    const dimensions = readPngDimensions(path.join(galleryDirectory, fileName));
-
-    return {
-      title: date ? `渔图 · ${date}` : "渔图",
-      cover: src,
-      href: src,
-      sortKey: dateMatch ? dateMatch[0] : "",
-      isGallery: true,
-      width: dimensions?.width,
-      height: dimensions?.height,
-    };
-  });
+const galleryImages = localGalleryImages.map((image) => ({
+  ...image,
+  href: image.cover,
+  isGallery: true,
+}));
 
 const coverImages = posts
   .filter((post) => Boolean(post.data.cover))

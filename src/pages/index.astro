@@ -1,49 +1,26 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { readdirSync } from "node:fs";
-import path from "node:path";
 import GalleryLightbox from "../components/GalleryLightbox.astro";
 import { formatDate, getPublishedPosts, getReadingTime } from "../lib/blog";
+import { galleryImages } from "../lib/gallery";
 import { getResponsiveImage } from "../lib/images";
 import { SITE } from "../site.config";
 
 const posts = await getPublishedPosts();
 const latestPosts = posts.slice(0, 4);
-const galleryDirectory = path.join(process.cwd(), "assets", "gallery");
-const galleryExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".gif", ".avif"]);
+const homeGalleryImages = galleryImages.slice(0, 4).map((image) => {
+  const thumbnail = getResponsiveImage(image.cover, [480, 960]);
+  const lightbox = getResponsiveImage(image.cover, [480, 960, 1920]);
 
-const galleryImages = readdirSync(galleryDirectory, { withFileTypes: true })
-  .filter(
-    (entry) =>
-      entry.isFile() &&
-      galleryExtensions.has(path.extname(entry.name).toLowerCase()),
-  )
-  .map((entry) => {
-    const fileName = entry.name;
-    const dateMatch = fileName.match(/^(\d{4})(\d{2})(\d{2})_/);
-    const date = dateMatch
-      ? `${dateMatch[1]}.${dateMatch[2]}.${dateMatch[3]}`
-      : null;
-    const title = date ? `渔图 · ${date}` : "渔情图库";
-    const thumbnail = getResponsiveImage(`/gallery/${fileName}`, [480, 960]);
-    const lightbox = getResponsiveImage(
-      `/gallery/${fileName}`,
-      [480, 960, 1920],
-    );
-
-    return {
-      href: lightbox.variants.at(-1) ?? lightbox.src,
-      preview: thumbnail.src,
-      srcSet: thumbnail.srcSet,
-      lightboxSrcSet: lightbox.srcSet,
-      title,
-      alt: title,
-      sortKey: dateMatch ? dateMatch[0] : "",
-    };
-  })
-  .sort((a, b) => b.sortKey.localeCompare(a.sortKey));
-
-const homeGalleryImages = galleryImages.slice(0, 4);
+  return {
+    href: lightbox.variants.at(-1) ?? lightbox.src,
+    preview: thumbnail.src,
+    srcSet: thumbnail.srcSet,
+    lightboxSrcSet: lightbox.srcSet,
+    title: image.title,
+    alt: image.title,
+  };
+});
 const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
   0,
   8,

@@ -53,7 +53,7 @@ const relatedPosts = allPosts
 <BaseLayout
   title={post.data.title}
   description={post.data.description}
-  image={post.data.cover}
+  image={cover?.variants.at(-1) ?? post.data.cover}
   type="article"
   publishedTime={post.data.pubDate}
   updatedTime={post.data.updatedDate}

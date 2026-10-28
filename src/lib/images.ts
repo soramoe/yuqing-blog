@@ -1,4 +1,7 @@
+import { SITE } from "../site.config";
+
 const imageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
+const mediaBaseUrl = SITE.mediaBaseUrl.replace(/\/+$/, "");
 
 export interface ResponsiveImage {
   src: string;
@@ -19,7 +22,7 @@ export function getResponsiveImage(
 
   const pathWithoutExtension = normalized.slice(0, -extension.length);
   const variants = widths.map(
-    (width) => `/media/optimized/${pathWithoutExtension}-${width}.webp`,
+    (width) => `${mediaBaseUrl}/${pathWithoutExtension}-${width}.webp`,
   );
   const fallbackIndex = Math.min(1, variants.length - 1);
 
