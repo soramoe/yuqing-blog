@@ -7,6 +7,7 @@ media-upload/
 .env
 .env.*
 !.env.example
+.dev.vars
 .DS_Store
 Thumbs.db
 pnpm-debug.log*

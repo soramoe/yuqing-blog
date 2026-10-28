@@ -1,0 +1,57 @@
+---
+import AuthLayout from "../components/AuthLayout.astro";
+---
+
+<AuthLayout
+  title="登录渔情"
+  description="使用 GitHub 登录渔情。登录后才能参与后续开放的评论、签到和积分功能。"
+  eyebrow="MEMBER ACCESS"
+>
+  <p class="auth-description">
+    当前使用 GitHub 账号登录，不保存密码。登录状态会通过安全的 HttpOnly
+    Cookie 保存 30 天。
+  </p>
+
+  <button class="auth-button" type="button" data-github-login>
+    <span aria-hidden="true">GH</span>
+    使用 GitHub 登录
+  </button>
+
+  <p class="auth-status" data-auth-status aria-live="polite">
+    首次登录会自动创建渔情账号。
+  </p>
+
+  <a class="auth-back" href="/">← 返回网站</a>
+</AuthLayout>
+
+<script>
+  import { authClient } from "../lib/auth-client";
+
+  const button = document.querySelector<HTMLButtonElement>("[data-github-login]");
+  const status = document.querySelector<HTMLElement>("[data-auth-status]");
+
+  const setStatus = (message: string, state: "idle" | "error" = "idle") => {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+  };
+
+  void authClient.getSession().then(({ data }) => {
+    if (data?.user) window.location.replace("/account/");
+  });
+
+  button?.addEventListener("click", async () => {
+    button.disabled = true;
+    setStatus("正在跳转到 GitHub…");
+
+    const { error } = await authClient.signIn.social({
+      provider: "github",
+      callbackURL: "/account/",
+    });
+
+    if (error) {
+      button.disabled = false;
+      setStatus(error.message || "登录失败，请稍后重试。", "error");
+    }
+  });
+</script>

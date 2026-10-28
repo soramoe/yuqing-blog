@@ -1,0 +1,101 @@
+---
+import AuthLayout from "../components/AuthLayout.astro";
+---
+
+<AuthLayout
+  title="我的账号"
+  description="查看当前登录的渔情账号，并安全退出登录。"
+  eyebrow="ACCOUNT CENTER"
+>
+  <p class="account-loading" data-account-loading>正在读取登录状态…</p>
+
+  <div data-account-content hidden>
+    <div class="account-profile">
+      <div class="account-avatar" data-account-avatar>
+        <span data-account-initial>渔</span>
+      </div>
+      <div>
+        <strong class="account-name" data-account-name></strong>
+        <span class="account-email" data-account-email></span>
+      </div>
+    </div>
+
+    <dl class="account-meta">
+      <div>
+        <dt>账号来源</dt>
+        <dd>GitHub</dd>
+      </div>
+      <div>
+        <dt>加入时间</dt>
+        <dd data-account-created></dd>
+      </div>
+      <div>
+        <dt>后续功能</dt>
+        <dd>评论、签到与积分</dd>
+      </div>
+    </dl>
+
+    <button class="auth-button auth-button-secondary" type="button" data-sign-out>
+      退出登录
+    </button>
+  </div>
+
+  <p class="auth-status" data-account-status aria-live="polite"></p>
+  <a class="auth-back" href="/">← 返回网站</a>
+</AuthLayout>
+
+<script>
+  import { authClient } from "../lib/auth-client";
+
+  const loading = document.querySelector<HTMLElement>("[data-account-loading]");
+  const content = document.querySelector<HTMLElement>("[data-account-content]");
+  const avatar = document.querySelector<HTMLElement>("[data-account-avatar]");
+  const initial = document.querySelector<HTMLElement>("[data-account-initial]");
+  const name = document.querySelector<HTMLElement>("[data-account-name]");
+  const email = document.querySelector<HTMLElement>("[data-account-email]");
+  const created = document.querySelector<HTMLElement>("[data-account-created]");
+  const status = document.querySelector<HTMLElement>("[data-account-status]");
+  const signOut = document.querySelector<HTMLButtonElement>("[data-sign-out]");
+
+  const { data, error } = await authClient.getSession();
+
+  if (error || !data?.user) {
+    window.location.replace("/login/?next=/account/");
+  } else {
+    const user = data.user;
+    loading?.setAttribute("hidden", "");
+    content?.removeAttribute("hidden");
+
+    if (name) name.textContent = user.name;
+    if (email) email.textContent = user.email;
+    if (created) {
+      created.textContent = new Intl.DateTimeFormat("zh-CN", {
+        dateStyle: "medium",
+      }).format(new Date(user.createdAt));
+    }
+
+    if (avatar && user.image) {
+      const image = document.createElement("img");
+      image.src = user.image;
+      image.alt = `${user.name} 的头像`;
+      image.referrerPolicy = "no-referrer";
+      avatar.replaceChildren(image);
+    } else if (initial) {
+      initial.textContent = user.name.slice(0, 1);
+    }
+  }
+
+  signOut?.addEventListener("click", async () => {
+    signOut.disabled = true;
+    const { error: signOutError } = await authClient.signOut();
+    if (signOutError) {
+      signOut.disabled = false;
+      if (status) {
+        status.textContent = signOutError.message || "退出失败，请稍后重试。";
+        status.dataset.state = "error";
+      }
+      return;
+    }
+    window.location.replace("/");
+  });
+</script>

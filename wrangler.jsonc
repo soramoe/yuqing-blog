@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "yuqing-blog",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "yuqing-auth",
+      "database_id": "4b91b2b2-2830-4676-8292-911ada646157"
+    }
+  ]
+}
