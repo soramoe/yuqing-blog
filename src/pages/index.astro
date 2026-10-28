@@ -1,7 +1,12 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import GalleryLightbox from "../components/GalleryLightbox.astro";
-import { formatDate, getPublishedPosts, getReadingTime } from "../lib/blog";
+import {
+  formatDate,
+  getPostPublishedAt,
+  getPublishedPosts,
+  getReadingTime,
+} from "../lib/blog";
 import { galleryImages } from "../lib/gallery";
 import { getResponsiveImage } from "../lib/images";
 import { SITE } from "../site.config";
@@ -105,8 +110,8 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                   <span class="home-post-copy">
                     <span class="home-post-meta">
                       <span class="home-post-category">{post.data.category}</span>
-                      <time datetime={post.data.pubDate.toISOString()}>
-                        {formatDate(post.data.pubDate)}
+                      <time datetime={getPostPublishedAt(post).toISOString()}>
+                        {formatDate(getPostPublishedAt(post))}
                       </time>
                       <span>{getReadingTime(post.body)} MIN</span>
                     </span>

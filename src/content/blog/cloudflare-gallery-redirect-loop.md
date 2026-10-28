@@ -2,6 +2,7 @@
 title: "当 /gallery/* 指向 /gallery/：一次重定向循环排查"
 description: "图库首页突然提示重定向过多，最终发现问题来自一条把自己的首页也匹配进去的 Pages 通配符规则。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T19:27:08+08:00
 category: "日常"
 tags: ["Cloudflare", "Pages", "重定向", "部署", "排错"]
 cover: "/gallery/20261017_095130_0fe5ca7798a2_1.png"

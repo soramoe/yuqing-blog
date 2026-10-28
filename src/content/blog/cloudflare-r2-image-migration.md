@@ -2,6 +2,7 @@
 title: "把 39 MB 图片搬进 Cloudflare R2：一次静态博客的媒体迁移"
 description: "从 Pages 本地图片迁到 R2 自定义域名，记录 57 个 WebP 的上传、图片清单、Astro 改造、旧路径清理和最终验证。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T15:33:53+08:00
 category: "日常"
 tags: ["Cloudflare", "R2", "Astro", "部署", "性能"]
 cover: "/gallery/20261027_043757_c4eb2d2aae11_1.png"

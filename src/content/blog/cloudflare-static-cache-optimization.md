@@ -2,6 +2,7 @@
 title: "给静态博客加上 Cloudflare 缓存：从 DYNAMIC 到 HIT"
 description: "记录一次 Astro 静态博客的实际性能排查：压缩、图片加载、预取和 Cloudflare Cache Rules，以及 Free 计划下如何让 HTML 真正命中边缘缓存。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T15:33:53+08:00
 category: "日常"
 tags: ["Cloudflare", "Astro", "缓存", "性能", "部署"]
 cover: "/gallery/20261027_050242_80858373fd28_1.png"

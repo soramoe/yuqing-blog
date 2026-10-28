@@ -2,6 +2,7 @@
 title: "AI 正在加速，治理还没跟上：读懂斯坦福《2026 AI Index》"
 description: "从能力跃迁、算力格局、商业投资到信任缺口，梳理斯坦福 HAI 最新 AI Index 报告里最值得关注的信号。"
 pubDate: 2026-10-27
+publishedAt: 2026-10-27T20:14:13+08:00
 category: "AI"
 tags: ["AI", "行业报告", "Stanford HAI"]
 cover: "/covers/ai-index-2026-cover.jpg"

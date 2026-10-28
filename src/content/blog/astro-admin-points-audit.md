@@ -2,6 +2,7 @@
 title: "让积分能改但改不乱：管理员加分、扣分与审计日志"
 description: "为已有积分系统补上站长管理能力：搜索用户、手动增减积分、防止负余额、防重复提交，并保留每一次操作的审计记录。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T19:07:20+08:00
 category: "日常"
 tags: ["Astro", "Cloudflare", "D1", "积分", "管理后台"]
 cover: "/gallery/20261018_044159_b73d8ce4a4a6_1.png"

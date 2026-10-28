@@ -2,6 +2,7 @@
 title: "近期 AI 重大更新：模型、智能体与物理世界一起加速"
 description: "从 GPT-6.1 Terra、Gemini 4 Argon 到新版 Copilot、NVIDIA 世界模型与 Agent Skills 开放标准，梳理 2026 年 9 月下旬到 10 月底最值得关注的 AI 变化。"
 pubDate: 2026-10-27
+publishedAt: 2026-10-27T22:02:39+08:00
 category: "AI"
 tags: ["AI", "行业观察", "GPT-6.1", "Gemini 4", "Agent"]
 cover: "/covers/recent-ai-updates-october-2026.png"

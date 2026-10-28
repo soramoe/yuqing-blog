@@ -2,6 +2,7 @@
 title: "PHP2Shell：10 月 21 日 PHP 核心 RCE 事件复盘"
 description: "从 OOM 状态损坏到跨请求内存复用，梳理 PHP2Shell 两个未认证 RCE 漏洞的起因、披露经过、修复结果，以及开发者现在应该检查什么。"
 pubDate: 2026-10-27
+publishedAt: 2026-10-27T23:04:43+08:00
 category: "安全"
 tags: ["安全", "RCE", "PHP", "AI安全"]
 cover: "/covers/php2shell-php-rce-october-2026.png"

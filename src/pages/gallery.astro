@@ -1,7 +1,7 @@
 ---
 import GalleryLightbox from "../components/GalleryLightbox.astro";
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { getPublishedPosts } from "../lib/blog";
+import { getPostPublishedAt, getPublishedPosts } from "../lib/blog";
 import { galleryImages as localGalleryImages } from "../lib/gallery";
 import { getResponsiveImage } from "../lib/images";
 import { SITE } from "../site.config";
@@ -21,7 +21,7 @@ const coverImages = posts
     title: post.data.title,
     cover: post.data.cover!,
     href: `/blog/${post.id}/`,
-    sortKey: post.data.pubDate.toISOString(),
+    sortKey: getPostPublishedAt(post).toISOString(),
     isGallery: false,
     width: undefined,
     height: undefined,

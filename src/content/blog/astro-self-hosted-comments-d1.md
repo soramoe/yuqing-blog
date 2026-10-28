@@ -2,6 +2,7 @@
 title: "把 Giscus 换掉：给 Astro 博客做一个登录后评论系统"
 description: "用 Cloudflare D1、Pages Functions 和现有登录会话实现自有评论：公开读取、登录发言、回复、删除、分页和频率限制。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T17:54:54+08:00
 category: "日常"
 tags: ["Astro", "Cloudflare", "D1", "评论", "Pages Functions"]
 cover: "/gallery/20261027_045746_5a4f66598da6_1.png"

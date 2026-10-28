@@ -1,6 +1,10 @@
 ---
 import type { BlogPost } from "../lib/blog";
-import { formatDate, getReadingTime } from "../lib/blog";
+import {
+  formatDate,
+  getPostPublishedAt,
+  getReadingTime,
+} from "../lib/blog";
 import { getResponsiveImage } from "../lib/images";
 
 interface Props {
@@ -9,6 +13,7 @@ interface Props {
 }
 
 const { post, index = 0 } = Astro.props;
+const publishedAt = getPostPublishedAt(post);
 const cover = post.data.cover
   ? getResponsiveImage(post.data.cover, [480, 960, 1440])
   : null;
@@ -53,8 +58,8 @@ const cover = post.data.cover
 
   <div class="post-body">
     <div class="post-card-top">
-      <time datetime={post.data.pubDate.toISOString()}>
-        {formatDate(post.data.pubDate)}
+      <time datetime={publishedAt.toISOString()}>
+        {formatDate(publishedAt)}
       </time>
       <span>{getReadingTime(post.body)} MIN</span>
     </div>

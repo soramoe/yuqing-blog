@@ -1,6 +1,7 @@
 ---
 import {
   formatDate,
+  getPostPublishedAt,
   getPublishedPosts,
   getReadingTime,
 } from "../lib/blog";
@@ -12,7 +13,7 @@ const searchFallbackItems = posts.map((post) => ({
   category: post.data.category,
   tags: post.data.tags,
   url: `/blog/${post.id}/`,
-  date: formatDate(post.data.pubDate),
+  date: formatDate(getPostPublishedAt(post)),
   readingTime: getReadingTime(post.body),
 }));
 

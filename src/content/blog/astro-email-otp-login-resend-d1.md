@@ -2,6 +2,7 @@
 title: "给渔情加上邮箱验证码登录：GitHub、邮箱与积分绑定怎么打通"
 description: "在保留 GitHub 登录的基础上接入邮箱验证码，通过 Better Auth、Cloudflare D1 与 Resend 完成登录、绑定、奖励和完整上线验证。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T21:43:36+08:00
 category: "日常"
 tags: ["Astro", "Cloudflare", "Better Auth", "D1", "登录", "邮件"]
 cover: "/gallery/uploads/20261028_65c1cdfc056c.png"

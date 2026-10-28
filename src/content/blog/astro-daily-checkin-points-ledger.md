@@ -2,6 +2,7 @@
 title: "给渔情加上每日签到和积分：先把每一分记清楚"
 description: "从账户余额、签到记录和不可变流水三张表开始，用 Cloudflare D1 实现每日签到、北京时间判定、连续天数和积分中心。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T18:51:55+08:00
 category: "日常"
 tags: ["Astro", "Cloudflare", "D1", "签到", "积分"]
 cover: "/gallery/20261027_045948_6e555f6df68c_1.png"

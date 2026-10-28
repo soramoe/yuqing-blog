@@ -2,6 +2,7 @@
 title: "给静态博客接上 GitHub 登录：Better Auth、Pages Functions 与 D1"
 description: "保留 Astro 静态页面，用 Better Auth、Cloudflare Pages Functions 和 D1 做出登录、账户页与 30 天会话，并记录实际部署中的配置顺序。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T17:54:54+08:00
 category: "日常"
 tags: ["Astro", "Cloudflare", "Better Auth", "D1", "登录"]
 cover: "/gallery/20261019_093735_f11f9ff60132_1.png"

@@ -2,6 +2,7 @@
 title: "第一次把渔情送上互联网：静态博客部署复盘"
 description: "从本地构建、GitHub 推送，到 Cloudflare Pages 和根域名绑定，记录一次真实静态博客上线过程。"
 pubDate: 2026-10-27
+publishedAt: 2026-10-27T20:14:13+08:00
 category: "日常"
 tags: ["部署", "Astro", "Cloudflare"]
 cover: "/covers/deploying-yuqing-blog.png"

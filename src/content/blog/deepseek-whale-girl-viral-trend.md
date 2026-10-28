@@ -2,6 +2,7 @@
 title: "DeepSeek 鲸鱼娘的火爆，会不会重演咕咕嘎嘎的结局？"
 description: "从二创热度、平台版权到虚拟形象的权利归属，聊聊 DeepSeek 鲸鱼娘爆红后的机会与风险。"
 pubDate: 2026-10-28
+publishedAt: 2026-10-28T14:16:33+08:00
 category: "日常"
 tags: ["DeepSeek", "鲸鱼娘", "AI", "网络文化"]
 cover: "/covers/deepseek-whale-girl-viral-trend.png"
