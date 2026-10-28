@@ -1,0 +1,347 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ImageUploader from "../../components/ImageUploader.astro";
+import "../../styles/upload.css";
+import "../../styles/admin-gallery.css";
+---
+
+<BaseLayout
+  title="图库管理"
+  description="上传图片并审核公开投稿。"
+  bodyClass="page-admin-gallery"
+  noindex
+>
+  <div class="container admin-gallery-shell">
+    <header class="admin-gallery-header">
+      <div>
+        <p class="eyebrow">MEDIA OPERATIONS</p>
+        <h1>图库管理</h1>
+        <p>站长上传会直接发布，公共投稿需要在这里审核。</p>
+      </div>
+      <div class="admin-gallery-nav">
+        <a href="/admin/comments/">评论审核</a>
+        <a href="/admin/points/">积分管理</a>
+        <a href="/account/">返回账户</a>
+      </div>
+    </header>
+
+    <p class="admin-gallery-status" data-admin-gallery-status aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-gallery-denied" data-admin-gallery-gate hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-admin-gallery-gate-title>请先登录</strong>
+      <p data-admin-gallery-gate-copy>登录后才能进入图库管理。</p>
+      <div class="admin-gallery-gate-actions">
+        <a href="/login/?next=%2Fadmin%2Fgallery%2F" data-admin-gallery-gate-link>
+          使用 GitHub 登录
+        </a>
+        <button type="button" data-admin-gallery-gate-retry hidden>
+          重新加载
+        </button>
+      </div>
+    </div>
+
+    <div data-admin-gallery-content hidden>
+      <ImageUploader mode="admin" />
+
+      <section class="admin-gallery-moderation">
+        <div class="admin-gallery-section-heading">
+          <div>
+            <p class="eyebrow">REVIEW QUEUE</p>
+            <h2>投稿记录</h2>
+          </div>
+          <label>
+            <span class="sr-only">筛选状态</span>
+            <select data-admin-gallery-filter>
+              <option value="pending">待审核</option>
+              <option value="approved">已发布</option>
+              <option value="rejected">已拒绝</option>
+              <option value="deleted">已删除</option>
+              <option value="all">全部</option>
+            </select>
+          </label>
+        </div>
+        <div class="admin-gallery-list" data-admin-gallery-list></div>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+  import type {
+    AdminGalleryItem,
+    GalleryUploadStatus,
+  } from "../../lib/gallery-upload";
+
+  class AdminGalleryError extends Error {
+    constructor(
+      message: string,
+      readonly status: number,
+    ) {
+      super(message);
+    }
+  }
+
+  const gate = document.querySelector<HTMLElement>(
+    "[data-admin-gallery-gate]",
+  );
+  const content = document.querySelector<HTMLElement>(
+    "[data-admin-gallery-content]",
+  );
+  const status = document.querySelector<HTMLElement>(
+    "[data-admin-gallery-status]",
+  );
+  const gateTitle = document.querySelector<HTMLElement>(
+    "[data-admin-gallery-gate-title]",
+  );
+  const gateCopy = document.querySelector<HTMLElement>(
+    "[data-admin-gallery-gate-copy]",
+  );
+  const gateLink = document.querySelector<HTMLAnchorElement>(
+    "[data-admin-gallery-gate-link]",
+  );
+  const gateRetry = document.querySelector<HTMLButtonElement>(
+    "[data-admin-gallery-gate-retry]",
+  );
+  const filter = document.querySelector<HTMLSelectElement>(
+    "[data-admin-gallery-filter]",
+  );
+  const list = document.querySelector<HTMLElement>("[data-admin-gallery-list]");
+
+  const labels: Record<GalleryUploadStatus, string> = {
+    pending: "待审核",
+    approved: "已发布",
+    rejected: "已拒绝",
+    deleted: "已删除",
+  };
+
+  const setStatus = (message = "", state: "idle" | "error" = "idle") => {
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.state = state;
+  };
+
+  const showGate = (
+    title: string,
+    copy: string,
+    action: "login" | "retry" = "login",
+  ) => {
+    if (content) content.hidden = true;
+    if (gate) gate.hidden = false;
+    if (gateTitle) gateTitle.textContent = title;
+    if (gateCopy) gateCopy.textContent = copy;
+    if (gateLink) gateLink.hidden = action !== "login";
+    if (gateRetry) gateRetry.hidden = action !== "retry";
+    setStatus("");
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const actionButton = (
+    label: string,
+    action: "approved" | "rejected" | "deleted",
+    id: string,
+  ) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.dataset.galleryAction = action;
+    button.dataset.galleryId = id;
+    return button;
+  };
+
+  const renderImage = (image: AdminGalleryItem) => {
+    const card = document.createElement("article");
+    card.className = `admin-gallery-card is-${image.status}`;
+
+    const thumbnail = document.createElement("img");
+    thumbnail.src = image.src;
+    thumbnail.alt = image.title;
+    thumbnail.loading = "lazy";
+    thumbnail.decoding = "async";
+
+    const body = document.createElement("div");
+    body.className = "admin-gallery-card-body";
+    const heading = document.createElement("header");
+    const title = document.createElement("strong");
+    title.textContent = image.title;
+    const badge = document.createElement("span");
+    badge.className = `admin-gallery-badge is-${image.status}`;
+    badge.textContent = labels[image.status];
+    heading.append(title, badge);
+
+    const meta = document.createElement("p");
+    meta.textContent = `${image.uploaderName} · ${formatDate(image.createdAt)}`;
+    const size = document.createElement("small");
+    size.textContent = `${image.width} × ${image.height} · ${image.source === "admin" ? "站长直传" : "公共投稿"}`;
+
+    const actions = document.createElement("div");
+    actions.className = "admin-gallery-actions";
+    if (image.status !== "deleted") {
+      if (image.status !== "approved") {
+        actions.append(actionButton("通过并发布", "approved", image.id));
+      }
+      if (image.status !== "rejected") {
+        actions.append(actionButton("拒绝", "rejected", image.id));
+      }
+      actions.append(actionButton("永久删除", "deleted", image.id));
+    }
+
+    body.append(heading, meta, size, actions);
+    card.append(thumbnail, body);
+    return card;
+  };
+
+  const loadImages = async () => {
+    setStatus("正在读取图库记录…");
+    const selectedStatus = filter?.value || "pending";
+    const response = await fetch(
+      `/api/admin/gallery?status=${encodeURIComponent(selectedStatus)}`,
+      {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      },
+    );
+    const payload = (await response.json()) as {
+      images?: AdminGalleryItem[];
+      error?: string;
+    };
+    if (!response.ok) {
+      throw new AdminGalleryError(
+        payload.error || "图库记录读取失败。",
+        response.status,
+      );
+    }
+
+    if (list) {
+      list.replaceChildren();
+      if (!payload.images?.length) {
+        const empty = document.createElement("p");
+        empty.className = "admin-gallery-empty";
+        empty.textContent = "当前状态下没有图片。";
+        list.append(empty);
+      } else {
+        payload.images.forEach((image) => list.append(renderImage(image)));
+      }
+    }
+    setStatus("");
+  };
+
+  const changeStatus = async (
+    id: string,
+    nextStatus: "approved" | "rejected" | "deleted",
+  ) => {
+    const response = await fetch(
+      `/api/admin/gallery/${encodeURIComponent(id)}`,
+      {
+        method: nextStatus === "deleted" ? "DELETE" : "PATCH",
+        credentials: "same-origin",
+        headers:
+          nextStatus === "deleted"
+            ? { Accept: "application/json" }
+            : {
+                Accept: "application/json",
+                "Content-Type": "application/json",
+              },
+        body:
+          nextStatus === "deleted"
+            ? undefined
+            : JSON.stringify({ status: nextStatus }),
+      },
+    );
+    if (!response.ok && response.status !== 204) {
+      const payload = (await response.json()) as { error?: string };
+      throw new AdminGalleryError(
+        payload.error || "审核操作失败。",
+        response.status,
+      );
+    }
+  };
+
+  gateRetry?.addEventListener("click", () => window.location.reload());
+  filter?.addEventListener("change", () => void loadImages());
+  window.addEventListener("gallery-uploaded", () => {
+    if (filter) filter.value = "approved";
+    void loadImages();
+  });
+
+  list?.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-gallery-action]",
+    );
+    if (!button) return;
+    const action = button.dataset.galleryAction as
+      | "approved"
+      | "rejected"
+      | "deleted";
+    if (
+      action === "deleted" &&
+      !window.confirm("永久删除会同时删除 R2 中的三个图片文件，确定继续吗？")
+    ) {
+      return;
+    }
+
+    button.disabled = true;
+    setStatus("正在更新图片状态…");
+    try {
+      await changeStatus(button.dataset.galleryId ?? "", action);
+      await loadImages();
+    } catch (error) {
+      button.disabled = false;
+      setStatus(
+        error instanceof Error ? error.message : "审核操作失败。",
+        "error",
+      );
+    }
+  });
+
+  void authClient
+    .getSession()
+    .then(async ({ data }) => {
+      if (!data?.user) {
+        showGate(
+          "请先登录",
+          "登录后才能进入图库管理，登录成功会自动返回这里。",
+        );
+        return;
+      }
+      try {
+        await loadImages();
+        if (gate) gate.hidden = true;
+        if (content) content.hidden = false;
+      } catch (error) {
+        if (error instanceof AdminGalleryError && error.status === 403) {
+          showGate(
+            "没有图库管理权限",
+            "当前账号不是站长，可以切换为绑定管理员权限的 GitHub 账号。",
+          );
+        } else if (
+          error instanceof AdminGalleryError &&
+          error.status === 401
+        ) {
+          showGate("登录已过期", "请重新登录后继续管理图库。");
+        } else {
+          showGate(
+            "暂时无法读取图库",
+            error instanceof Error ? error.message : "请稍后重试。",
+            "retry",
+          );
+        }
+      }
+    })
+    .catch(() => {
+      showGate(
+        "无法验证登录状态",
+        "浏览器没有取得登录状态。请检查网络后重新加载。",
+        "retry",
+      );
+    });
+</script>

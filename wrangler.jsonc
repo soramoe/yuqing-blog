@@ -10,5 +10,11 @@
       "database_name": "yuqing-auth",
       "database_id": "4b91b2b2-2830-4676-8292-911ada646157"
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA_BUCKET",
+      "bucket_name": "yuqing-media"
+    }
   ]
 }

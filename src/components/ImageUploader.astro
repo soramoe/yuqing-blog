@@ -1,0 +1,332 @@
+---
+import { GALLERY_UPLOAD_MAX_BYTES } from "../lib/gallery-upload";
+
+interface Props {
+  mode: "public" | "admin";
+}
+
+const { mode } = Astro.props;
+const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
+---
+
+<section
+  class="image-uploader"
+  data-image-uploader
+  data-upload-mode={mode}
+  aria-labelledby={`image-uploader-title-${mode}`}
+>
+  <div class="image-uploader-heading">
+    <div>
+      <p class="eyebrow">{mode === "admin" ? "DIRECT PUBLISH" : "PUBLIC SUBMISSION"}</p>
+      <h2 id={`image-uploader-title-${mode}`}>
+        {mode === "admin" ? "上传并发布" : "投稿一张图片"}
+      </h2>
+    </div>
+    <span data-upload-quota>
+      {mode === "admin" ? "站长上传无需审核" : "正在读取今日额度…"}
+    </span>
+  </div>
+
+  <form data-image-upload-form>
+    <label class="image-dropzone" data-image-dropzone>
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/avif"
+        data-image-input
+      />
+      <span class="image-dropzone-icon" aria-hidden="true">＋</span>
+      <strong data-image-pick-label>选择或拖入一张图片</strong>
+      <small>支持 JPG、PNG、WebP、AVIF，原图最大 {maxMegabytes} MB</small>
+    </label>
+
+    <div class="image-upload-preview" data-image-preview hidden>
+      <img data-image-preview-image alt="待上传图片预览" />
+      <div>
+        <strong data-image-file-name></strong>
+        <span data-image-file-meta></span>
+      </div>
+    </div>
+
+    <label class="image-title-field">
+      <span>图片标题</span>
+      <input
+        type="text"
+        maxlength="80"
+        placeholder="不填写将使用当天日期"
+        data-image-title
+      />
+    </label>
+
+    <div class="image-upload-foot">
+      <p data-image-upload-status aria-live="polite">
+        图片会自动压缩为 480、960、1920 三档 WebP。
+      </p>
+      <button type="submit" data-image-submit disabled>
+        {mode === "admin" ? "上传并发布" : "提交审核"}
+      </button>
+    </div>
+  </form>
+</section>
+
+<script>
+  import { GALLERY_UPLOAD_MAX_BYTES } from "../lib/gallery-upload";
+
+  const root = document.querySelector<HTMLElement>("[data-image-uploader]");
+  if (root) {
+    const mode = root.dataset.uploadMode as "public" | "admin";
+    const form = root.querySelector<HTMLFormElement>(
+      "[data-image-upload-form]",
+    );
+    const input = root.querySelector<HTMLInputElement>("[data-image-input]");
+    const dropzone = root.querySelector<HTMLElement>("[data-image-dropzone]");
+    const pickLabel = root.querySelector<HTMLElement>(
+      "[data-image-pick-label]",
+    );
+    const preview = root.querySelector<HTMLElement>("[data-image-preview]");
+    const previewImage = root.querySelector<HTMLImageElement>(
+      "[data-image-preview-image]",
+    );
+    const fileName = root.querySelector<HTMLElement>(
+      "[data-image-file-name]",
+    );
+    const fileMeta = root.querySelector<HTMLElement>(
+      "[data-image-file-meta]",
+    );
+    const title = root.querySelector<HTMLInputElement>("[data-image-title]");
+    const uploadStatus = root.querySelector<HTMLElement>(
+      "[data-image-upload-status]",
+    );
+    const quota = root.querySelector<HTMLElement>("[data-upload-quota]");
+    const submit = root.querySelector<HTMLButtonElement>("[data-image-submit]");
+
+    let selectedFile: File | null = null;
+    let previewUrl = "";
+    let originalWidth = 0;
+    let originalHeight = 0;
+
+    const setStatus = (
+      message: string,
+      state: "idle" | "error" | "success" = "idle",
+    ) => {
+      if (!uploadStatus) return;
+      uploadStatus.textContent = message;
+      uploadStatus.dataset.state = state;
+    };
+
+    const loadQuota = async () => {
+      if (mode !== "public" || !quota) return;
+      try {
+        const response = await fetch("/api/gallery/upload-info", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (!response.ok) throw new Error();
+        const data = (await response.json()) as {
+          authenticated: boolean;
+          isAdmin: boolean;
+          dailyLimit: number;
+          remaining: number;
+        };
+        quota.textContent = data.isAdmin
+          ? "站长请使用专用上传入口"
+          : `${data.authenticated ? "已登录" : "匿名"} · 今日剩余 ${data.remaining}/${data.dailyLimit} 张`;
+      } catch {
+        quota.textContent = "今日额度暂时无法读取";
+      }
+    };
+
+    const decodeImage = async (file: File) => {
+      if ("createImageBitmap" in window) {
+        const bitmap = await createImageBitmap(file);
+        return {
+          source: bitmap as CanvasImageSource,
+          width: bitmap.width,
+          height: bitmap.height,
+          dispose: () => bitmap.close(),
+        };
+      }
+
+      const url = URL.createObjectURL(file);
+      const image = new Image();
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("无法读取这张图片。"));
+        image.src = url;
+      });
+      return {
+        source: image,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        dispose: () => URL.revokeObjectURL(url),
+      };
+    };
+
+    const createVariant = async (
+      source: CanvasImageSource,
+      sourceWidth: number,
+      sourceHeight: number,
+      targetWidth: number,
+    ) => {
+      const width = Math.min(sourceWidth, targetWidth);
+      const height = Math.max(1, Math.round((sourceHeight / sourceWidth) * width));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("浏览器无法处理这张图片。");
+      context.drawImage(source, 0, 0, width, height);
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/webp", 0.86);
+      });
+      if (!blob || blob.type !== "image/webp") {
+        throw new Error("浏览器无法生成 WebP 图片。");
+      }
+      return blob;
+    };
+
+    const chooseFile = async (file: File | undefined) => {
+      if (!file) return;
+      if (!/^image\/(jpeg|png|webp|avif)$/i.test(file.type)) {
+        setStatus("请选择 JPG、PNG、WebP 或 AVIF 图片。", "error");
+        return;
+      }
+      if (file.size > GALLERY_UPLOAD_MAX_BYTES) {
+        setStatus("原图不能超过 25 MB。", "error");
+        return;
+      }
+
+      try {
+        const decoded = await decodeImage(file);
+        originalWidth = decoded.width;
+        originalHeight = decoded.height;
+        decoded.dispose();
+      } catch {
+        setStatus("无法读取这张图片，请换一张重试。", "error");
+        return;
+      }
+
+      selectedFile = file;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      if (previewImage) previewImage.src = previewUrl;
+      if (preview) preview.hidden = false;
+      if (fileName) fileName.textContent = file.name;
+      if (fileMeta) {
+        fileMeta.textContent = `${originalWidth} × ${originalHeight} · ${(file.size / 1024 / 1024).toFixed(1)} MB`;
+      }
+      if (pickLabel) pickLabel.textContent = "重新选择图片";
+      if (title && !title.value) {
+        title.value = file.name.replace(/\.[^.]+$/, "").slice(0, 80);
+      }
+      if (submit) submit.disabled = false;
+      setStatus("图片已选择，提交后会生成三种尺寸。");
+    };
+
+    input?.addEventListener("change", () => {
+      void chooseFile(input.files?.[0]);
+    });
+
+    ["dragenter", "dragover"].forEach((eventName) => {
+      dropzone?.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.add("is-dragging");
+      });
+    });
+    ["dragleave", "drop"].forEach((eventName) => {
+      dropzone?.addEventListener(eventName, (event) => {
+        event.preventDefault();
+        dropzone.classList.remove("is-dragging");
+      });
+    });
+    dropzone?.addEventListener("drop", (event) => {
+      const file = event.dataTransfer?.files[0];
+      void chooseFile(file);
+    });
+
+    form?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!selectedFile || !submit) {
+        setStatus("请先选择一张图片。", "error");
+        return;
+      }
+
+      submit.disabled = true;
+      setStatus("正在压缩并生成三种尺寸…");
+      try {
+        const decoded = await decodeImage(selectedFile);
+        const variants = new Map<number, Blob>();
+        for (const width of [480, 960, 1920]) {
+          variants.set(
+            width,
+            await createVariant(
+              decoded.source,
+              decoded.width,
+              decoded.height,
+              width,
+            ),
+          );
+        }
+        decoded.dispose();
+
+        const data = new FormData();
+        data.append("title", title?.value.trim() ?? "");
+        data.append("width", String(originalWidth));
+        data.append("height", String(originalHeight));
+        for (const [width, blob] of variants) {
+          data.append(`variant-${width}`, blob, `variant-${width}.webp`);
+        }
+
+        setStatus("正在上传到 Cloudflare R2…");
+        const endpoint =
+          mode === "admin"
+            ? "/api/admin/gallery/upload"
+            : "/api/gallery/upload";
+        const response = await fetch(endpoint, {
+          method: "POST",
+          credentials: "same-origin",
+          body: data,
+        });
+        const payload = (await response.json()) as {
+          error?: string;
+          requiresReview?: boolean;
+          adminUploadUrl?: string;
+        };
+        if (!response.ok) {
+          if (payload.adminUploadUrl) {
+            throw new Error(
+              `${payload.error ?? "请使用专用入口。"} ${location.origin}${payload.adminUploadUrl}`,
+            );
+          }
+          throw new Error(payload.error || "图片上传失败。");
+        }
+
+        selectedFile = null;
+        if (input) input.value = "";
+        if (preview) preview.hidden = true;
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = "";
+        if (pickLabel) pickLabel.textContent = "继续选择图片";
+        if (title) title.value = "";
+        submit.disabled = true;
+        setStatus(
+          payload.requiresReview
+            ? "投稿成功，等待站长审核后显示在图库。"
+            : "图片上传成功，已经发布到图库。",
+          "success",
+        );
+        await loadQuota();
+        window.dispatchEvent(
+          new CustomEvent("gallery-uploaded", { detail: payload }),
+        );
+      } catch (error) {
+        setStatus(
+          error instanceof Error ? error.message : "图片上传失败，请稍后重试。",
+          "error",
+        );
+        submit.disabled = false;
+      }
+    });
+
+    void loadQuota();
+  }
+</script>

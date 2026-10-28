@@ -1,0 +1,30 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ImageUploader from "../components/ImageUploader.astro";
+import "../styles/upload.css";
+---
+
+<BaseLayout
+  title="投稿图片"
+  description="向渔情图库投稿图片。匿名每天 1 张，登录用户每天 5 张，所有投稿都需要站长审核。"
+  bodyClass="page-upload"
+  noindex
+>
+  <div class="container upload-page-shell">
+    <header class="upload-page-header">
+      <p class="eyebrow">PUBLIC SUBMISSION</p>
+      <h1>投稿图片</h1>
+      <p>
+        匿名用户每天可以投稿 1 张，登录用户每天可以投稿 5 张。
+        上传内容不会立即公开，需要站长审核后才会出现在图库。
+      </p>
+    </header>
+
+    <ImageUploader mode="public" />
+
+    <div class="upload-page-links">
+      <a href="/gallery/">← 返回图库</a>
+      <a href="/login/?next=%2Fupload%2F">登录账号</a>
+    </div>
+  </div>
+</BaseLayout>

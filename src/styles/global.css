@@ -1823,6 +1823,27 @@ h3,
   padding: 0 0 80px;
 }
 
+.gallery-page-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding-block: 10px 16px;
+}
+
+.gallery-page-toolbar > span {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.58rem;
+}
+
+.gallery-page-toolbar a {
+  padding-bottom: 2px;
+  border-bottom: 1px solid currentColor;
+  color: var(--accent);
+  font-size: 0.7rem;
+}
+
 .waterfall-grid {
   columns: 4;
   column-gap: 14px;

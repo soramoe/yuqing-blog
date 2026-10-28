@@ -29,6 +29,13 @@
       "when": 1793185077462,
       "tag": "0003_admin_point_adjustments",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793187872214,
+      "tag": "0004_gallery_uploads",
+      "breakpoints": true
     }
   ]
 }

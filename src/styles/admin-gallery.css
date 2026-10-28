@@ -1,0 +1,247 @@
+.page-admin-gallery main {
+  padding-block: 58px 100px;
+}
+
+.admin-gallery-shell {
+  max-width: 1080px;
+}
+
+.admin-gallery-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--strong-border);
+}
+
+.admin-gallery-header h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  letter-spacing: -0.06em;
+}
+
+.admin-gallery-header p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-gallery-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.admin-gallery-nav a,
+.admin-gallery-gate-actions a {
+  border-bottom: 1px solid currentColor;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.admin-gallery-status {
+  margin: 20px 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.admin-gallery-status[data-state="error"] {
+  color: #e38276;
+}
+
+.admin-gallery-denied {
+  margin-top: 32px;
+  padding: 26px;
+  border: 1px dashed var(--strong-border);
+}
+
+.admin-gallery-denied .eyebrow {
+  margin: 0 0 12px;
+}
+
+.admin-gallery-denied > strong {
+  display: block;
+  font-size: 1.1rem;
+}
+
+.admin-gallery-denied > p:not(.eyebrow) {
+  margin: 8px 0 18px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-gallery-gate-actions {
+  display: flex;
+  gap: 18px;
+}
+
+.admin-gallery-gate-actions a {
+  color: var(--accent);
+}
+
+.admin-gallery-gate-actions button {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.admin-gallery-moderation {
+  margin-top: 34px;
+  padding-top: 26px;
+  border-top: 1px solid var(--strong-border);
+}
+
+.admin-gallery-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.admin-gallery-section-heading h2 {
+  margin: 5px 0 0;
+  font-size: 1.35rem;
+}
+
+.admin-gallery-section-heading select {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.admin-gallery-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-gallery-card {
+  display: grid;
+  gap: 16px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 64%, transparent);
+  grid-template-columns: 190px minmax(0, 1fr);
+}
+
+.admin-gallery-card.is-rejected,
+.admin-gallery-card.is-deleted {
+  opacity: 0.7;
+}
+
+.admin-gallery-card > img {
+  width: 100%;
+  height: 128px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.admin-gallery-card-body {
+  min-width: 0;
+}
+
+.admin-gallery-card-body header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.admin-gallery-card-body header strong {
+  font-size: 0.82rem;
+}
+
+.admin-gallery-badge {
+  padding: 3px 7px;
+  border: 1px solid currentColor;
+  color: var(--muted);
+  font-size: 0.58rem;
+}
+
+.admin-gallery-badge.is-approved {
+  color: #79b98b;
+}
+
+.admin-gallery-badge.is-pending {
+  color: #d2a95f;
+}
+
+.admin-gallery-badge.is-rejected,
+.admin-gallery-badge.is-deleted {
+  color: #d17870;
+}
+
+.admin-gallery-card-body p,
+.admin-gallery-card-body small {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.58rem;
+}
+
+.admin-gallery-card-body p {
+  margin: 8px 0 3px;
+}
+
+.admin-gallery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 15px;
+}
+
+.admin-gallery-actions button {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.64rem;
+}
+
+.admin-gallery-actions button:hover {
+  border-color: currentColor;
+  color: var(--accent);
+}
+
+.admin-gallery-actions button:last-child:hover {
+  color: #e38276;
+}
+
+.admin-gallery-empty {
+  padding-block: 20px;
+  border-block: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 720px) {
+  .page-admin-gallery main {
+    padding-block: 34px 72px;
+  }
+
+  .admin-gallery-header,
+  .admin-gallery-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-gallery-card {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-gallery-card > img {
+    height: 190px;
+  }
+}
