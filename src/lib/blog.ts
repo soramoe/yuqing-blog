@@ -21,6 +21,7 @@ export async function getPublishedPosts(): Promise<BlogPost[]> {
 
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
     year: "numeric",
     month: "long",
     day: "numeric",
