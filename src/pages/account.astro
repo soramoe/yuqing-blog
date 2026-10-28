@@ -35,6 +35,28 @@ import AuthLayout from "../components/AuthLayout.astro";
       </div>
     </dl>
 
+    <section class="account-admin-tools" data-account-admin hidden>
+      <div class="account-admin-heading">
+        <div>
+          <p class="eyebrow">OWNER TOOLS</p>
+          <h2>站长工具</h2>
+        </div>
+        <span>仅管理员可见</span>
+      </div>
+      <div class="account-admin-grid">
+        <a href="/admin/comments/">
+          <span>01</span>
+          <strong>评论审核</strong>
+          <small>查看、隐藏、恢复或永久删除评论</small>
+        </a>
+        <a href="/admin/points/">
+          <span>02</span>
+          <strong>积分管理</strong>
+          <small>搜索用户并手动增加或扣减积分</small>
+        </a>
+      </div>
+    </section>
+
     <div class="account-actions">
       <a class="auth-button" href="/points/">签到与积分</a>
       <button class="auth-button auth-button-secondary" type="button" data-sign-out>
@@ -59,6 +81,9 @@ import AuthLayout from "../components/AuthLayout.astro";
   const created = document.querySelector<HTMLElement>("[data-account-created]");
   const status = document.querySelector<HTMLElement>("[data-account-status]");
   const signOut = document.querySelector<HTMLButtonElement>("[data-sign-out]");
+  const adminTools = document.querySelector<HTMLElement>(
+    "[data-account-admin]",
+  );
 
   const { data, error } = await authClient.getSession();
 
@@ -86,6 +111,18 @@ import AuthLayout from "../components/AuthLayout.astro";
     } else if (initial) {
       initial.textContent = user.name.slice(0, 1);
     }
+
+    void fetch("/api/admin/status", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) =>
+        response.ok ? response.json() : { isAdmin: false },
+      )
+      .then((result: { isAdmin?: boolean }) => {
+        if (result.isAdmin && adminTools) adminTools.hidden = false;
+      })
+      .catch(() => undefined);
   }
 
   signOut?.addEventListener("click", async () => {
