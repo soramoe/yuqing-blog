@@ -52,6 +52,8 @@ pnpm preview
 
 本地开发时复制 `.env.example` 为 `.dev.vars` 并填写登录配置。正式环境的密钥应通过 Cloudflare Pages 的“变量和密钥”页面配置，不要提交到 Git。
 
+站长可在 `/admin/comments/` 审核评论。`COMMENT_ADMIN_USER_IDS` 支持用逗号分隔多个用户 ID，权限只会在服务端校验。
+
 ## 部署
 
 推荐部署到 Cloudflare Pages：

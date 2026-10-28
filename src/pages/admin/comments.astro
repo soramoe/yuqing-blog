@@ -1,0 +1,313 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/admin-comments.css";
+---
+
+<BaseLayout
+  title="评论审核"
+  description="管理渔情博客的评论状态。"
+  bodyClass="page-admin-comments"
+  noindex
+>
+  <div class="container admin-comments-shell">
+    <header class="admin-comments-header">
+      <div>
+        <p class="eyebrow">MODERATION</p>
+        <h1>评论审核</h1>
+        <p>检查最近评论，隐藏违规内容或彻底删除正文。</p>
+      </div>
+      <a href="/account/">返回账户</a>
+    </header>
+
+    <p class="admin-comments-status" data-admin-status aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-access" data-admin-denied hidden>
+      <strong>你没有评论审核权限</strong>
+      <p>审核入口只对站长账号开放。</p>
+      <a href="/login/?next=%2Fadmin%2Fcomments%2F">切换登录账号</a>
+    </div>
+
+    <div data-admin-content hidden>
+      <form class="admin-comments-toolbar" data-admin-filter>
+        <label>
+          <span>状态</span>
+          <select name="status" data-admin-filter-status>
+            <option value="visible">已发布</option>
+            <option value="hidden">已隐藏</option>
+            <option value="deleted">已永久删除</option>
+            <option value="all">全部</option>
+          </select>
+        </label>
+        <label class="admin-search-field">
+          <span>搜索</span>
+          <input
+            type="search"
+            name="q"
+            maxlength="100"
+            placeholder="评论正文、用户名或文章标识"
+            data-admin-search
+          />
+        </label>
+        <button type="submit">搜索</button>
+      </form>
+
+      <div class="admin-comments-summary">
+        <span data-admin-count>0 条记录</span>
+        <span>隐藏会保留正文；永久删除会清空正文且无法恢复。</span>
+      </div>
+
+      <div class="admin-comments-list" data-admin-list></div>
+      <button class="admin-load-more" type="button" data-admin-more hidden>
+        加载更多
+      </button>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+  import type {
+    AdminCommentItem,
+    AdminCommentsResponse,
+    CommentStatus,
+  } from "../../lib/comment-admin";
+
+  const denied = document.querySelector<HTMLElement>("[data-admin-denied]");
+  const content = document.querySelector<HTMLElement>("[data-admin-content]");
+  const status = document.querySelector<HTMLElement>("[data-admin-status]");
+  const filter = document.querySelector<HTMLFormElement>("[data-admin-filter]");
+  const statusFilter =
+    document.querySelector<HTMLSelectElement>("[data-admin-filter-status]");
+  const search = document.querySelector<HTMLInputElement>("[data-admin-search]");
+  const list = document.querySelector<HTMLElement>("[data-admin-list]");
+  const count = document.querySelector<HTMLElement>("[data-admin-count]");
+  const more = document.querySelector<HTMLButtonElement>("[data-admin-more]");
+
+  let nextCursor: string | null = null;
+  let loaded = 0;
+
+  const labels: Record<CommentStatus, string> = {
+    visible: "已发布",
+    hidden: "已隐藏",
+    deleted: "已删除",
+  };
+
+  const setStatus = (message = "", state: "idle" | "error" = "idle") => {
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.state = state;
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const avatarElement = (name: string, image: string | null) => {
+    if (image && /^https:\/\//i.test(image)) {
+      const img = document.createElement("img");
+      img.src = image;
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.referrerPolicy = "no-referrer";
+      return img;
+    }
+    return document.createTextNode(name.slice(0, 1) || "渔");
+  };
+
+  const actionButton = (
+    label: string,
+    action: "visible" | "hidden" | "deleted",
+    commentId: string,
+  ) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.textContent = label;
+    button.dataset.moderationAction = action;
+    button.dataset.commentId = commentId;
+    return button;
+  };
+
+  const renderComment = (comment: AdminCommentItem) => {
+    const article = document.createElement("article");
+    article.className = `admin-comment-card is-${comment.status}`;
+
+    const avatar = document.createElement("div");
+    avatar.className = "admin-comment-avatar";
+    avatar.append(avatarElement(comment.user.name, comment.user.image));
+
+    const main = document.createElement("div");
+    main.className = "admin-comment-main";
+
+    const header = document.createElement("header");
+    const identity = document.createElement("div");
+    const author = document.createElement("strong");
+    author.textContent = comment.user.name;
+    const time = document.createElement("time");
+    time.dateTime = new Date(comment.createdAt).toISOString();
+    time.textContent = formatDate(comment.createdAt);
+    identity.append(author, time);
+
+    const badge = document.createElement("span");
+    badge.className = `admin-status-badge is-${comment.status}`;
+    badge.textContent = labels[comment.status];
+    header.append(identity, badge);
+
+    const articleLink = document.createElement("a");
+    articleLink.className = "admin-post-link";
+    articleLink.href = `/blog/${encodeURIComponent(comment.postSlug)}/#comments-title`;
+    articleLink.textContent = comment.postSlug;
+
+    const body = document.createElement("p");
+    body.className = "admin-comment-body";
+    body.textContent = comment.body || "正文已清空。";
+
+    const actions = document.createElement("div");
+    actions.className = "admin-comment-actions";
+    if (comment.status === "visible") {
+      actions.append(actionButton("隐藏", "hidden", comment.id));
+    } else if (comment.status === "hidden") {
+      actions.append(actionButton("恢复", "visible", comment.id));
+    }
+    if (comment.status !== "deleted") {
+      actions.append(actionButton("永久删除", "deleted", comment.id));
+    }
+
+    main.append(header, articleLink, body, actions);
+    article.append(avatar, main);
+    return article;
+  };
+
+  const loadComments = async (append = false) => {
+    if (!list) return;
+    const params = new URLSearchParams({
+      status: statusFilter?.value || "visible",
+    });
+    const query = search?.value.trim();
+    if (query) params.set("q", query);
+    if (append && nextCursor) params.set("cursor", nextCursor);
+
+    setStatus("正在读取评论…");
+    const response = await fetch(`/api/admin/comments?${params}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as AdminCommentsResponse & {
+      error?: string;
+    };
+    if (!response.ok) throw new Error(payload.error || "评论读取失败。");
+
+    if (!append) {
+      list.replaceChildren();
+      loaded = 0;
+    }
+    payload.comments.forEach((comment) => list.append(renderComment(comment)));
+    loaded += payload.comments.length;
+    nextCursor = payload.nextCursor;
+
+    if (count) count.textContent = `${payload.total} 条记录`;
+    if (more) more.hidden = !nextCursor;
+    setStatus(loaded === 0 ? "当前筛选条件下没有评论。" : "");
+  };
+
+  const moderate = async (
+    commentId: string,
+    nextStatus: CommentStatus,
+  ) => {
+    const response = await fetch(
+      `/api/admin/comments/${encodeURIComponent(commentId)}`,
+      {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      },
+    );
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      throw new Error(payload.error || "操作失败。");
+    }
+  };
+
+  filter?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    nextCursor = null;
+    void loadComments();
+  });
+
+  statusFilter?.addEventListener("change", () => {
+    nextCursor = null;
+    void loadComments();
+  });
+
+  more?.addEventListener("click", async () => {
+    if (!nextCursor) return;
+    if (more) more.disabled = true;
+    try {
+      await loadComments(true);
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "评论读取失败。",
+        "error",
+      );
+    } finally {
+      if (more) more.disabled = false;
+    }
+  });
+
+  list?.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-moderation-action]",
+    );
+    if (!button) return;
+
+    const action = button.dataset.moderationAction as CommentStatus;
+    if (
+      action === "deleted" &&
+      !window.confirm("永久删除后正文会被清空且无法恢复，确定继续吗？")
+    ) {
+      return;
+    }
+
+    button.disabled = true;
+    setStatus("正在更新评论状态…");
+    try {
+      await moderate(button.dataset.commentId ?? "", action);
+      nextCursor = null;
+      await loadComments();
+    } catch (error) {
+      button.disabled = false;
+      setStatus(
+        error instanceof Error ? error.message : "操作失败，请稍后重试。",
+        "error",
+      );
+    }
+  });
+
+  void authClient.getSession().then(async ({ data }) => {
+    if (!data?.user) {
+      window.location.replace("/login/?next=%2Fadmin%2Fcomments%2F");
+      return;
+    }
+    try {
+      await loadComments();
+      if (denied) denied.hidden = true;
+      if (content) content.hidden = false;
+    } catch (error) {
+      if (denied) denied.hidden = false;
+      if (content) content.hidden = true;
+      setStatus(
+        error instanceof Error ? error.message : "权限验证失败。",
+        "error",
+      );
+    }
+  });
+</script>
