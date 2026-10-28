@@ -6,15 +6,16 @@ interface Props {
   title: string;
   description: string;
   eyebrow: string;
+  bodyClass?: string;
 }
 
-const { title, description, eyebrow } = Astro.props;
+const { title, description, eyebrow, bodyClass = "page-auth" } = Astro.props;
 ---
 
 <BaseLayout
   title={title}
   description={description}
-  bodyClass="page-auth"
+  bodyClass={bodyClass}
   noindex
 >
   <div class="container auth-shell">
