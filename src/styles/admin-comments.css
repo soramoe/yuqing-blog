@@ -27,7 +27,13 @@
   font-size: 0.78rem;
 }
 
-.admin-comments-header > a {
+.admin-header-links {
+  display: flex;
+  gap: 16px;
+}
+
+.admin-comments-header > a,
+.admin-header-links a {
   border-bottom: 1px solid currentColor;
   color: var(--muted);
   font-size: 0.7rem;

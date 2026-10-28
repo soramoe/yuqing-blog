@@ -1,0 +1,442 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/admin-points.css";
+---
+
+<BaseLayout
+  title="积分管理"
+  description="管理渔情用户的积分余额。"
+  bodyClass="page-admin-points"
+  noindex
+>
+  <div class="container admin-points-shell">
+    <header class="admin-points-header">
+      <div>
+        <p class="eyebrow">POINT OPERATIONS</p>
+        <h1>积分管理</h1>
+        <p>手动增加或扣减用户积分，每次操作都会写入独立流水。</p>
+      </div>
+      <div class="admin-points-nav">
+        <a href="/admin/comments/">评论审核</a>
+        <a href="/account/">返回账户</a>
+      </div>
+    </header>
+
+    <p class="admin-points-status" data-admin-points-status aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-points-denied" data-admin-points-denied hidden>
+      <strong>你没有积分管理权限</strong>
+      <p>该页面只对站长账号开放。</p>
+      <a href="/login/?next=%2Fadmin%2Fpoints%2F">切换登录账号</a>
+    </div>
+
+    <div data-admin-points-content hidden>
+      <form class="admin-points-search" data-points-user-search>
+        <label>
+          <span>查找用户</span>
+          <input
+            type="search"
+            name="q"
+            maxlength="100"
+            placeholder="输入昵称或邮箱"
+            data-points-user-query
+          />
+        </label>
+        <button type="submit">搜索</button>
+      </form>
+
+      <section class="admin-points-users" aria-labelledby="points-users-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">USERS</p>
+            <h2 id="points-users-title">用户账户</h2>
+          </div>
+          <span data-points-user-count>0 位用户</span>
+        </div>
+        <div class="admin-points-user-list" data-points-user-list></div>
+      </section>
+
+      <section class="admin-points-editor" data-points-editor hidden>
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">ADJUST BALANCE</p>
+            <h2>调整 <span data-selected-user-name></span></h2>
+          </div>
+          <span>当前余额 <strong data-selected-user-balance>0</strong> 积分</span>
+        </div>
+
+        <form data-points-adjust-form>
+          <label>
+            <span>调整积分数量</span>
+            <input
+              type="number"
+              min="1"
+              max="100000"
+              step="1"
+              inputmode="numeric"
+              placeholder="例如 20"
+              data-points-amount
+              required
+            />
+          </label>
+          <label class="admin-adjust-reason">
+            <span>调整原因</span>
+            <input
+              type="text"
+              minlength="2"
+              maxlength="120"
+              placeholder="例如：活动奖励、撤销误发积分"
+              data-points-reason
+              required
+            />
+          </label>
+          <div class="admin-adjust-actions">
+            <button type="submit" data-adjust-mode="credit">增加积分</button>
+            <button type="button" data-adjust-mode="debit">扣减积分</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-point-actions" aria-labelledby="recent-actions-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">AUDIT LOG</p>
+            <h2 id="recent-actions-title">最近管理员调整</h2>
+          </div>
+        </div>
+        <ol data-point-actions-list></ol>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+  import type {
+    AdminPointAction,
+    AdminPointUser,
+    AdminPointsResponse,
+  } from "../../lib/admin-points";
+
+  const denied = document.querySelector<HTMLElement>(
+    "[data-admin-points-denied]",
+  );
+  const content = document.querySelector<HTMLElement>(
+    "[data-admin-points-content]",
+  );
+  const status = document.querySelector<HTMLElement>(
+    "[data-admin-points-status]",
+  );
+  const searchForm = document.querySelector<HTMLFormElement>(
+    "[data-points-user-search]",
+  );
+  const search = document.querySelector<HTMLInputElement>(
+    "[data-points-user-query]",
+  );
+  const usersList = document.querySelector<HTMLElement>(
+    "[data-points-user-list]",
+  );
+  const userCount = document.querySelector<HTMLElement>(
+    "[data-points-user-count]",
+  );
+  const editor = document.querySelector<HTMLElement>("[data-points-editor]");
+  const selectedName = document.querySelector<HTMLElement>(
+    "[data-selected-user-name]",
+  );
+  const selectedBalance = document.querySelector<HTMLElement>(
+    "[data-selected-user-balance]",
+  );
+  const adjustForm = document.querySelector<HTMLFormElement>(
+    "[data-points-adjust-form]",
+  );
+  const amountInput = document.querySelector<HTMLInputElement>(
+    "[data-points-amount]",
+  );
+  const reasonInput = document.querySelector<HTMLInputElement>(
+    "[data-points-reason]",
+  );
+  const recentActions = document.querySelector<HTMLElement>(
+    "[data-point-actions-list]",
+  );
+
+  let selectedUser: AdminPointUser | null = null;
+  const usersById = new Map<string, AdminPointUser>();
+
+  const setStatus = (message = "", state: "idle" | "error" = "idle") => {
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.state = state;
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const avatarElement = (name: string, image: string | null) => {
+    if (image && /^https:\/\//i.test(image)) {
+      const img = document.createElement("img");
+      img.src = image;
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.referrerPolicy = "no-referrer";
+      return img;
+    }
+    return document.createTextNode(name.slice(0, 1) || "渔");
+  };
+
+  const renderUser = (user: AdminPointUser) => {
+    const card = document.createElement("article");
+    card.className = "admin-point-user";
+    if (selectedUser?.id === user.id) card.classList.add("is-selected");
+
+    const avatar = document.createElement("div");
+    avatar.className = "admin-point-user-avatar";
+    avatar.append(avatarElement(user.name, user.image));
+
+    const info = document.createElement("div");
+    info.className = "admin-point-user-info";
+    const name = document.createElement("strong");
+    name.textContent = user.name;
+    const email = document.createElement("span");
+    email.textContent = user.email;
+    info.append(name, email);
+
+    const metrics = document.createElement("div");
+    metrics.className = "admin-point-user-metrics";
+    const balance = document.createElement("strong");
+    balance.textContent = `${user.balance} 积分`;
+    const earned = document.createElement("span");
+    earned.textContent = `累计获得 ${user.totalEarned}`;
+    metrics.append(balance, earned);
+
+    const select = document.createElement("button");
+    select.type = "button";
+    select.textContent = selectedUser?.id === user.id ? "已选择" : "管理";
+    select.dataset.userId = user.id;
+
+    card.append(avatar, info, metrics, select);
+    return card;
+  };
+
+  const renderRecentAction = (action: AdminPointAction) => {
+    const row = document.createElement("li");
+    const main = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${action.targetName} · ${action.description}`;
+    const meta = document.createElement("span");
+    meta.textContent = `${action.operatorName ?? "已删除管理员"} / ${formatDate(action.createdAt)}`;
+    main.append(title, meta);
+
+    const amount = document.createElement("strong");
+    amount.className = action.amount > 0 ? "is-positive" : "is-negative";
+    amount.textContent = `${action.amount > 0 ? "+" : ""}${action.amount}`;
+
+    const balance = document.createElement("small");
+    balance.textContent = `余额 ${action.balanceAfter}`;
+    row.append(main, amount, balance);
+    return row;
+  };
+
+  const loadUsers = async () => {
+    const params = new URLSearchParams();
+    const query = search?.value.trim();
+    if (query) params.set("q", query);
+
+    setStatus("正在读取用户积分…");
+    const response = await fetch(`/api/admin/points?${params}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as AdminPointsResponse & {
+      error?: string;
+    };
+    if (!response.ok) throw new Error(payload.error || "用户积分读取失败。");
+
+    if (usersList) {
+      usersList.replaceChildren();
+      usersById.clear();
+      if (payload.users.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "admin-points-empty";
+        empty.textContent = "没有找到匹配的用户。";
+        usersList.append(empty);
+      } else {
+        payload.users.forEach((user) => {
+          usersById.set(user.id, user);
+          usersList.append(renderUser(user));
+        });
+      }
+    }
+    if (userCount) userCount.textContent = `${payload.users.length} 位用户`;
+
+    if (selectedUser) {
+      selectedUser =
+        payload.users.find((user) => user.id === selectedUser?.id) ?? null;
+    }
+    if (selectedUser) {
+      if (selectedName) selectedName.textContent = selectedUser.name;
+      if (selectedBalance) {
+        selectedBalance.textContent = String(selectedUser.balance);
+      }
+      if (editor) editor.hidden = false;
+    } else if (editor) {
+      editor.hidden = true;
+    }
+
+    if (recentActions) {
+      recentActions.replaceChildren();
+      if (payload.recentActions.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "admin-points-empty";
+        empty.textContent = "还没有管理员调整记录。";
+        recentActions.append(empty);
+      } else {
+        payload.recentActions.forEach((action) =>
+          recentActions.append(renderRecentAction(action)),
+        );
+      }
+    }
+    setStatus("");
+  };
+
+  const submitAdjustment = async (mode: "credit" | "debit") => {
+    if (!selectedUser || !amountInput || !reasonInput) return;
+    const rawAmount = Number(amountInput.value);
+    const reason = reasonInput.value.trim();
+    if (!Number.isInteger(rawAmount) || rawAmount <= 0) {
+      setStatus("请输入大于 0 的整数积分。", "error");
+      return;
+    }
+    if (reason.length < 2) {
+      setStatus("请填写至少 2 个字符的调整原因。", "error");
+      return;
+    }
+    if (
+      mode === "debit" &&
+      !window.confirm(
+        `确定从“${selectedUser.name}”扣减 ${rawAmount} 积分吗？`,
+      )
+    ) {
+      return;
+    }
+
+    const amount = mode === "credit" ? rawAmount : -rawAmount;
+    const buttons = adjustForm?.querySelectorAll<HTMLButtonElement>(
+      "[data-adjust-mode]",
+    );
+    buttons?.forEach((button) => {
+      button.disabled = true;
+    });
+    setStatus("正在更新积分…");
+
+    try {
+      const response = await fetch("/api/admin/points/adjust", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          amount,
+          reason,
+          requestId: crypto.randomUUID(),
+        }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        balance?: number;
+      };
+      if (!response.ok) throw new Error(payload.error || "积分调整失败。");
+
+      amountInput.value = "";
+      reasonInput.value = "";
+      await loadUsers();
+      setStatus(`${mode === "credit" ? "增加" : "扣减"}积分成功。`);
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "积分调整失败。",
+        "error",
+      );
+    } finally {
+      buttons?.forEach((button) => {
+        button.disabled = false;
+      });
+    }
+  };
+
+  searchForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void loadUsers().catch((error) =>
+      setStatus(
+        error instanceof Error ? error.message : "用户读取失败。",
+        "error",
+      ),
+    );
+  });
+
+  usersList?.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-user-id]",
+    );
+    if (!button) return;
+    const userId = button.dataset.userId ?? "";
+    const selected = usersById.get(userId);
+    if (!selected) return;
+    selectedUser = selected;
+
+    const cards = usersList.querySelectorAll<HTMLElement>(
+      ".admin-point-user",
+    );
+    cards.forEach((item) => {
+      item.classList.remove("is-selected");
+      const cardButton = item.querySelector<HTMLButtonElement>("[data-user-id]");
+      if (cardButton) cardButton.textContent = "管理";
+    });
+    const card = button.closest<HTMLElement>(".admin-point-user");
+    if (!card) return;
+    card.classList.add("is-selected");
+    button.textContent = "已选择";
+    if (selectedName) selectedName.textContent = selectedUser.name;
+    if (selectedBalance) {
+      selectedBalance.textContent = String(selectedUser.balance);
+    }
+    if (editor) editor.hidden = false;
+    editor?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  adjustForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void submitAdjustment("credit");
+  });
+
+  adjustForm
+    ?.querySelector<HTMLButtonElement>('[data-adjust-mode="debit"]')
+    ?.addEventListener("click", () => void submitAdjustment("debit"));
+
+  void authClient.getSession().then(async ({ data }) => {
+    if (!data?.user) {
+      window.location.replace("/login/?next=%2Fadmin%2Fpoints%2F");
+      return;
+    }
+    try {
+      await loadUsers();
+      if (denied) denied.hidden = true;
+      if (content) content.hidden = false;
+    } catch (error) {
+      if (denied) denied.hidden = false;
+      if (content) content.hidden = true;
+      setStatus(
+        error instanceof Error ? error.message : "权限验证失败。",
+        "error",
+      );
+    }
+  });
+</script>

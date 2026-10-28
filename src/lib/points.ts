@@ -1,3 +1,4 @@
+export const POINTS_NAME = "积分";
 export const CHECKIN_REWARD = 5;
 
 export interface PointTransactionItem {

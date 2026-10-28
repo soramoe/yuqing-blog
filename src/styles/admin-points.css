@@ -1,0 +1,344 @@
+.page-admin-points main {
+  padding-block: 58px 100px;
+}
+
+.admin-points-shell {
+  max-width: 980px;
+}
+
+.admin-points-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--strong-border);
+}
+
+.admin-points-header h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  letter-spacing: -0.06em;
+}
+
+.admin-points-header p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-points-nav {
+  display: flex;
+  gap: 16px;
+}
+
+.admin-points-nav a,
+.admin-points-denied a {
+  border-bottom: 1px solid currentColor;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.admin-points-status {
+  margin: 20px 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.admin-points-status[data-state="error"] {
+  color: #e38276;
+}
+
+.admin-points-denied {
+  margin-top: 32px;
+  padding: 26px;
+  border: 1px dashed var(--strong-border);
+}
+
+.admin-points-denied p {
+  margin: 8px 0 18px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.admin-points-search {
+  display: grid;
+  align-items: end;
+  gap: 12px;
+  margin-top: 24px;
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.admin-points-search label,
+.admin-points-editor label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.admin-points-search input,
+.admin-points-search button,
+.admin-points-editor input,
+.admin-points-editor button {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.72rem;
+}
+
+.admin-points-search input:focus,
+.admin-points-editor input:focus {
+  border-color: var(--accent);
+}
+
+.admin-points-search button,
+.admin-points-editor button {
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.admin-points-search button:hover,
+.admin-points-editor button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.admin-points-users,
+.admin-points-editor,
+.admin-point-actions {
+  margin-top: 28px;
+}
+
+.admin-points-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.admin-points-section-heading h2 {
+  margin: 5px 0 0;
+  font-size: 1.25rem;
+}
+
+.admin-points-section-heading > span {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.62rem;
+}
+
+.admin-points-section-heading > span strong {
+  color: var(--accent);
+}
+
+.admin-points-user-list {
+  display: grid;
+  border-top: 1px solid var(--border);
+}
+
+.admin-point-user {
+  display: grid;
+  align-items: center;
+  gap: 14px;
+  padding-block: 13px;
+  border-bottom: 1px solid var(--border);
+  grid-template-columns: 40px minmax(0, 1fr) auto auto;
+}
+
+.admin-point-user.is-selected {
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.admin-point-user-avatar {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.admin-point-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.admin-point-user-info,
+.admin-point-user-metrics {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-point-user-info strong,
+.admin-point-user-metrics strong {
+  font-size: 0.76rem;
+}
+
+.admin-point-user-info span,
+.admin-point-user-metrics span {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.56rem;
+}
+
+.admin-point-user-metrics {
+  min-width: 110px;
+  text-align: right;
+}
+
+.admin-point-user-metrics strong {
+  color: var(--accent);
+}
+
+.admin-point-user > button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.64rem;
+}
+
+.admin-point-user > button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.admin-points-editor {
+  padding: 20px;
+  border: 1px solid var(--strong-border);
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+}
+
+.admin-points-editor form {
+  display: grid;
+  align-items: end;
+  gap: 12px;
+  grid-template-columns: 160px minmax(220px, 1fr) auto;
+}
+
+.admin-adjust-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-adjust-actions button {
+  min-height: 42px;
+  background: var(--text);
+  color: var(--background);
+}
+
+.admin-adjust-actions button:last-child {
+  background: transparent;
+  color: #e38276;
+}
+
+.admin-point-actions ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.admin-point-actions li {
+  display: grid;
+  align-items: center;
+  gap: 14px;
+  padding-block: 11px;
+  border-bottom: 1px solid var(--border);
+  grid-template-columns: minmax(0, 1fr) auto auto;
+}
+
+.admin-point-actions li > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-point-actions li strong {
+  font-size: 0.72rem;
+}
+
+.admin-point-actions li span,
+.admin-point-actions li small {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.54rem;
+}
+
+.admin-point-actions li > strong {
+  color: var(--accent);
+  font-family: Consolas, monospace;
+  font-size: 0.76rem;
+}
+
+.admin-point-actions li > strong.is-negative {
+  color: #e38276;
+}
+
+.admin-points-empty {
+  padding-block: 18px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 760px) {
+  .page-admin-points main {
+    padding-block: 34px 72px;
+  }
+
+  .admin-points-header,
+  .admin-points-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-points-search,
+  .admin-points-editor form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-point-user {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+
+  .admin-point-user-avatar {
+    width: 36px;
+    height: 36px;
+  }
+
+  .admin-point-user-metrics {
+    min-width: 0;
+    text-align: left;
+    grid-column: 2;
+  }
+
+  .admin-point-user > button {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+  }
+
+  .admin-adjust-actions {
+    flex-wrap: wrap;
+  }
+
+  .admin-point-actions li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admin-point-actions li small {
+    grid-column: 1 / -1;
+  }
+}

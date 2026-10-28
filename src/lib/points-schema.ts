@@ -54,6 +54,9 @@ export const pointTransaction = sqliteTable(
     description: text("description").notNull(),
     referenceId: text("reference_id").notNull().unique(),
     balanceAfter: integer("balance_after").notNull(),
+    operatorUserId: text("operator_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => [
