@@ -136,9 +136,7 @@ import "../../styles/admin-shop.css";
     userEmail: string;
   };
 
-  const previewMode =
-    import.meta.env.DEV &&
-    new URLSearchParams(window.location.search).has("preview");
+  const previewMode = import.meta.env.DEV;
   const previewItems: ShopItem[] = [
     {
       id: "fish-badge",
@@ -249,6 +247,16 @@ import "../../styles/admin-shop.css";
     status.textContent = message;
     status.dataset.state = state;
     status.hidden = !message;
+  };
+
+  const readJson = async <T,>(response: Response) => {
+    const contentType = response.headers.get("Content-Type") ?? "";
+    if (!contentType.includes("application/json")) {
+      throw new Error(
+        "本地 Astro 未运行商城 API。请刷新预览，或通过 wrangler pages dev 启动完整运行时。",
+      );
+    }
+    return (await response.json()) as T;
   };
 
   const formatDate = (timestamp: number) =>
@@ -463,9 +471,9 @@ import "../../styles/admin-shop.css";
       credentials: "same-origin",
       headers: { Accept: "application/json" },
     });
-    const payload = (await response.json()) as AdminShopResponse & {
+    const payload = await readJson<AdminShopResponse & {
       error?: string;
-    };
+    }>(response);
     if (!response.ok) {
       throw new AdminShopError(payload.error || "商城数据读取失败。", response.status);
     }
@@ -513,11 +521,11 @@ import "../../styles/admin-shop.css";
         },
         body: JSON.stringify({ amount, count }),
       });
-      const payload = (await response.json()) as {
+      const payload = await readJson<{
         error?: string;
         codes?: Array<{ code: string }>;
         amount?: number;
-      };
+      }>(response);
       if (!response.ok || !payload.codes) {
         throw new AdminShopError(payload.error || "兑换码生成失败。", response.status);
       }
@@ -590,7 +598,7 @@ import "../../styles/admin-shop.css";
           active: form.querySelector<HTMLInputElement>("[data-item-active]")?.checked ?? false,
         }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = await readJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(payload.error || "商品保存失败。");
       await loadAdminShop();
       setStatus("商品信息已保存。", "success");
@@ -650,7 +658,7 @@ import "../../styles/admin-shop.css";
       },
       body: JSON.stringify({ orderId, action, note }),
     });
-    const payload = (await response.json()) as { error?: string };
+    const payload = await readJson<{ error?: string }>(response);
     if (!response.ok) {
       setStatus(payload.error || "订单处理失败。", "error");
       return;

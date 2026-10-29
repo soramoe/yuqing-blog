@@ -88,9 +88,7 @@ import "../styles/shop.css";
     ShopResponse,
   } from "../lib/shop";
 
-  const previewMode =
-    import.meta.env.DEV &&
-    new URLSearchParams(window.location.search).has("preview");
+  const previewMode = import.meta.env.DEV;
   const loading = document.querySelector<HTMLElement>("[data-shop-loading]");
   const content = document.querySelector<HTMLElement>("[data-shop-content]");
   const balance = document.querySelector<HTMLElement>("[data-shop-balance]");
@@ -173,6 +171,16 @@ import "../styles/shop.css";
     status.textContent = message;
     status.dataset.state = state;
     status.hidden = !message;
+  };
+
+  const readJson = async <T,>(response: Response) => {
+    const contentType = response.headers.get("Content-Type") ?? "";
+    if (!contentType.includes("application/json")) {
+      throw new Error(
+        "本地 Astro 未运行商城 API。请使用预览数据，或通过 wrangler pages dev 启动完整运行时。",
+      );
+    }
+    return (await response.json()) as T;
   };
 
   const formatDate = (timestamp: number) =>
@@ -310,7 +318,7 @@ import "../styles/shop.css";
         credentials: "same-origin",
         headers: { Accept: "application/json" },
       });
-      const payload = (await response.json()) as ShopResponse & { error?: string };
+      const payload = await readJson<ShopResponse & { error?: string }>(response);
       if (!response.ok) throw new Error(payload.error || "商城读取失败。");
       data = payload;
     }
@@ -379,7 +387,7 @@ import "../styles/shop.css";
           requestId: crypto.randomUUID(),
         }),
       });
-      const payload = (await response.json()) as { error?: string };
+      const payload = await readJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(payload.error || "兑换失败。");
       await loadShop();
       setStatus("兑换成功，订单已记录。", "success");
@@ -428,10 +436,10 @@ import "../styles/shop.css";
         },
         body: JSON.stringify({ code }),
       });
-      const payload = (await response.json()) as {
+      const payload = await readJson<{
         error?: string;
         amount?: number;
-      };
+      }>(response);
       if (!response.ok) throw new Error(payload.error || "兑换码使用失败。");
       await loadShop();
       if (codeInput) codeInput.value = "";

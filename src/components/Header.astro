@@ -56,7 +56,7 @@ const isActive = (href: string) =>
   const authNav = document.querySelector<HTMLAnchorElement>("[data-auth-nav]");
   const authLabel = authNav?.querySelector<HTMLElement>("[data-auth-label]");
 
-  if (authNav && authLabel) {
+  if (import.meta.env.PROD && authNav && authLabel) {
     fetch("/api/auth/get-session", {
       credentials: "same-origin",
       headers: { Accept: "application/json" },
