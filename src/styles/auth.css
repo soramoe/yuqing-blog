@@ -17,6 +17,12 @@
   grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
 }
 
+.auth-shell-compact {
+  max-width: 1040px;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .auth-intro {
   position: relative;
   display: flex;
@@ -104,6 +110,10 @@
   flex-direction: column;
   justify-content: center;
   padding: clamp(32px, 6vw, 76px);
+}
+
+.auth-card-compact {
+  padding: clamp(24px, 4vw, 42px);
 }
 
 .auth-card h1 {
@@ -655,6 +665,10 @@
   .auth-shell {
     min-height: 0;
     grid-template-columns: 1fr;
+  }
+
+  .auth-card-compact {
+    padding: 24px 18px 28px;
   }
 
   .auth-intro {

@@ -7,64 +7,129 @@ import "../styles/points.css";
   title="签到与积分"
   description="每天签到领取积分，并查看你的积分流水。"
   eyebrow="POINTS CENTER"
+  bodyClass="page-auth page-points"
+  compact
 >
+  <div class="points-topbar">
+    <a href="/account/">← 返回账户</a>
+    <span>每日签到 · 自动记账</span>
+  </div>
+
   <p class="points-loading" data-points-loading>正在读取积分账户…</p>
 
   <div class="points-dashboard" data-points-content hidden>
-    <section class="points-balance-card" aria-label="积分余额">
-      <span>当前积分</span>
-      <strong data-points-balance>0</strong>
-      <small>累计获得 <b data-points-earned>0</b> 分</small>
-    </section>
+    <div class="points-overview">
+      <section class="points-balance-card" aria-label="积分余额">
+        <p class="eyebrow">POINT BALANCE</p>
+        <strong data-points-balance>0</strong>
+        <div class="points-balance-meta">
+          <span>累计获得 <b data-points-earned>0</b></span>
+          <span>连续签到 <b data-points-streak>0</b> 天</span>
+        </div>
+      </section>
 
-    <section class="points-checkin-card">
-      <div>
-        <p class="eyebrow">DAILY CHECK-IN</p>
-        <h2 data-points-date>今日签到</h2>
-        <p>
-          每天可签到一次，每次获得
-          <strong data-checkin-reward>5</strong> 积分。连续签到天数会保留记录。
-        </p>
-      </div>
-      <div class="points-checkin-action">
-        <span>连续签到 <strong data-points-streak>0</strong> 天</span>
-        <button type="button" data-checkin-button>签到 +5</button>
-      </div>
-    </section>
-  </div>
+      <section class="points-checkin-card">
+        <div class="points-checkin-head">
+          <div>
+            <p class="eyebrow">DAILY CHECK-IN</p>
+            <h2 data-points-date>今日签到</h2>
+          </div>
+          <span class="points-checkin-state" data-checkin-state>今日待签到</span>
+        </div>
 
-  <section class="points-history" data-points-history hidden>
-    <div class="points-history-heading">
-      <p class="eyebrow">POINT LEDGER</p>
-      <h2>积分流水</h2>
+        <div class="points-week" data-points-week aria-label="最近 7 天签到状态"></div>
+
+        <div class="points-checkin-action">
+          <p>
+            今日签到可获得
+            <strong data-checkin-reward>5</strong>
+            积分
+          </p>
+          <button type="button" data-checkin-button>签到 +5</button>
+        </div>
+      </section>
     </div>
-    <ol data-points-transactions></ol>
-  </section>
 
-  <p class="auth-status" data-points-status aria-live="polite"></p>
-  <div class="points-links">
-    <a class="auth-back" href="/account/">← 返回账户</a>
-    <a class="auth-back" href="/">返回网站</a>
+    <section class="points-history" aria-labelledby="points-history-title">
+      <div class="points-history-heading">
+        <div>
+          <p class="eyebrow">RECENT ACTIVITY</p>
+          <h2 id="points-history-title">积分流水</h2>
+        </div>
+        <span data-points-count>最近 0 条</span>
+      </div>
+      <ol data-points-transactions></ol>
+      <button class="points-history-toggle" type="button" data-points-history-toggle hidden>
+        查看全部记录
+      </button>
+    </section>
   </div>
+
+  <p class="auth-status" data-points-status aria-live="polite" hidden></p>
 </AuthLayout>
 
 <script>
   import { authClient } from "../lib/auth-client";
   import type { PointsSummary, PointTransactionItem } from "../lib/points";
 
+  const HISTORY_PREVIEW = 5;
   const loading = document.querySelector<HTMLElement>("[data-points-loading]");
   const content = document.querySelector<HTMLElement>("[data-points-content]");
-  const history = document.querySelector<HTMLElement>("[data-points-history]");
   const balance = document.querySelector<HTMLElement>("[data-points-balance]");
   const earned = document.querySelector<HTMLElement>("[data-points-earned]");
   const streak = document.querySelector<HTMLElement>("[data-points-streak]");
   const reward = document.querySelector<HTMLElement>("[data-checkin-reward]");
   const dateLabel = document.querySelector<HTMLElement>("[data-points-date]");
-  const checkin = document.querySelector<HTMLButtonElement>("[data-checkin-button]");
+  const checkinState = document.querySelector<HTMLElement>(
+    "[data-checkin-state]",
+  );
+  const week = document.querySelector<HTMLElement>("[data-points-week]");
+  const checkin = document.querySelector<HTMLButtonElement>(
+    "[data-checkin-button]",
+  );
   const transactionList = document.querySelector<HTMLElement>(
     "[data-points-transactions]",
   );
+  const transactionCount = document.querySelector<HTMLElement>(
+    "[data-points-count]",
+  );
+  const historyToggle = document.querySelector<HTMLButtonElement>(
+    "[data-points-history-toggle]",
+  );
   const status = document.querySelector<HTMLElement>("[data-points-status]");
+
+  let currentTransactions: PointTransactionItem[] = [];
+  let historyExpanded = false;
+  const previewMode =
+    import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).has("preview");
+  const previewTransactions: PointTransactionItem[] = Array.from(
+    { length: 12 },
+    (_, index) => {
+      const daysAgo = Math.floor(index / 2);
+      const isCheckin = index % 3 !== 2;
+      return {
+        id: `preview-${index}`,
+        amount: isCheckin ? 5 : index === 5 ? -20 : 10,
+        type: isCheckin ? "checkin" : "adjustment",
+        description: isCheckin
+          ? "每日签到"
+          : index === 5
+            ? "积分兑换"
+            : "活动奖励",
+        balanceAfter: Math.max(0, 128 - index * 5),
+        createdAt: Date.now() - daysAgo * 86_400_000 - index * 1_200_000,
+      };
+    },
+  );
+  const previewSummary: PointsSummary = {
+    balance: 128,
+    totalEarned: 156,
+    streak: 6,
+    checkedInToday: false,
+    checkinReward: 5,
+    transactions: previewTransactions,
+  };
 
   const setStatus = (message = "", state: "idle" | "error" = "idle") => {
     if (!status) return;
@@ -75,6 +140,7 @@ import "../styles/points.css";
 
   const formatDate = (timestamp: number) =>
     new Intl.DateTimeFormat("zh-CN", {
+      timeZone: "Asia/Shanghai",
       dateStyle: "medium",
       timeStyle: "short",
     }).format(new Date(timestamp));
@@ -83,20 +149,104 @@ import "../styles/points.css";
     const row = document.createElement("li");
     const main = document.createElement("div");
     const title = document.createElement("strong");
-    title.textContent = item.description;
     const time = document.createElement("time");
+    const amount = document.createElement("span");
+    const remaining = document.createElement("small");
+
+    title.textContent = item.description;
     time.dateTime = new Date(item.createdAt).toISOString();
     time.textContent = formatDate(item.createdAt);
     main.append(title, time);
 
-    const amount = document.createElement("span");
     amount.className = item.amount >= 0 ? "is-positive" : "is-negative";
     amount.textContent = `${item.amount >= 0 ? "+" : ""}${item.amount}`;
-
-    const remaining = document.createElement("small");
     remaining.textContent = `余额 ${item.balanceAfter}`;
+
     row.append(main, amount, remaining);
     return row;
+  };
+
+  const renderHistory = () => {
+    if (!transactionList) return;
+
+    transactionList.replaceChildren();
+    if (currentTransactions.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "points-empty";
+      empty.textContent = "还没有积分记录，完成第一次签到后会显示在这里。";
+      transactionList.append(empty);
+    } else {
+      currentTransactions.forEach((item, index) => {
+        const row = renderTransaction(item);
+        if (!historyExpanded && index >= HISTORY_PREVIEW) {
+          row.hidden = true;
+        }
+        transactionList.append(row);
+      });
+    }
+
+    if (transactionCount) {
+      transactionCount.textContent = `最近 ${currentTransactions.length} 条`;
+    }
+
+    if (historyToggle) {
+      historyToggle.hidden = currentTransactions.length <= HISTORY_PREVIEW;
+      historyToggle.textContent = historyExpanded ? "收起记录" : "查看全部记录";
+      historyToggle.setAttribute("aria-expanded", String(historyExpanded));
+    }
+  };
+
+  const renderWeek = (summary: PointsSummary) => {
+    if (!week) return;
+
+    const formatter = new Intl.DateTimeFormat("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      weekday: "short",
+    });
+    const todayParts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const values = Object.fromEntries(
+      todayParts.map((part) => [part.type, part.value]),
+    );
+    const todayUtc = Date.UTC(
+      Number(values.year),
+      Number(values.month) - 1,
+      Number(values.day),
+    );
+
+    week.replaceChildren();
+    for (let offset = -6; offset <= 0; offset += 1) {
+      const date = new Date(todayUtc + offset * 86_400_000);
+      const parts = formatter.formatToParts(date);
+      const weekday = parts.find((part) => part.type === "weekday")?.value ?? "";
+      const day = parts.find((part) => part.type === "day")?.value ?? "";
+      const active = summary.checkedInToday
+        ? offset <= 0 && offset > -summary.streak
+        : offset < 0 && offset >= -summary.streak;
+      const item = document.createElement("span");
+      item.className = "points-week-day";
+      item.classList.toggle("is-active", active);
+      item.classList.toggle("is-today", offset === 0);
+      item.setAttribute(
+        "aria-label",
+        `${formatter.format(date)}，${active ? "已签到" : "未签到"}`,
+      );
+
+      const dot = document.createElement("i");
+      const weekdayLabel = document.createElement("small");
+      const dayLabel = document.createElement("b");
+      weekdayLabel.textContent = weekday.replace("周", "");
+      dayLabel.textContent = day;
+      item.append(dot, weekdayLabel, dayLabel);
+      week.append(item);
+    }
   };
 
   const renderSummary = (summary: PointsSummary) => {
@@ -104,12 +254,6 @@ import "../styles/points.css";
     if (earned) earned.textContent = String(summary.totalEarned);
     if (streak) streak.textContent = String(summary.streak);
     if (reward) reward.textContent = String(summary.checkinReward);
-    if (checkin) {
-      checkin.disabled = summary.checkedInToday;
-      checkin.textContent = summary.checkedInToday
-        ? "今日已签到"
-        : `签到 +${summary.checkinReward}`;
-    }
     if (dateLabel) {
       dateLabel.textContent = new Intl.DateTimeFormat("zh-CN", {
         timeZone: "Asia/Shanghai",
@@ -118,23 +262,32 @@ import "../styles/points.css";
         weekday: "long",
       }).format(new Date());
     }
-
-    if (transactionList) {
-      transactionList.replaceChildren();
-      if (summary.transactions.length === 0) {
-        const empty = document.createElement("li");
-        empty.className = "points-empty";
-        empty.textContent = "还没有积分记录，完成第一次签到后会显示在这里。";
-        transactionList.append(empty);
-      } else {
-        summary.transactions.forEach((item) =>
-          transactionList.append(renderTransaction(item)),
-        );
-      }
+    if (checkinState) {
+      checkinState.textContent = summary.checkedInToday
+        ? "今日已签到"
+        : "今日待签到";
+      checkinState.dataset.checked = String(summary.checkedInToday);
     }
+    if (checkin) {
+      checkin.disabled = summary.checkedInToday;
+      checkin.textContent = summary.checkedInToday
+        ? "今日已签到"
+        : `签到 +${summary.checkinReward}`;
+    }
+
+    renderWeek(summary);
+    currentTransactions = summary.transactions;
+    renderHistory();
   };
 
   const loadPoints = async () => {
+    if (previewMode) {
+      renderSummary(previewSummary);
+      loading?.setAttribute("hidden", "");
+      content?.removeAttribute("hidden");
+      return;
+    }
+
     const response = await fetch("/api/points", {
       credentials: "same-origin",
       headers: { Accept: "application/json" },
@@ -146,10 +299,19 @@ import "../styles/points.css";
     renderSummary(payload);
     loading?.setAttribute("hidden", "");
     content?.removeAttribute("hidden");
-    history?.removeAttribute("hidden");
   };
 
+  historyToggle?.addEventListener("click", () => {
+    historyExpanded = !historyExpanded;
+    renderHistory();
+  });
+
   void authClient.getSession().then(async ({ data }) => {
+    if (previewMode) {
+      await loadPoints();
+      return;
+    }
+
     if (!data?.user) {
       window.location.replace("/login/?next=%2Fpoints%2F");
       return;
@@ -167,6 +329,25 @@ import "../styles/points.css";
 
   checkin?.addEventListener("click", async () => {
     if (!checkin) return;
+
+    if (previewMode) {
+      previewSummary.balance += previewSummary.checkinReward;
+      previewSummary.totalEarned += previewSummary.checkinReward;
+      previewSummary.streak += 1;
+      previewSummary.checkedInToday = true;
+      previewSummary.transactions.unshift({
+        id: "preview-today",
+        amount: previewSummary.checkinReward,
+        type: "checkin",
+        description: "每日签到",
+        balanceAfter: previewSummary.balance,
+        createdAt: Date.now(),
+      });
+      renderSummary(previewSummary);
+      setStatus("预览签到成功，获得 5 积分。");
+      return;
+    }
+
     checkin.disabled = true;
     setStatus("正在签到…");
     try {
