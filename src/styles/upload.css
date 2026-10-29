@@ -145,6 +145,55 @@
   border-color: var(--accent);
 }
 
+.image-privacy-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1px dashed var(--strong-border);
+  background: color-mix(in srgb, var(--accent) 4%, var(--background));
+  cursor: pointer;
+}
+
+.image-privacy-field input {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.image-privacy-field > span {
+  display: grid;
+  gap: 4px;
+}
+
+.image-privacy-field strong {
+  font-size: 0.7rem;
+}
+
+.image-privacy-field small {
+  color: var(--muted);
+  font-size: 0.62rem;
+  line-height: 1.6;
+}
+
+.image-upload-preview-item.is-private::after {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  background: rgba(8, 10, 8, 0.72);
+  color: #fff;
+  content: "私密";
+  font-size: 0.56rem;
+}
+
+.image-upload-preview-item {
+  position: relative;
+}
+
 .image-upload-foot {
   display: flex;
   align-items: center;

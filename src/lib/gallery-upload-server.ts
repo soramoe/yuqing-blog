@@ -3,12 +3,18 @@ import { isCommentAdmin } from "./comment-admin";
 import {
   GALLERY_UPLOAD_MAX_BYTES,
   GALLERY_UPLOAD_WIDTHS,
+  galleryOriginalKeys,
+  galleryPrivateKeys,
+  galleryPrivatePreviewKey,
   galleryVariantUrls,
+  privateGallerySourceUrl,
   toOnlineGalleryItem,
   type AdminGalleryItem,
   type GalleryUploadQuotaInfo,
   type GalleryUploadStatus,
+  type GalleryVisibility,
   type OnlineGalleryItem,
+  type OwnedGalleryItem,
 } from "./gallery-upload";
 import { chinaDateKey } from "./points";
 
@@ -20,6 +26,8 @@ interface GalleryUploadRow {
   height: number;
   source: "admin" | "public";
   status: GalleryUploadStatus;
+  visibility: GalleryVisibility;
+  hasPrivatePreview: boolean;
   createdAt: number;
   uploaderName: string | null;
 }
@@ -185,6 +193,50 @@ const createUploadJson = (
 ) =>
   new Response(JSON.stringify(body), { status, headers: jsonHeaders });
 
+const webpMetadata = {
+  contentType: "image/webp",
+  cacheControl: "public, max-age=31536000, immutable",
+} as const;
+
+const privateWebpMetadata = {
+  contentType: "image/webp",
+  cacheControl: "private, no-store",
+} as const;
+
+export function galleryR2Keys(baseName: string) {
+  return {
+    public: galleryOriginalKeys(baseName),
+    private: galleryPrivateKeys(baseName),
+    preview: galleryPrivatePreviewKey(baseName),
+  };
+}
+
+export async function moveGalleryVariants(
+  sourceBucket: R2Bucket,
+  targetBucket: R2Bucket,
+  sourceKeys: string[],
+  targetKeys: string[],
+  targetIsPrivate: boolean,
+) {
+  const copiedKeys: string[] = [];
+  try {
+    for (let index = 0; index < sourceKeys.length; index += 1) {
+      const object = await sourceBucket.get(sourceKeys[index]);
+      if (!object) {
+        throw new Error(`Missing R2 object: ${sourceKeys[index]}`);
+      }
+      await targetBucket.put(targetKeys[index], await object.arrayBuffer(), {
+        httpMetadata: targetIsPrivate ? privateWebpMetadata : webpMetadata,
+      });
+      copiedKeys.push(targetKeys[index]);
+    }
+  } catch (error) {
+    if (copiedKeys.length > 0) await targetBucket.delete(copiedKeys);
+    throw error;
+  }
+  await sourceBucket.delete(sourceKeys);
+}
+
 export async function uploadGalleryImage(
   request: Request,
   env: Env,
@@ -254,6 +306,25 @@ export async function uploadGalleryImage(
   if (title.length === 0) {
     return createUploadJson(400, { error: "图片标题不能为空。" });
   }
+  const visibilityValue = form.get("visibility");
+  if (visibilityValue !== "public" && visibilityValue !== "private") {
+    return createUploadJson(400, { error: "图片可见性设置无效。" });
+  }
+  const visibility = visibilityValue as GalleryVisibility;
+
+  let privatePreview: File | null = null;
+  if (visibility === "private") {
+    const preview = form.get("private-preview");
+    if (
+      !(preview instanceof File) ||
+      preview.type !== "image/webp" ||
+      !(await isWebp(preview)) ||
+      preview.size > 1024 * 1024
+    ) {
+      return createUploadJson(400, { error: "私密图片缺少有效的马赛克预览。" });
+    }
+    privatePreview = preview;
+  }
 
   let quotaUsed = 0;
   if (mode === "public") {
@@ -270,30 +341,53 @@ export async function uploadGalleryImage(
   }
 
   const baseName = `${date.replaceAll("-", "")}_${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
-  const uploadedKeys: string[] = [];
+  const uploadedPublicKeys: string[] = [];
+  const uploadedPrivateKeys: string[] = [];
   const now = Date.now();
   const id = crypto.randomUUID();
   const status: GalleryUploadStatus =
     mode === "admin" ? "approved" : "pending";
+  const storageBucket =
+    visibility === "private" ? env.MEDIA_PRIVATE_BUCKET : env.MEDIA_BUCKET;
+  const storageKeys =
+    visibility === "private"
+      ? galleryPrivateKeys(baseName)
+      : galleryOriginalKeys(baseName);
 
   try {
-    for (const { width, file } of files) {
-      const key = `gallery/uploads/${baseName}-${width}.webp`;
-      await env.MEDIA_BUCKET.put(key, await file.arrayBuffer(), {
-        httpMetadata: {
-          contentType: "image/webp",
-          cacheControl: "public, max-age=31536000, immutable",
-        },
+    for (let index = 0; index < files.length; index += 1) {
+      const { file } = files[index];
+      const key = storageKeys[index];
+      await storageBucket.put(key, await file.arrayBuffer(), {
+        httpMetadata:
+          visibility === "private" ? privateWebpMetadata : webpMetadata,
       });
-      uploadedKeys.push(key);
+      if (visibility === "private") {
+        uploadedPrivateKeys.push(key);
+      } else {
+        uploadedPublicKeys.push(key);
+      }
+    }
+
+    if (privatePreview) {
+      const previewKey = galleryPrivatePreviewKey(baseName);
+      await env.MEDIA_BUCKET.put(
+        previewKey,
+        await privatePreview.arrayBuffer(),
+        {
+          httpMetadata: webpMetadata,
+        },
+      );
+      uploadedPublicKeys.push(previewKey);
     }
 
     await env.DB.prepare(
       `INSERT INTO gallery_upload
-        (id, base_name, title, source, status, upload_date,
+        (id, base_name, title, source, status, visibility,
+         has_private_preview, visibility_updated_at, upload_date,
          uploader_user_id, anonymous_hash, width, height,
          created_at, updated_at, reviewed_by, reviewed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -301,6 +395,9 @@ export async function uploadGalleryImage(
         title,
         mode,
         status,
+        visibility,
+        visibility === "private",
+        now,
         date,
         identity.userId,
         identity.anonymousHash,
@@ -313,9 +410,10 @@ export async function uploadGalleryImage(
       )
       .run();
   } catch {
-    if (uploadedKeys.length > 0) {
-      await env.MEDIA_BUCKET.delete(uploadedKeys);
-    }
+    if (uploadedPublicKeys.length > 0)
+      await env.MEDIA_BUCKET.delete(uploadedPublicKeys);
+    if (uploadedPrivateKeys.length > 0)
+      await env.MEDIA_PRIVATE_BUCKET.delete(uploadedPrivateKeys);
     if (mode === "public") {
       await releaseQuota(env.DB, identity.subjectKey, date);
     }
@@ -330,8 +428,10 @@ export async function uploadGalleryImage(
     height: originalHeight,
     source: mode,
     status,
+    visibility,
+    hasPrivatePreview: visibility === "private",
     createdAt: now,
-  });
+  }, { revealPrivateTitle: true });
   return createUploadJson(201, {
     item,
     quota:
@@ -360,6 +460,8 @@ export async function listApprovedGalleryUploads(
         height,
         source,
         status,
+        visibility,
+        has_private_preview AS hasPrivatePreview,
         created_at AS createdAt
       FROM gallery_upload
       WHERE status = 'approved'
@@ -367,7 +469,7 @@ export async function listApprovedGalleryUploads(
       LIMIT 200`,
     )
     .all<GalleryUploadRow>();
-  return result.results.map(toOnlineGalleryItem);
+  return result.results.map((row) => toOnlineGalleryItem(row));
 }
 
 export async function listAdminGalleryUploads(
@@ -385,6 +487,8 @@ export async function listAdminGalleryUploads(
       g.height,
       g.source,
       g.status,
+      g.visibility,
+      g.has_private_preview AS hasPrivatePreview,
       g.created_at AS createdAt,
       g.reviewed_at AS reviewedAt,
       u.name AS uploaderName
@@ -399,7 +503,7 @@ export async function listAdminGalleryUploads(
   ).all<GalleryUploadRow & { reviewedAt: number | null }>();
 
   return result.results.map((row) => ({
-    ...toOnlineGalleryItem(row),
+    ...toOnlineGalleryItem(row, { revealPrivateTitle: true }),
     baseName: row.baseName,
     uploaderType:
       row.source === "admin"
@@ -412,5 +516,38 @@ export async function listAdminGalleryUploads(
         ? "站长"
         : row.uploaderName || "匿名投稿",
     reviewedAt: row.reviewedAt ? Number(row.reviewedAt) : null,
+    reviewHref: privateGallerySourceUrl(row.id),
+  }));
+}
+
+export async function listOwnedGalleryUploads(
+  db: D1Database,
+  userId: string,
+): Promise<OwnedGalleryItem[]> {
+  const result = await db
+    .prepare(
+      `SELECT
+        id,
+        title,
+        base_name AS baseName,
+        width,
+        height,
+        source,
+        status,
+        visibility,
+        has_private_preview AS hasPrivatePreview,
+        upload_date AS uploadDate,
+        created_at AS createdAt
+      FROM gallery_upload
+      WHERE uploader_user_id = ? AND status <> 'deleted'
+      ORDER BY created_at DESC, id DESC
+      LIMIT 100`,
+    )
+    .bind(userId)
+    .all<GalleryUploadRow & { uploadDate: string }>();
+  return result.results.map((row) => ({
+    ...toOnlineGalleryItem(row, { revealPrivateTitle: true }),
+    uploadDate: row.uploadDate,
+    reviewHref: privateGallerySourceUrl(row.id),
   }));
 }

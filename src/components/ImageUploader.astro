@@ -56,6 +56,14 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
       />
     </label>
 
+    <label class="image-privacy-field">
+      <input type="checkbox" data-image-private />
+      <span>
+        <strong>设为私密图片</strong>
+        <small>图库只展示马赛克预览；原图存入私有 R2，仅你和管理员可读取。</small>
+      </span>
+    </label>
+
     <div class="image-upload-foot">
       <p data-image-upload-status aria-live="polite">
         图片会自动压缩为 480、960、1920 三档 WebP。
@@ -85,6 +93,9 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
       "[data-image-preview]",
     );
     const title = root.querySelector<HTMLInputElement>("[data-image-title]");
+    const privateInput = root.querySelector<HTMLInputElement>(
+      "[data-image-private]",
+    );
     const uploadStatus = root.querySelector<HTMLElement>(
       "[data-image-upload-status]",
     );
@@ -154,6 +165,7 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
       selectedImages.forEach((image, index) => {
         const item = document.createElement("article");
         item.className = "image-upload-preview-item";
+        if (privateInput?.checked) item.classList.add("is-private");
 
         const preview = document.createElement("img");
         preview.src = image.previewUrl;
@@ -227,6 +239,44 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
       });
       if (!blob || blob.type !== "image/webp") {
         throw new Error("浏览器无法生成 WebP 图片。");
+      }
+      return blob;
+    };
+
+    const createPrivatePreview = async (
+      source: CanvasImageSource,
+      sourceWidth: number,
+      sourceHeight: number,
+    ) => {
+      const previewWidth = 36;
+      const previewHeight = Math.max(
+        1,
+        Math.round((sourceHeight / sourceWidth) * previewWidth),
+      );
+      const tiny = document.createElement("canvas");
+      tiny.width = previewWidth;
+      tiny.height = previewHeight;
+      const tinyContext = tiny.getContext("2d");
+      if (!tinyContext) throw new Error("浏览器无法生成私密预览。");
+      tinyContext.drawImage(source, 0, 0, previewWidth, previewHeight);
+
+      const outputWidth = 480;
+      const outputHeight = Math.max(
+        1,
+        Math.round((sourceHeight / sourceWidth) * outputWidth),
+      );
+      const output = document.createElement("canvas");
+      output.width = outputWidth;
+      output.height = outputHeight;
+      const context = output.getContext("2d");
+      if (!context) throw new Error("浏览器无法生成私密预览。");
+      context.imageSmoothingEnabled = false;
+      context.drawImage(tiny, 0, 0, outputWidth, outputHeight);
+      const blob = await new Promise<Blob | null>((resolve) => {
+        output.toBlob(resolve, "image/webp", 0.72);
+      });
+      if (!blob || blob.type !== "image/webp") {
+        throw new Error("浏览器无法生成私密预览。");
       }
       return blob;
     };
@@ -345,10 +395,12 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
 
       busy = true;
       submit.disabled = true;
+      if (privateInput) privateInput.disabled = true;
       let completed = 0;
       const successfulIds = new Set<string>();
       const total = selectedImages.length;
       const heading = title?.value.trim() ?? "";
+      const uploadAsPrivate = Boolean(privateInput?.checked);
 
       try {
         for (const image of [...selectedImages]) {
@@ -366,6 +418,13 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
               ),
             );
           }
+          const privatePreview = uploadAsPrivate
+            ? await createPrivatePreview(
+                decoded.source,
+                decoded.width,
+                decoded.height,
+              )
+            : null;
           decoded.dispose();
 
           const data = new FormData();
@@ -379,8 +438,15 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
           );
           data.append("width", String(image.width));
           data.append("height", String(image.height));
+          data.append(
+            "visibility",
+            uploadAsPrivate ? "private" : "public",
+          );
           for (const [width, blob] of variants) {
             data.append(`variant-${width}`, blob, `variant-${width}.webp`);
+          }
+          if (privatePreview) {
+            data.append("private-preview", privatePreview, "preview.webp");
           }
 
           const endpoint =
@@ -422,12 +488,13 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
         );
         if (input) input.value = "";
         if (title) title.value = "";
+        if (privateInput) privateInput.checked = false;
         renderPreviews();
         await loadQuota();
         setStatus(
           mode === "public"
-            ? `已成功提交 ${completed} 张图片，等待站长审核。`
-            : `已成功上传 ${completed} 张图片，并发布到图库。`,
+            ? `已成功提交 ${completed} 张图片，等待站长审核。${uploadAsPrivate ? "私密图片只会展示锁定预览。" : "公开图片审核通过后会正常显示。"}`
+            : `已成功上传 ${completed} 张图片，并发布到图库。${uploadAsPrivate ? "私密原图已存入私有桶。" : ""}`,
           "success",
         );
       } catch (error) {
@@ -448,6 +515,7 @@ const maxMegabytes = Math.round(GALLERY_UPLOAD_MAX_BYTES / 1024 / 1024);
         );
       } finally {
         busy = false;
+        if (privateInput) privateInput.disabled = false;
         updateSubmit();
       }
     });

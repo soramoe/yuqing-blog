@@ -238,6 +238,12 @@
   font-size: 0.82rem;
 }
 
+.admin-gallery-badges {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 6px;
+}
+
 .admin-gallery-badge {
   padding: 3px 7px;
   border: 1px solid currentColor;
@@ -251,6 +257,10 @@
 
 .admin-gallery-badge.is-pending {
   color: #d2a95f;
+}
+
+.admin-gallery-badge.is-private {
+  color: #aebfaa;
 }
 
 .admin-gallery-badge.is-rejected,

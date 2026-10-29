@@ -16,6 +16,15 @@ export const galleryUpload = sqliteTable(
     title: text("title").notNull(),
     source: text("source").notNull(),
     status: text("status").default("pending").notNull(),
+    visibility: text("visibility").default("public").notNull(),
+    hasPrivatePreview: integer("has_private_preview", {
+      mode: "boolean",
+    })
+      .default(false)
+      .notNull(),
+    visibilityUpdatedAt: integer("visibility_updated_at", {
+      mode: "timestamp_ms",
+    }),
     uploadDate: text("upload_date").notNull(),
     uploaderUserId: text("uploader_user_id").references(() => user.id, {
       onDelete: "set null",
@@ -37,6 +46,10 @@ export const galleryUpload = sqliteTable(
     ),
     index("gallery_upload_user_created_idx").on(
       table.uploaderUserId,
+      table.createdAt,
+    ),
+    index("gallery_upload_visibility_created_idx").on(
+      table.visibility,
       table.createdAt,
     ),
     index("gallery_upload_date_idx").on(table.uploadDate),

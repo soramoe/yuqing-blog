@@ -15,6 +15,10 @@
     {
       "binding": "MEDIA_BUCKET",
       "bucket_name": "yuqing-media"
+    },
+    {
+      "binding": "MEDIA_PRIVATE_BUCKET",
+      "bucket_name": "yuqing-private-media"
     }
   ]
 }

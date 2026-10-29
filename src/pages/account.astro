@@ -58,6 +58,17 @@ import AuthLayout from "../components/AuthLayout.astro";
         class="account-tab"
         type="button"
         role="tab"
+        id="account-tab-images"
+        aria-controls="account-panel-images"
+        aria-selected="false"
+        data-account-tab="images"
+      >
+        <span>03</span>我的图片
+      </button>
+      <button
+        class="account-tab"
+        type="button"
+        role="tab"
         id="account-tab-admin"
         aria-controls="account-panel-admin"
         aria-selected="false"
@@ -65,7 +76,7 @@ import AuthLayout from "../components/AuthLayout.astro";
         data-account-admin-tab
         hidden
       >
-        <span>03</span>站长工具
+        <span>04</span>站长工具
       </button>
     </div>
 
@@ -98,6 +109,25 @@ import AuthLayout from "../components/AuthLayout.astro";
         <p class="account-panel-note">
           登录方式决定评论身份；绑定 GitHub 或已验证邮箱后，可获得对应奖励。
         </p>
+      </section>
+
+      <section
+        class="account-panel account-gallery-panel"
+        id="account-panel-images"
+        role="tabpanel"
+        aria-labelledby="account-tab-images"
+        data-account-panel="images"
+        hidden
+      >
+        <div class="account-admin-heading">
+          <div>
+            <p class="eyebrow">MY UPLOADS</p>
+            <h2>我的图片</h2>
+          </div>
+          <span data-account-gallery-count>正在读取…</span>
+        </div>
+        <p class="account-gallery-status" data-account-gallery-status aria-live="polite"></p>
+        <div class="account-gallery-list" data-account-gallery-list></div>
       </section>
 
       <section
@@ -213,6 +243,10 @@ import AuthLayout from "../components/AuthLayout.astro";
 
 <script>
   import { authClient } from "../lib/auth-client";
+  import type {
+    GalleryUploadStatus,
+    OwnedGalleryItem,
+  } from "../lib/gallery-upload";
 
   const loading = document.querySelector<HTMLElement>("[data-account-loading]");
   const content = document.querySelector<HTMLElement>("[data-account-content]");
@@ -257,6 +291,156 @@ import AuthLayout from "../components/AuthLayout.astro";
   const bindVerifyCode = document.querySelector<HTMLButtonElement>(
     "[data-bind-verify-code]",
   );
+  const accountGalleryList = document.querySelector<HTMLElement>(
+    "[data-account-gallery-list]",
+  );
+  const accountGalleryCount = document.querySelector<HTMLElement>(
+    "[data-account-gallery-count]",
+  );
+  const accountGalleryStatus = document.querySelector<HTMLElement>(
+    "[data-account-gallery-status]",
+  );
+
+  const galleryStatusLabels: Record<GalleryUploadStatus, string> = {
+    pending: "待审核",
+    approved: "已发布",
+    rejected: "未通过",
+    deleted: "已删除",
+  };
+
+  const setGalleryStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!accountGalleryStatus) return;
+    accountGalleryStatus.textContent = message;
+    accountGalleryStatus.dataset.state = state;
+  };
+
+  const loadOwnedGallery = async () => {
+    if (!accountGalleryList) return;
+    setGalleryStatus("正在读取你的图片…");
+    const response = await fetch("/api/gallery/mine", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as {
+      images?: OwnedGalleryItem[];
+      error?: string;
+    };
+    if (!response.ok) {
+      throw new Error(payload.error || "图片记录读取失败。");
+    }
+
+    const images = payload.images ?? [];
+    if (accountGalleryCount) {
+      accountGalleryCount.textContent = `${images.length} 张图片`;
+    }
+    accountGalleryList.replaceChildren();
+    if (images.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "account-gallery-empty";
+      empty.textContent = "还没有上传过图片。";
+      accountGalleryList.append(empty);
+      setGalleryStatus("");
+      return;
+    }
+
+    for (const image of images) {
+      const card = document.createElement("article");
+      card.className = "account-gallery-card";
+      if (image.locked) card.classList.add("is-private");
+
+      const thumbnail = document.createElement("img");
+      thumbnail.src = image.locked ? image.src : image.reviewHref;
+      thumbnail.alt = image.locked ? "私密图片的马赛克预览" : image.title;
+      thumbnail.loading = "lazy";
+      thumbnail.decoding = "async";
+
+      const body = document.createElement("div");
+      const heading = document.createElement("header");
+      const title = document.createElement("strong");
+      title.textContent = image.title;
+      const state = document.createElement("span");
+      state.textContent = `${galleryStatusLabels[image.status]} · ${image.locked ? "私密" : "公开"}`;
+      heading.append(title, state);
+
+      const meta = document.createElement("small");
+      meta.textContent = `${image.width} × ${image.height} · ${new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(new Date(image.createdAt))}`;
+
+      const actions = document.createElement("div");
+      actions.className = "account-gallery-actions";
+      const view = document.createElement("a");
+      view.href = image.reviewHref;
+      view.target = "_blank";
+      view.rel = "noopener";
+      view.textContent = "查看原图";
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.dataset.ownedGalleryVisibility =
+        image.visibility === "private" ? "public" : "private";
+      toggle.dataset.ownedGalleryId = image.id;
+      toggle.textContent =
+        image.visibility === "private" ? "设为公开" : "设为私密";
+      actions.append(view, toggle);
+
+      body.append(heading, meta, actions);
+      card.append(thumbnail, body);
+      accountGalleryList.append(card);
+    }
+    setGalleryStatus("");
+  };
+
+  accountGalleryList?.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-owned-gallery-visibility]",
+    );
+    if (!button) return;
+    const visibility = button.dataset.ownedGalleryVisibility;
+    const id = button.dataset.ownedGalleryId;
+    if (!id || (visibility !== "public" && visibility !== "private")) return;
+    if (
+      visibility === "private" &&
+      !window.confirm(
+        "设为私密后，公开图库只显示马赛克预览，原图会从公开存储移入私有 R2。确定继续吗？",
+      )
+    ) {
+      return;
+    }
+
+    button.disabled = true;
+    setGalleryStatus(
+      visibility === "private" ? "正在移入私有存储…" : "正在公开原图…",
+    );
+    try {
+      const response = await fetch("/api/gallery/visibility", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, visibility }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "可见性更新失败。");
+      }
+      await loadOwnedGallery();
+      setGalleryStatus(
+        visibility === "private"
+          ? "已设为私密，原图仅你和管理员可查看。"
+          : "已设为公开，原图已移入公开图库。",
+        "success",
+      );
+    } catch (error) {
+      button.disabled = false;
+      setGalleryStatus(
+        error instanceof Error ? error.message : "可见性更新失败。",
+        "error",
+      );
+    }
+  });
 
   const { data, error } = await authClient.getSession();
 
@@ -361,6 +545,14 @@ import AuthLayout from "../components/AuthLayout.astro";
     };
 
     void loadSignInMethods().catch(() => undefined);
+    void loadOwnedGallery().catch((galleryError) => {
+      setGalleryStatus(
+        galleryError instanceof Error
+          ? galleryError.message
+          : "你的图片暂时无法读取。",
+        "error",
+      );
+    });
   }
 
   const accountTabs = Array.from(

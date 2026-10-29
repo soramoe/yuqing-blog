@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400" role="img" aria-label="私密图片已锁定">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#242824"/>
+      <stop offset="1" stop-color="#0f110f"/>
+    </linearGradient>
+    <pattern id="mosaic" width="40" height="40" patternUnits="userSpaceOnUse">
+      <rect width="40" height="40" fill="#1a1d1a"/>
+      <rect width="20" height="20" fill="#2a302a" opacity=".72"/>
+      <rect x="20" y="20" width="20" height="20" fill="#353d34" opacity=".42"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="400" fill="url(#bg)"/>
+  <rect width="640" height="400" fill="url(#mosaic)" opacity=".72"/>
+  <g fill="none" stroke="#b7c6ad" stroke-width="3">
+    <rect x="272" y="166" width="96" height="78" rx="8"/>
+    <path d="M293 166v-19a27 27 0 0 1 54 0v19"/>
+  </g>
+  <circle cx="320" cy="203" r="8" fill="#b7c6ad"/>
+  <path d="M320 211v16" stroke="#b7c6ad" stroke-width="5" stroke-linecap="round"/>
+  <text x="320" y="290" fill="#d8e2d2" font-family="sans-serif" font-size="18" text-anchor="middle" letter-spacing="5">PRIVATE</text>
+</svg>

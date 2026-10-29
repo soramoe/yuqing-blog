@@ -149,12 +149,19 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
       payload.images.forEach((image) => {
         const item = document.createElement("a");
         item.className = "waterfall-item";
+        if (image.locked) item.classList.add("is-private");
         item.href = image.href;
-        item.dataset.galleryOpen = "true";
+        if (!image.locked) item.dataset.galleryOpen = "true";
         item.dataset.galleryTitle = image.title;
-        item.dataset.gallerySrcset = image.srcSet;
-        item.dataset.gallerySizes =
-          "(max-width: 820px) 100vw, (max-width: 1915px) 94vw, 1800px";
+        if (!image.locked) {
+          item.dataset.gallerySrcset = image.srcSet;
+          item.dataset.gallerySizes =
+            "(max-width: 820px) 100vw, (max-width: 1915px) 94vw, 1800px";
+        }
+        item.setAttribute(
+          "aria-label",
+          image.locked ? "私密图片，已锁定" : image.title,
+        );
         item.style.setProperty(
           "--gallery-aspect",
           `${image.width} / ${image.height}`,
@@ -162,7 +169,7 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
 
         const thumbnail = document.createElement("img");
         thumbnail.src = image.src;
-        thumbnail.srcset = image.srcSet;
+        if (!image.locked) thumbnail.srcset = image.srcSet;
         thumbnail.sizes = "(max-width: 820px) 50vw, (max-width: 1200px) 33vw, 25vw";
         thumbnail.alt = image.title;
         thumbnail.width = image.width;
@@ -181,8 +188,18 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
         );
 
         const caption = document.createElement("span");
-        caption.textContent = image.title;
-        item.append(thumbnail, caption);
+        caption.textContent = image.locked
+          ? "私密图片 · 仅投稿者可见"
+          : image.title;
+        item.append(thumbnail);
+        if (image.locked) {
+          const lock = document.createElement("div");
+          lock.className = "gallery-private-mark";
+          lock.innerHTML =
+            '<span aria-hidden="true">⌑</span><strong>已锁定</strong>';
+          item.append(lock);
+        }
+        item.append(caption);
         fragment.append(item);
       });
       grid.prepend(fragment);

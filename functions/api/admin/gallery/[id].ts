@@ -1,7 +1,7 @@
 import type { PagesFunction } from "@cloudflare/workers-types";
 import { createAuth } from "../../../../src/lib/auth";
 import { isCommentAdmin } from "../../../../src/lib/comment-admin";
-import { galleryVariantUrls } from "../../../../src/lib/gallery-upload";
+import { galleryR2Keys } from "../../../../src/lib/gallery-upload-server";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -102,11 +102,10 @@ export const onRequestDelete: PagesFunction<
     .bind(authorized.session.user.id, now, now, id)
     .run();
 
-  const urls = galleryVariantUrls(authorized.image.baseName);
-  await env.MEDIA_BUCKET.delete([
-    new URL(urls[480]).pathname.slice(1),
-    new URL(urls[960]).pathname.slice(1),
-    new URL(urls[1920]).pathname.slice(1),
+  const keys = galleryR2Keys(authorized.image.baseName);
+  await Promise.all([
+    env.MEDIA_BUCKET.delete([...keys.public, keys.preview]),
+    env.MEDIA_PRIVATE_BUCKET.delete(keys.private),
   ]);
   return new Response(null, {
     status: 204,

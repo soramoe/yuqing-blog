@@ -600,6 +600,126 @@
     color-mix(in srgb, var(--surface) 72%, transparent);
 }
 
+.account-gallery-panel {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 62%, transparent);
+}
+
+.account-gallery-status {
+  min-height: 1em;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.58rem;
+}
+
+.account-gallery-status:empty {
+  display: none;
+}
+
+.account-gallery-status[data-state="error"] {
+  color: #e38276;
+}
+
+.account-gallery-status[data-state="success"] {
+  color: #79b98b;
+}
+
+.account-gallery-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+}
+
+.account-gallery-card {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--background);
+}
+
+.account-gallery-card > img {
+  width: 100%;
+  height: 118px;
+  object-fit: cover;
+}
+
+.account-gallery-card.is-private > img {
+  filter: blur(6px) saturate(0.72);
+  transform: scale(1.08);
+}
+
+.account-gallery-card > div {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  padding: 10px;
+}
+
+.account-gallery-card header {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.account-gallery-card header strong {
+  overflow: hidden;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-gallery-card header span,
+.account-gallery-card small {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.55rem;
+}
+
+.account-gallery-card header span {
+  color: var(--accent);
+}
+
+.account-gallery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 2px;
+}
+
+.account-gallery-actions a,
+.account-gallery-actions button {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.6rem;
+}
+
+.account-gallery-actions a:hover,
+.account-gallery-actions button:hover:not(:disabled) {
+  color: var(--accent);
+}
+
+.account-gallery-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.account-gallery-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 16px 0;
+  border-block: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
 .account-admin-heading {
   display: flex;
   align-items: end;
@@ -753,7 +873,8 @@
   }
 
   .account-login-methods,
-  .account-admin-tools {
+  .account-admin-tools,
+  .account-gallery-panel {
     padding: 13px;
   }
 

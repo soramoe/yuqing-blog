@@ -9,6 +9,8 @@ export type GalleryUploadStatus =
   | "rejected"
   | "deleted";
 
+export type GalleryVisibility = "public" | "private";
+
 export interface OnlineGalleryItem {
   id: string;
   title: string;
@@ -16,6 +18,8 @@ export interface OnlineGalleryItem {
   height: number;
   source: "admin" | "public";
   status: GalleryUploadStatus;
+  visibility: GalleryVisibility;
+  locked: boolean;
   createdAt: number;
   src: string;
   srcSet: string;
@@ -27,6 +31,12 @@ export interface AdminGalleryItem extends OnlineGalleryItem {
   uploaderName: string;
   uploaderType: "admin" | "user" | "anonymous";
   reviewedAt: number | null;
+  reviewHref: string;
+}
+
+export interface OwnedGalleryItem extends OnlineGalleryItem {
+  uploadDate: string;
+  reviewHref: string;
 }
 
 export interface GalleryUploadQuotaInfo {
@@ -54,7 +64,28 @@ export function galleryVariantUrls(baseName: string) {
   };
 }
 
-export function toOnlineGalleryItem(row: {
+export function galleryOriginalKeys(baseName: string) {
+  return GALLERY_UPLOAD_WIDTHS.map(
+    (width) => `gallery/uploads/${baseName}-${width}.webp`,
+  );
+}
+
+export function galleryPrivateKeys(baseName: string) {
+  return GALLERY_UPLOAD_WIDTHS.map(
+    (width) => `gallery/private/${baseName}-${width}.webp`,
+  );
+}
+
+export function galleryPrivatePreviewKey(baseName: string) {
+  return `gallery/private-previews/${baseName}-480.webp`;
+}
+
+export function privateGallerySourceUrl(id: string, variant = 960) {
+  return `/api/gallery/source/${encodeURIComponent(id)}?variant=${variant}`;
+}
+
+export function toOnlineGalleryItem(
+  row: {
   id: string;
   title: string;
   baseName: string;
@@ -62,19 +93,34 @@ export function toOnlineGalleryItem(row: {
   height: number;
   source: "admin" | "public";
   status: GalleryUploadStatus;
+  visibility?: GalleryVisibility;
+  hasPrivatePreview?: boolean;
   createdAt: number;
-}): OnlineGalleryItem {
+  },
+  options: { revealPrivateTitle?: boolean } = {},
+): OnlineGalleryItem {
   const urls = galleryVariantUrls(row.baseName);
+  const visibility: GalleryVisibility =
+    row.visibility === "private" ? "private" : "public";
+  const locked = visibility === "private";
+  const preview = row.hasPrivatePreview
+    ? `${SITE.mediaBaseUrl}/${galleryPrivatePreviewKey(row.baseName)}`
+    : "/private-locked.svg";
   return {
     id: row.id,
-    title: row.title,
+    title:
+      locked && !options.revealPrivateTitle ? "私密图片" : row.title,
     width: row.width,
     height: row.height,
     source: row.source,
     status: row.status,
+    visibility,
+    locked,
     createdAt: row.createdAt,
-    src: urls[960],
-    srcSet: `${urls[480]} 480w, ${urls[960]} 960w, ${urls[1920]} 1920w`,
-    href: urls[1920],
+    src: locked ? preview : urls[960],
+    srcSet: locked
+      ? preview
+      : `${urls[480]} 480w, ${urls[960]} 960w, ${urls[1920]} 1920w`,
+    href: locked ? "/account/" : urls[1920],
   };
 }

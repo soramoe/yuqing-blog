@@ -71,6 +71,13 @@
       "when": 1793260143504,
       "tag": "0009_shop_limit_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1793271727114,
+      "tag": "0010_safe_zarda",
+      "breakpoints": true
     }
   ]
 }

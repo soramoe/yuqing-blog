@@ -212,7 +212,7 @@ const staticItems = [
     card.className = `admin-gallery-card is-${image.status}`;
 
     const thumbnail = document.createElement("img");
-    thumbnail.src = image.src;
+    thumbnail.src = image.reviewHref;
     thumbnail.alt = image.title;
     thumbnail.loading = "lazy";
     thumbnail.decoding = "async";
@@ -225,12 +225,21 @@ const staticItems = [
     const badge = document.createElement("span");
     badge.className = `admin-gallery-badge is-${image.status}`;
     badge.textContent = labels[image.status];
-    heading.append(title, badge);
+    const badges = document.createElement("div");
+    badges.className = "admin-gallery-badges";
+    badges.append(badge);
+    if (image.locked) {
+      const privateBadge = document.createElement("span");
+      privateBadge.className = "admin-gallery-badge is-private";
+      privateBadge.textContent = "私密";
+      badges.append(privateBadge);
+    }
+    heading.append(title, badges);
 
     const meta = document.createElement("p");
     meta.textContent = `${image.uploaderName} · ${formatDate(image.createdAt)}`;
     const size = document.createElement("small");
-    size.textContent = `${image.width} × ${image.height} · ${image.source === "admin" ? "站长直传" : "公共投稿"}`;
+    size.textContent = `${image.width} × ${image.height} · ${image.source === "admin" ? "站长直传" : "公共投稿"} · ${image.locked ? "私密原图" : "公开原图"}`;
 
     const actions = document.createElement("div");
     actions.className = "admin-gallery-actions";
@@ -385,7 +394,7 @@ const staticItems = [
       | "deleted";
     if (
       action === "deleted" &&
-      !window.confirm("永久删除会同时删除 R2 中的三个图片文件，确定继续吗？")
+      !window.confirm("永久删除会同时删除 R2 中的原图、私密文件与预览，确定继续吗？")
     ) {
       return;
     }
