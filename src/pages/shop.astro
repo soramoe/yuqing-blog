@@ -1,0 +1,465 @@
+---
+import AuthLayout from "../components/AuthLayout.astro";
+import "../styles/shop.css";
+---
+
+<AuthLayout
+  title="兑换"
+  description="使用渔情积分兑换站内物品，或使用兑换码领取积分。"
+  eyebrow="REDEEM MARKET"
+  bodyClass="page-auth page-shop"
+  compact
+>
+  <div class="shop-topbar">
+    <a href="/account/">← 返回账户</a>
+    <a href="/points/">积分与签到 →</a>
+  </div>
+
+  <p class="shop-loading" data-shop-loading>正在准备兑换商城…</p>
+
+  <div class="shop-content" data-shop-content hidden>
+    <section class="shop-overview" aria-label="积分与兑换码">
+      <div class="shop-balance">
+        <p class="eyebrow">POINT BALANCE</p>
+        <strong data-shop-balance>—</strong>
+        <span>可用积分</span>
+        <small>累计获得 <b data-shop-earned>—</b></small>
+      </div>
+
+      <form class="shop-code-form" data-shop-code-form>
+        <div>
+          <p class="eyebrow">CODE REDEEM</p>
+          <h2>兑换积分码</h2>
+          <p>输入站长生成的兑换码，积分会立即到账。</p>
+        </div>
+        <label>
+          <span class="sr-only">积分兑换码</span>
+          <input
+            type="text"
+            name="code"
+            maxlength="32"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="YQ-XXXX-XXXX-XXXX-XXXX"
+            data-shop-code
+            required
+          />
+        </label>
+        <button type="submit">兑换积分</button>
+      </form>
+    </section>
+
+    <div class="shop-guest" data-shop-guest hidden>
+      <span>登录后才能兑换商品和使用积分码。</span>
+      <a href="/login/?next=%2Fshop%2F">登录 / 注册</a>
+    </div>
+
+    <section class="shop-catalog" aria-labelledby="shop-catalog-title">
+      <div class="shop-section-heading">
+        <div>
+          <p class="eyebrow">AVAILABLE ITEMS</p>
+          <h2 id="shop-catalog-title">可兑换物品</h2>
+        </div>
+        <span data-shop-item-count>0 件</span>
+      </div>
+      <div class="shop-grid" data-shop-grid></div>
+    </section>
+
+    <section class="shop-orders" data-shop-orders hidden aria-labelledby="shop-orders-title">
+      <div class="shop-section-heading">
+        <div>
+          <p class="eyebrow">MY REDEMPTIONS</p>
+          <h2 id="shop-orders-title">我的兑换</h2>
+        </div>
+        <span data-shop-order-count>0 条</span>
+      </div>
+      <ol data-shop-order-list></ol>
+    </section>
+  </div>
+
+  <p class="auth-status" data-shop-status aria-live="polite" hidden></p>
+</AuthLayout>
+
+<script>
+  import { authClient } from "../lib/auth-client";
+  import type {
+    ShopItem,
+    ShopOrder,
+    ShopResponse,
+  } from "../lib/shop";
+
+  const previewMode =
+    import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).has("preview");
+  const loading = document.querySelector<HTMLElement>("[data-shop-loading]");
+  const content = document.querySelector<HTMLElement>("[data-shop-content]");
+  const balance = document.querySelector<HTMLElement>("[data-shop-balance]");
+  const earned = document.querySelector<HTMLElement>("[data-shop-earned]");
+  const guest = document.querySelector<HTMLElement>("[data-shop-guest]");
+  const status = document.querySelector<HTMLElement>("[data-shop-status]");
+  const grid = document.querySelector<HTMLElement>("[data-shop-grid]");
+  const itemCount = document.querySelector<HTMLElement>("[data-shop-item-count]");
+  const orders = document.querySelector<HTMLElement>("[data-shop-orders]");
+  const orderList = document.querySelector<HTMLElement>("[data-shop-order-list]");
+  const orderCount = document.querySelector<HTMLElement>("[data-shop-order-count]");
+  const codeForm = document.querySelector<HTMLFormElement>("[data-shop-code-form]");
+  const codeInput = document.querySelector<HTMLInputElement>("[data-shop-code]");
+
+  const previewItems: ShopItem[] = [
+    {
+      id: "fish-badge",
+      name: "渔情限定徽章",
+      description: "点亮个人账号中的渔情身份标记，兑换后由站长登记。",
+      coverUrl: null,
+      pricePoints: 30,
+      stock: 100,
+      perUserLimit: 1,
+      deliveryNote: "兑换成功后请联系站长完成徽章登记。",
+      active: true,
+      sortOrder: 10,
+      redeemedByUser: 0,
+    },
+    {
+      id: "wallpaper-pack",
+      name: "高清壁纸包",
+      description: "一套渔情主题高清壁纸，适合桌面与手机使用。",
+      coverUrl: null,
+      pricePoints: 50,
+      stock: 50,
+      perUserLimit: 1,
+      deliveryNote: "兑换成功后由站长提供下载地址。",
+      active: true,
+      sortOrder: 20,
+      redeemedByUser: 0,
+    },
+    {
+      id: "comment-title",
+      name: "自定义评论称号",
+      description: "为账号设置一个专属评论称号，展示在评论身份旁。",
+      coverUrl: null,
+      pricePoints: 80,
+      stock: 30,
+      perUserLimit: 1,
+      deliveryNote: "兑换成功后由站长确认称号文字并完成设置。",
+      active: true,
+      sortOrder: 30,
+      redeemedByUser: 0,
+    },
+  ];
+  const previewOrders: ShopOrder[] = [
+    {
+      id: "preview-order-1",
+      itemId: "fish-badge",
+      itemName: "渔情限定徽章",
+      itemDescription: "",
+      deliveryNote: "等待站长登记",
+      quantity: 1,
+      unitPrice: 30,
+      totalPoints: 30,
+      status: "pending",
+      createdAt: Date.now() - 86_400_000,
+      completedAt: null,
+    },
+  ];
+  const previewData: ShopResponse = {
+    items: previewItems,
+    user: { balance: 128, totalEarned: 194, orders: previewOrders },
+  };
+
+  let data: ShopResponse = previewData;
+
+  const setStatus = (message = "", state: "idle" | "error" | "success" = "idle") => {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+    status.hidden = !message;
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const orderStatus = {
+    pending: { label: "待发放", className: "is-pending" },
+    fulfilled: { label: "已发放", className: "is-fulfilled" },
+    cancelled: { label: "已取消", className: "is-cancelled" },
+  } as const;
+
+  const createItemCard = (item: ShopItem) => {
+    const card = document.createElement("article");
+    card.className = "shop-card";
+    card.dataset.shopItem = item.id;
+
+    const cover = document.createElement("div");
+    cover.className = "shop-card-cover";
+    if (item.coverUrl && /^(https:\/\/|\/)/.test(item.coverUrl)) {
+      const image = document.createElement("img");
+      image.src = item.coverUrl;
+      image.alt = "";
+      image.loading = "lazy";
+      image.decoding = "async";
+      cover.append(image);
+    } else {
+      const glyph = document.createElement("span");
+      glyph.textContent = item.name.slice(0, 1);
+      glyph.setAttribute("aria-hidden", "true");
+      cover.append(glyph);
+    }
+    const stock = document.createElement("small");
+    stock.textContent = item.stock > 0 ? `库存 ${item.stock}` : "已兑完";
+    cover.append(stock);
+
+    const body = document.createElement("div");
+    body.className = "shop-card-body";
+    const heading = document.createElement("div");
+    heading.className = "shop-card-heading";
+    const name = document.createElement("h3");
+    name.textContent = item.name;
+    const price = document.createElement("strong");
+    price.textContent = `${item.pricePoints} 积分`;
+    heading.append(name, price);
+    const description = document.createElement("p");
+    description.textContent = item.description;
+
+    const footer = document.createElement("div");
+    footer.className = "shop-card-footer";
+    const limit = document.createElement("span");
+    limit.textContent = `每人限兑 ${item.perUserLimit} 件`;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.shopRedeem = item.id;
+
+    const user = data.user;
+    const alreadyRedeemed =
+      (item.redeemedByUser ?? 0) >= item.perUserLimit;
+    if (!user) {
+      button.textContent = "登录后兑换";
+      button.dataset.shopLogin = "true";
+    } else if (alreadyRedeemed) {
+      button.textContent = "已兑换";
+      button.disabled = true;
+    } else if (item.stock <= 0) {
+      button.textContent = "暂时售罄";
+      button.disabled = true;
+    } else if (user.balance < item.pricePoints) {
+      button.textContent = "积分不足";
+      button.disabled = true;
+    } else {
+      button.textContent = "立即兑换";
+    }
+
+    footer.append(limit, button);
+    body.append(heading, description, footer);
+    card.append(cover, body);
+    return card;
+  };
+
+  const renderOrders = () => {
+    if (!orderList || !orders || !orderCount) return;
+    const rows = data.user?.orders ?? [];
+    orders.hidden = !data.user || rows.length === 0;
+    orderCount.textContent = `${rows.length} 条`;
+    orderList.replaceChildren();
+
+    for (const item of rows) {
+      const row = document.createElement("li");
+      const main = document.createElement("div");
+      const name = document.createElement("strong");
+      const meta = document.createElement("time");
+      const badge = document.createElement("span");
+      const note = document.createElement("p");
+      const state = orderStatus[item.status] ?? orderStatus.pending;
+
+      name.textContent = item.itemName;
+      meta.dateTime = new Date(item.createdAt).toISOString();
+      meta.textContent = formatDate(item.createdAt);
+      main.append(name, meta);
+      badge.className = `shop-order-state ${state.className}`;
+      badge.textContent = state.label;
+      note.textContent =
+        item.status === "fulfilled" && item.deliveryNote
+          ? item.deliveryNote
+          : item.status === "pending"
+            ? "兑换已记录，等待站长发放。"
+            : "订单已取消，积分已退回。";
+      row.append(main, badge, note);
+      orderList.append(row);
+    }
+  };
+
+  const render = () => {
+    if (grid) {
+      grid.replaceChildren(...data.items.map(createItemCard));
+    }
+    if (itemCount) itemCount.textContent = `${data.items.length} 件`;
+    if (balance) balance.textContent = data.user ? String(data.user.balance) : "—";
+    if (earned) earned.textContent = data.user ? String(data.user.totalEarned) : "—";
+    if (guest) guest.hidden = Boolean(data.user);
+    if (codeForm) codeForm.dataset.requiresLogin = String(!data.user);
+    renderOrders();
+  };
+
+  const loadShop = async () => {
+    if (previewMode) {
+      data = previewData;
+    } else {
+      const response = await fetch("/api/shop", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json()) as ShopResponse & { error?: string };
+      if (!response.ok) throw new Error(payload.error || "商城读取失败。");
+      data = payload;
+    }
+    render();
+    loading?.setAttribute("hidden", "");
+    content?.removeAttribute("hidden");
+  };
+
+  codeInput?.addEventListener("input", () => {
+    codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  });
+
+  grid?.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-shop-redeem]",
+    );
+    if (!button) return;
+    if (button.dataset.shopLogin === "true") {
+      window.location.assign("/login/?next=%2Fshop%2F");
+      return;
+    }
+    const itemId = button.dataset.shopRedeem ?? "";
+    const item = data.items.find((entry) => entry.id === itemId);
+    if (!item) return;
+    if (!window.confirm(`确定使用 ${item.pricePoints} 积分兑换“${item.name}”吗？`)) {
+      return;
+    }
+
+    button.disabled = true;
+    setStatus("正在兑换…");
+    if (previewMode) {
+      const order: ShopOrder = {
+        id: `preview-${Date.now()}`,
+        itemId: item.id,
+        itemName: item.name,
+        itemDescription: item.description,
+        deliveryNote: item.deliveryNote,
+        quantity: 1,
+        unitPrice: item.pricePoints,
+        totalPoints: item.pricePoints,
+        status: "pending",
+        createdAt: Date.now(),
+        completedAt: null,
+      };
+      if (data.user) {
+        data.user.balance -= item.pricePoints;
+        data.user.orders.unshift(order);
+      }
+      item.stock -= 1;
+      item.redeemedByUser = (item.redeemedByUser ?? 0) + 1;
+      render();
+      setStatus("预览兑换成功，等待站长发放。", "success");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/shop/redeem", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          itemId,
+          requestId: crypto.randomUUID(),
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "兑换失败。");
+      await loadShop();
+      setStatus("兑换成功，订单已记录。", "success");
+    } catch (error) {
+      button.disabled = false;
+      setStatus(
+        error instanceof Error ? error.message : "兑换失败，请稍后重试。",
+        "error",
+      );
+    }
+  });
+
+  codeForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (codeForm.dataset.requiresLogin === "true") {
+      window.location.assign("/login/?next=%2Fshop%2F");
+      return;
+    }
+    const code = codeInput?.value.trim() ?? "";
+    if (code.length < 12) {
+      setStatus("请输入完整的积分兑换码。", "error");
+      return;
+    }
+    const submit = codeForm.querySelector<HTMLButtonElement>("button[type=submit]");
+    if (submit) submit.disabled = true;
+    setStatus("正在兑换积分…");
+
+    try {
+      if (previewMode) {
+        if (data.user) {
+          data.user.balance += 20;
+          data.user.totalEarned += 20;
+        }
+        render();
+        if (codeInput) codeInput.value = "";
+        setStatus("预览兑换成功，获得 20 积分。", "success");
+        return;
+      }
+
+      const response = await fetch("/api/points/redeem-code", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        amount?: number;
+      };
+      if (!response.ok) throw new Error(payload.error || "兑换码使用失败。");
+      await loadShop();
+      if (codeInput) codeInput.value = "";
+      setStatus(`兑换成功，获得 ${payload.amount ?? 0} 积分。`, "success");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "兑换码使用失败。",
+        "error",
+      );
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+
+  const initializeShop = async () => {
+    if (!previewMode) {
+      const { data: session } = await authClient.getSession();
+      if (!session?.user && guest) guest.hidden = false;
+    }
+    await loadShop();
+  };
+
+  void initializeShop()
+    .catch((error) => {
+      loading?.setAttribute("hidden", "");
+      setStatus(
+        error instanceof Error ? error.message : "商城读取失败。",
+        "error",
+      );
+    });
+</script>

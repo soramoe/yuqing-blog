@@ -1,0 +1,695 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/admin-points.css";
+import "../../styles/admin-shop.css";
+---
+
+<BaseLayout
+  title="商城管理"
+  description="管理积分兑换商品、兑换订单和积分兑换码。"
+  bodyClass="page-admin-points page-admin-shop"
+  noindex
+>
+  <div class="container admin-points-shell">
+    <header class="admin-points-header">
+      <div>
+        <p class="eyebrow">SHOP OPERATIONS</p>
+        <h1>商城管理</h1>
+        <p>管理商品与库存、处理兑换订单，并生成一次性积分码。</p>
+      </div>
+      <div class="admin-points-nav">
+        <a href="/admin/comments/">评论审核</a>
+        <a href="/admin/points/">积分管理</a>
+        <a href="/account/">返回账户</a>
+      </div>
+    </header>
+
+    <p class="admin-points-status" data-admin-shop-status aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-points-denied" data-admin-shop-denied hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-admin-shop-gate-title>请先登录</strong>
+      <p data-admin-shop-gate-copy>登录后才能进入商城管理。</p>
+      <div class="admin-points-gate-actions">
+        <a href="/login/?next=%2Fadmin%2Fshop%2F" data-admin-shop-gate-link>
+          使用 GitHub 登录
+        </a>
+        <button type="button" data-admin-shop-gate-retry hidden>
+          重新加载
+        </button>
+      </div>
+    </div>
+
+    <div data-admin-shop-content hidden>
+      <section class="admin-shop-code-panel" aria-labelledby="code-generator-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">POINT CODES</p>
+            <h2 id="code-generator-title">生成积分兑换码</h2>
+          </div>
+          <span>一次最多生成 20 个</span>
+        </div>
+        <form class="admin-shop-code-form" data-admin-code-form>
+          <label>
+            <span>每个兑换码的积分</span>
+            <input
+              type="number"
+              min="1"
+              max="100000"
+              step="1"
+              value="20"
+              data-code-amount
+              required
+            />
+          </label>
+          <label>
+            <span>生成数量</span>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              step="1"
+              value="1"
+              data-code-count
+              required
+            />
+          </label>
+          <button type="submit">生成兑换码</button>
+        </form>
+        <div class="admin-shop-code-result" data-code-result hidden>
+          <p>
+            兑换码明文只显示这一次，请立即复制或下载保存。
+          </p>
+          <textarea data-code-output readonly></textarea>
+          <div>
+            <button type="button" data-copy-codes>复制全部</button>
+            <button type="button" data-download-codes>下载 TXT</button>
+          </div>
+        </div>
+        <div class="admin-shop-code-history">
+          <h3>最近生成的兑换码</h3>
+          <ol data-code-history></ol>
+        </div>
+      </section>
+
+      <section class="admin-shop-items" aria-labelledby="admin-shop-items-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">CATALOG</p>
+            <h2 id="admin-shop-items-title">商品与库存</h2>
+          </div>
+          <div class="admin-shop-heading-actions">
+            <span data-admin-item-count>0 件商品</span>
+            <button type="button" data-admin-add-item>新增商品</button>
+          </div>
+        </div>
+        <div data-admin-item-list></div>
+      </section>
+
+      <section class="admin-shop-orders" aria-labelledby="admin-shop-orders-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">REDEMPTIONS</p>
+            <h2 id="admin-shop-orders-title">兑换订单</h2>
+          </div>
+          <span data-admin-order-count>0 条订单</span>
+        </div>
+        <ol data-admin-order-list></ol>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+  import type {
+    AdminShopResponse,
+    ShopItem,
+    ShopOrder,
+  } from "../../lib/shop";
+
+  type AdminOrder = ShopOrder & {
+    userId: string;
+    userName: string;
+    userEmail: string;
+  };
+
+  const previewMode =
+    import.meta.env.DEV &&
+    new URLSearchParams(window.location.search).has("preview");
+  const previewItems: ShopItem[] = [
+    {
+      id: "fish-badge",
+      name: "渔情限定徽章",
+      description: "点亮个人账号中的渔情身份标记，兑换后由站长登记。",
+      coverUrl: null,
+      pricePoints: 30,
+      stock: 99,
+      perUserLimit: 1,
+      deliveryNote: "兑换成功后请联系站长完成徽章登记。",
+      active: true,
+      sortOrder: 10,
+    },
+    {
+      id: "wallpaper-pack",
+      name: "高清壁纸包",
+      description: "一套渔情主题高清壁纸，适合桌面与手机使用。",
+      coverUrl: null,
+      pricePoints: 50,
+      stock: 50,
+      perUserLimit: 1,
+      deliveryNote: "兑换成功后由站长提供下载地址。",
+      active: true,
+      sortOrder: 20,
+    },
+    {
+      id: "comment-title",
+      name: "自定义评论称号",
+      description: "为账号设置一个专属评论称号，展示在评论身份旁。",
+      coverUrl: null,
+      pricePoints: 80,
+      stock: 30,
+      perUserLimit: 1,
+      deliveryNote: "兑换成功后由站长确认称号文字并完成设置。",
+      active: true,
+      sortOrder: 30,
+    },
+  ];
+  const previewAdminData: AdminShopResponse = {
+    items: previewItems,
+    orders: [
+      {
+        id: "preview-order",
+        itemId: "fish-badge",
+        itemName: "渔情限定徽章",
+        itemDescription: "",
+        deliveryNote: "兑换成功后请联系站长完成徽章登记。",
+        quantity: 1,
+        unitPrice: 30,
+        totalPoints: 30,
+        status: "pending",
+        createdAt: Date.now() - 3_600_000,
+        completedAt: null,
+        userId: "preview-user",
+        userName: "小耗子",
+        userEmail: "preview@example.com",
+      },
+    ],
+    codes: [
+      {
+        id: "preview-code",
+        codeHint: "YQAB••••9K2X",
+        amount: 20,
+        batchId: "preview-batch",
+        createdAt: Date.now() - 7_200_000,
+        redeemedAt: null,
+        redeemedByName: null,
+      },
+    ],
+  };
+
+  class AdminShopError extends Error {
+    constructor(
+      message: string,
+      readonly status: number,
+    ) {
+      super(message);
+    }
+  }
+
+  const denied = document.querySelector<HTMLElement>("[data-admin-shop-denied]");
+  const content = document.querySelector<HTMLElement>("[data-admin-shop-content]");
+  const status = document.querySelector<HTMLElement>("[data-admin-shop-status]");
+  const gateTitle = document.querySelector<HTMLElement>("[data-admin-shop-gate-title]");
+  const gateCopy = document.querySelector<HTMLElement>("[data-admin-shop-gate-copy]");
+  const gateLink = document.querySelector<HTMLAnchorElement>("[data-admin-shop-gate-link]");
+  const gateRetry = document.querySelector<HTMLButtonElement>("[data-admin-shop-gate-retry]");
+  const codeForm = document.querySelector<HTMLFormElement>("[data-admin-code-form]");
+  const amountInput = document.querySelector<HTMLInputElement>("[data-code-amount]");
+  const countInput = document.querySelector<HTMLInputElement>("[data-code-count]");
+  const codeResult = document.querySelector<HTMLElement>("[data-code-result]");
+  const codeOutput = document.querySelector<HTMLTextAreaElement>("[data-code-output]");
+  const copyCodes = document.querySelector<HTMLButtonElement>("[data-copy-codes]");
+  const downloadCodes = document.querySelector<HTMLButtonElement>("[data-download-codes]");
+  const codeHistory = document.querySelector<HTMLElement>("[data-code-history]");
+  const itemList = document.querySelector<HTMLElement>("[data-admin-item-list]");
+  const itemCount = document.querySelector<HTMLElement>("[data-admin-item-count]");
+  const addItemButton = document.querySelector<HTMLButtonElement>(
+    "[data-admin-add-item]",
+  );
+  const orderList = document.querySelector<HTMLElement>("[data-admin-order-list]");
+  const orderCount = document.querySelector<HTMLElement>("[data-admin-order-count]");
+
+  let latestCodes: string[] = [];
+
+  const setStatus = (message = "", state: "idle" | "error" | "success" = "idle") => {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+    status.hidden = !message;
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const showGate = (title: string, copy: string, retry = false) => {
+    if (content) content.hidden = true;
+    if (denied) denied.hidden = false;
+    if (gateTitle) gateTitle.textContent = title;
+    if (gateCopy) gateCopy.textContent = copy;
+    if (gateLink) gateLink.hidden = retry;
+    if (gateRetry) gateRetry.hidden = !retry;
+    setStatus("");
+  };
+
+  const renderCodes = (codes: AdminShopResponse["codes"]) => {
+    if (!codeHistory) return;
+    codeHistory.replaceChildren();
+    if (codes.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "admin-points-empty";
+      empty.textContent = "还没有生成过积分兑换码。";
+      codeHistory.append(empty);
+      return;
+    }
+    for (const code of codes) {
+      const row = document.createElement("li");
+      const main = document.createElement("div");
+      const amount = document.createElement("strong");
+      const meta = document.createElement("span");
+      const state = document.createElement("small");
+      amount.textContent = `+${code.amount} 积分 · ${code.codeHint}`;
+      meta.textContent = `${formatDate(code.createdAt)} / ${code.batchId.slice(0, 8)}`;
+      state.textContent = code.redeemedAt
+        ? `${code.redeemedByName ?? "用户"} 已兑换`
+        : "未使用";
+      state.className = code.redeemedAt ? "is-used" : "";
+      main.append(amount, meta);
+      row.append(main, state);
+      codeHistory.append(row);
+    }
+  };
+
+  const createField = (
+    labelText: string,
+    input: HTMLInputElement | HTMLTextAreaElement,
+  ) => {
+    const label = document.createElement("label");
+    const text = document.createElement("span");
+    text.textContent = labelText;
+    label.append(text, input);
+    return label;
+  };
+
+  const renderItem = (item: ShopItem) => {
+    const form = document.createElement("form");
+    form.className = "admin-shop-item";
+    form.dataset.itemId = item.id;
+    form.dataset.sortOrder = String(item.sortOrder);
+
+    const heading = document.createElement("div");
+    heading.className = "admin-shop-item-heading";
+    const title = document.createElement("strong");
+    title.textContent = item.name;
+    const id = document.createElement("small");
+    id.textContent = item.id ? item.id.slice(0, 8) : "NEW";
+    heading.append(title, id);
+
+    const name = document.createElement("input");
+    name.value = item.name;
+    name.maxLength = 60;
+    name.dataset.itemName = "";
+    const price = document.createElement("input");
+    price.type = "number";
+    price.min = "1";
+    price.max = "100000";
+    price.value = String(item.pricePoints);
+    price.dataset.itemPrice = "";
+    const stock = document.createElement("input");
+    stock.type = "number";
+    stock.min = "0";
+    stock.max = "1000000";
+    stock.value = String(item.stock);
+    stock.dataset.itemStock = "";
+    const limit = document.createElement("input");
+    limit.type = "number";
+    limit.min = "1";
+    limit.max = "10";
+    limit.value = String(item.perUserLimit);
+    limit.dataset.itemLimit = "";
+    const note = document.createElement("textarea");
+    note.value = item.deliveryNote;
+    note.maxLength = 500;
+    note.rows = 2;
+    note.dataset.itemNote = "";
+    const cover = document.createElement("input");
+    cover.value = item.coverUrl ?? "";
+    cover.maxLength = 500;
+    cover.placeholder = "https://… 或 /covers/…";
+    cover.dataset.itemCover = "";
+    const description = document.createElement("textarea");
+    description.value = item.description;
+    description.maxLength = 500;
+    description.rows = 2;
+    description.dataset.itemDescription = "";
+
+    const fields = document.createElement("div");
+    fields.className = "admin-shop-item-fields";
+    fields.append(
+      createField("名称", name),
+      createField("积分价格", price),
+      createField("库存", stock),
+      createField("每人限兑", limit),
+    );
+
+    const activeLabel = document.createElement("label");
+    activeLabel.className = "admin-shop-active";
+    const active = document.createElement("input");
+    active.type = "checkbox";
+    active.checked = item.active;
+    active.dataset.itemActive = "";
+    activeLabel.append(active, document.createTextNode("上架中"));
+
+    const actions = document.createElement("div");
+    actions.className = "admin-shop-item-actions";
+    actions.append(activeLabel);
+    const save = document.createElement("button");
+    save.type = "submit";
+    save.textContent = "保存商品";
+    actions.append(save);
+
+    form.append(
+      heading,
+      fields,
+      createField("封面地址（可选）", cover),
+      createField("商品描述", description),
+      createField("发放说明", note),
+      actions,
+    );
+    return form;
+  };
+
+  const renderOrders = (orders: AdminOrder[]) => {
+    if (!orderList || !orderCount) return;
+    orderCount.textContent = `${orders.length} 条订单`;
+    orderList.replaceChildren();
+    if (orders.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "admin-points-empty";
+      empty.textContent = "还没有兑换订单。";
+      orderList.append(empty);
+      return;
+    }
+
+    for (const order of orders) {
+      const row = document.createElement("li");
+      const main = document.createElement("div");
+      const title = document.createElement("strong");
+      const user = document.createElement("span");
+      const time = document.createElement("time");
+      const points = document.createElement("strong");
+      const state = document.createElement("small");
+      const actions = document.createElement("div");
+
+      title.textContent = order.itemName;
+      user.textContent = `${order.userName} / ${order.userEmail}`;
+      time.dateTime = new Date(order.createdAt).toISOString();
+      time.textContent = formatDate(order.createdAt);
+      main.append(title, user, time);
+      points.textContent = `-${order.totalPoints}`;
+      points.className = "admin-shop-order-points";
+      state.textContent =
+        order.status === "pending"
+          ? "待发放"
+          : order.status === "fulfilled"
+            ? "已发放"
+            : "已取消";
+
+      if (order.status === "pending") {
+        const fulfill = document.createElement("button");
+        fulfill.type = "button";
+        fulfill.dataset.fulfillOrder = order.id;
+        fulfill.textContent = "标记已发放";
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.dataset.cancelOrder = order.id;
+        cancel.textContent = "取消并退款";
+        actions.append(fulfill, cancel);
+      }
+
+      row.append(main, points, state, actions);
+      orderList.append(row);
+    }
+  };
+
+  const applyData = (data: AdminShopResponse) => {
+    if (itemList) {
+      itemList.replaceChildren(...data.items.map(renderItem));
+    }
+    if (itemCount) itemCount.textContent = `${data.items.length} 件商品`;
+    renderCodes(data.codes);
+    renderOrders(data.orders);
+  };
+
+  const loadAdminShop = async () => {
+    setStatus("正在读取商城数据…");
+    const response = await fetch("/api/admin/shop", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as AdminShopResponse & {
+      error?: string;
+    };
+    if (!response.ok) {
+      throw new AdminShopError(payload.error || "商城数据读取失败。", response.status);
+    }
+    applyData(payload);
+    if (content) content.hidden = false;
+    if (denied) denied.hidden = true;
+    setStatus("");
+  };
+
+  codeForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const amount = Number(amountInput?.value);
+    const count = Number(countInput?.value);
+    if (!Number.isInteger(amount) || amount < 1) {
+      setStatus("请输入正确的积分数量。", "error");
+      return;
+    }
+    if (!Number.isInteger(count) || count < 1 || count > 20) {
+      setStatus("生成数量需要在 1 到 20 之间。", "error");
+      return;
+    }
+    const submit = codeForm.querySelector<HTMLButtonElement>("button[type=submit]");
+    if (submit) submit.disabled = true;
+    setStatus("正在生成兑换码…");
+    try {
+      if (previewMode) {
+        const prefix = "YQPREVIEW";
+        latestCodes = Array.from(
+          { length: count },
+          (_, index) =>
+            `${prefix.slice(0, 2)}-${String(amount).padStart(4, "0")}-${String(index + 1).padStart(4, "0")}-DEMO-${crypto.randomUUID().slice(0, 4).toUpperCase()}`,
+        );
+        if (codeOutput) codeOutput.value = latestCodes.join("\n");
+        if (codeResult) codeResult.hidden = false;
+        setStatus(`预览：已生成 ${count} 个 ${amount} 积分兑换码。`, "success");
+        return;
+      }
+
+      const response = await fetch("/api/admin/shop/codes", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ amount, count }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        codes?: Array<{ code: string }>;
+        amount?: number;
+      };
+      if (!response.ok || !payload.codes) {
+        throw new AdminShopError(payload.error || "兑换码生成失败。", response.status);
+      }
+      latestCodes = payload.codes.map((item) => item.code);
+      if (codeOutput) codeOutput.value = latestCodes.join("\n");
+      if (codeResult) codeResult.hidden = false;
+      await loadAdminShop();
+      setStatus(`已生成 ${latestCodes.length} 个 ${payload.amount ?? amount} 积分兑换码。`, "success");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "兑换码生成失败。", "error");
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+
+  copyCodes?.addEventListener("click", async () => {
+    if (latestCodes.length === 0) return;
+    try {
+      await navigator.clipboard.writeText(latestCodes.join("\n"));
+      setStatus("兑换码已复制。", "success");
+    } catch {
+      setStatus("复制失败，请手动选择文本框内容。", "error");
+      codeOutput?.focus();
+      codeOutput?.select();
+    }
+  });
+
+  downloadCodes?.addEventListener("click", () => {
+    if (latestCodes.length === 0) return;
+    const blob = new Blob([`${latestCodes.join("\n")}\n`], {
+      type: "text/plain;charset=utf-8",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `yuqing-point-codes-${new Date().toISOString().slice(0, 10)}.txt`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  });
+
+  itemList?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const form = event.target as HTMLFormElement;
+    const button = form.querySelector<HTMLButtonElement>("button[type=submit]");
+    const value = (selector: string) =>
+      form.querySelector<HTMLInputElement | HTMLTextAreaElement>(selector)?.value ?? "";
+    if (button) button.disabled = true;
+    try {
+      if (previewMode) {
+        setStatus("预览模式：商品信息已模拟保存。", "success");
+        return;
+      }
+
+      const response = await fetch("/api/admin/shop/items", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: form.dataset.itemId,
+          name: value("[data-item-name]").trim(),
+          description: value("[data-item-description]").trim(),
+          coverUrl: value("[data-item-cover]").trim(),
+          deliveryNote: value("[data-item-note]").trim(),
+          pricePoints: Number(value("[data-item-price]")),
+          stock: Number(value("[data-item-stock]")),
+          perUserLimit: Number(value("[data-item-limit]")),
+          sortOrder: Number(form.dataset.sortOrder ?? 0),
+          active: form.querySelector<HTMLInputElement>("[data-item-active]")?.checked ?? false,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "商品保存失败。");
+      await loadAdminShop();
+      setStatus("商品信息已保存。", "success");
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "商品保存失败。", "error");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  });
+
+  addItemButton?.addEventListener("click", () => {
+    if (!itemList) return;
+    const form = renderItem({
+      id: "",
+      name: "",
+      description: "",
+      coverUrl: null,
+      pricePoints: 10,
+      stock: 1,
+      perUserLimit: 1,
+      deliveryNote: "",
+      active: true,
+      sortOrder: 100,
+    });
+    form.dataset.sortOrder = "100";
+    itemList.prepend(form);
+    form.querySelector<HTMLInputElement>("[data-item-name]")?.focus();
+    form.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+
+  orderList?.addEventListener("click", async (event) => {
+    const target = event.target as HTMLElement;
+    const fulfill = target.closest<HTMLButtonElement>("[data-fulfill-order]");
+    const cancel = target.closest<HTMLButtonElement>("[data-cancel-order]");
+    if (!fulfill && !cancel) return;
+    const orderId = fulfill?.dataset.fulfillOrder ?? cancel?.dataset.cancelOrder ?? "";
+    const action = fulfill ? "fulfill" : "cancel";
+    let note = "";
+    if (action === "fulfill") {
+      note = window.prompt("发放说明，可留空：", "已完成发放") ?? "";
+    } else if (!window.confirm("确定取消订单并退回积分、恢复库存吗？")) {
+      return;
+    }
+    if (previewMode) {
+      setStatus(
+        action === "fulfill" ? "预览：订单已模拟发放。" : "预览：订单已模拟取消并退款。",
+        "success",
+      );
+      return;
+    }
+    const response = await fetch("/api/admin/shop/orders", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ orderId, action, note }),
+    });
+    const payload = (await response.json()) as { error?: string };
+    if (!response.ok) {
+      setStatus(payload.error || "订单处理失败。", "error");
+      return;
+    }
+    await loadAdminShop();
+    setStatus(action === "fulfill" ? "订单已标记发放。" : "订单已取消并退回积分。", "success");
+  });
+
+  gateRetry?.addEventListener("click", () => window.location.reload());
+
+  if (previewMode) {
+    applyData(previewAdminData);
+    if (content) content.hidden = false;
+    if (denied) denied.hidden = true;
+    setStatus("预览模式：当前展示模拟商城数据。");
+  } else {
+    void authClient
+      .getSession()
+      .then(async ({ data }) => {
+        if (!data?.user) {
+          showGate("请先登录", "登录后才能进入商城管理，完成后会自动返回这里。");
+          return;
+        }
+        try {
+          await loadAdminShop();
+        } catch (error) {
+          if (error instanceof AdminShopError && error.status === 403) {
+            showGate("没有商城管理权限", "当前账号不是站长。");
+          } else if (error instanceof AdminShopError && error.status === 401) {
+            showGate("登录已过期", "请重新登录后再试。", true);
+          } else {
+            showGate(
+              "暂时无法读取商城",
+              error instanceof Error ? error.message : "请稍后重试。",
+              true,
+            );
+          }
+        }
+      })
+      .catch(() => showGate("无法验证登录状态", "请检查网络后重新加载。", true));
+  }
+</script>

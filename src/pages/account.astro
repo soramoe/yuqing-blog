@@ -24,6 +24,7 @@ import AuthLayout from "../components/AuthLayout.astro";
 
       <div class="account-actions">
         <a class="auth-button" href="/points/">签到与积分</a>
+        <a class="auth-button auth-button-secondary" href="/shop/">兑换商城</a>
         <button class="auth-button auth-button-secondary" type="button" data-sign-out>
           退出登录
         </button>
@@ -88,6 +89,10 @@ import AuthLayout from "../components/AuthLayout.astro";
           <div>
             <dt>积分中心</dt>
             <dd><a href="/points/">查看积分与签到</a></dd>
+          </div>
+          <div>
+            <dt>兑换商城</dt>
+            <dd><a href="/shop/">兑换物品与积分码</a></dd>
           </div>
         </dl>
         <p class="account-panel-note">
@@ -191,6 +196,11 @@ import AuthLayout from "../components/AuthLayout.astro";
             <span>03</span>
             <strong>图库管理</strong>
             <small>上传发布图片并审核公共投稿</small>
+          </a>
+          <a href="/admin/shop/">
+            <span>04</span>
+            <strong>商城管理</strong>
+            <small>管理商品、兑换订单与积分码</small>
           </a>
         </div>
       </section>

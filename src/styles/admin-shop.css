@@ -1,0 +1,326 @@
+.admin-shop-code-panel,
+.admin-shop-items,
+.admin-shop-orders {
+  margin-top: 28px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 44%, transparent);
+}
+
+.admin-shop-code-panel {
+  border-color: var(--strong-border);
+}
+
+.admin-shop-code-form {
+  display: grid;
+  align-items: end;
+  gap: 12px;
+  grid-template-columns: 180px 130px auto;
+}
+
+.admin-shop-code-form label,
+.admin-shop-item label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.6rem;
+}
+
+.admin-shop-code-form input,
+.admin-shop-item input:not([type="checkbox"]),
+.admin-shop-item textarea {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  outline: none;
+  background: var(--background);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.admin-shop-item textarea {
+  min-height: 58px;
+  resize: vertical;
+}
+
+.admin-shop-code-form input:focus,
+.admin-shop-item input:focus,
+.admin-shop-item textarea:focus {
+  border-color: var(--accent);
+}
+
+.admin-shop-code-form button,
+.admin-shop-code-result button,
+.admin-shop-item-actions button,
+.admin-shop-orders button {
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid var(--text);
+  background: var(--text);
+  color: var(--background);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.admin-shop-code-form button:hover:not(:disabled),
+.admin-shop-code-result button:hover,
+.admin-shop-item-actions button:hover:not(:disabled),
+.admin-shop-orders button:hover:not(:disabled) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+
+.admin-shop-code-form button:disabled,
+.admin-shop-item-actions button:disabled,
+.admin-shop-orders button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.admin-shop-code-result {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+}
+
+.admin-shop-code-result[hidden] {
+  display: none;
+}
+
+.admin-shop-code-result p {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.68rem;
+}
+
+.admin-shop-code-result textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--text);
+  font-family: Consolas, monospace;
+  font-size: 0.7rem;
+  line-height: 1.7;
+  resize: vertical;
+}
+
+.admin-shop-code-result > div {
+  display: flex;
+  gap: 8px;
+}
+
+.admin-shop-code-history,
+.admin-shop-items {
+  margin-top: 20px;
+}
+
+.admin-shop-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-shop-heading-actions > span {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.62rem;
+}
+
+.admin-shop-heading-actions > button {
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.64rem;
+}
+
+.admin-shop-code-history h3 {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+}
+
+.admin-shop-code-history ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.admin-shop-code-history li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-block: 9px;
+  border-bottom: 1px solid var(--border);
+}
+
+.admin-shop-code-history li > div {
+  display: grid;
+  gap: 2px;
+}
+
+.admin-shop-code-history strong {
+  font-family: Consolas, monospace;
+  font-size: 0.68rem;
+}
+
+.admin-shop-code-history span,
+.admin-shop-code-history small {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.53rem;
+}
+
+.admin-shop-code-history small.is-used {
+  color: var(--accent);
+}
+
+.admin-shop-items [data-admin-item-list] {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-shop-item {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background: var(--background);
+}
+
+.admin-shop-item-heading,
+.admin-shop-item-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.admin-shop-item-heading small {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.54rem;
+}
+
+.admin-shop-item-fields {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(180px, 1.6fr) repeat(3, minmax(90px, 0.55fr));
+}
+
+.admin-shop-active {
+  display: flex !important;
+  align-items: center;
+  gap: 7px !important;
+  color: var(--text) !important;
+}
+
+.admin-shop-active input {
+  accent-color: var(--accent);
+}
+
+.admin-shop-item-actions > button {
+  min-width: 96px;
+}
+
+.admin-shop-orders ol {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+  list-style: none;
+}
+
+.admin-shop-orders li {
+  display: grid;
+  align-items: center;
+  gap: 10px 14px;
+  padding-block: 11px;
+  border-bottom: 1px solid var(--border);
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+}
+
+.admin-shop-orders li > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.admin-shop-orders li strong {
+  font-size: 0.72rem;
+}
+
+.admin-shop-orders li span,
+.admin-shop-orders li time,
+.admin-shop-orders li small {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.53rem;
+}
+
+.admin-shop-order-points {
+  color: var(--accent) !important;
+  font-size: 0.72rem !important;
+  font-weight: 700;
+}
+
+.admin-shop-orders li > div:last-child {
+  display: flex;
+  gap: 6px;
+}
+
+.admin-shop-orders button {
+  min-height: 32px;
+  padding-inline: 9px;
+  background: transparent;
+  color: var(--accent);
+}
+
+.admin-shop-orders button[data-cancel-order] {
+  color: #e38276;
+}
+
+.admin-points-status[data-state="success"] {
+  color: var(--accent);
+}
+
+@media (max-width: 760px) {
+  .admin-shop-code-panel,
+  .admin-shop-items,
+  .admin-shop-orders {
+    padding: 14px;
+  }
+
+  .admin-shop-code-form,
+  .admin-shop-item-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-shop-code-result > div {
+    flex-wrap: wrap;
+  }
+
+  .admin-shop-orders li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admin-shop-orders li > small,
+  .admin-shop-orders li > div:last-child {
+    grid-column: 1 / -1;
+  }
+}

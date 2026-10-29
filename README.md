@@ -58,6 +58,10 @@ pnpm preview
 
 站长可在 `/admin/points/` 搜索用户并手动增加或扣减积分。每次调整必须填写原因，余额不足时不能继续扣减，操作记录会写入积分流水。
 
+登录用户可在 `/shop/` 使用积分兑换商品，或输入一次性积分兑换码。商品扣款、库存扣减、订单与积分流水在同一个 D1 批次中完成；积分余额与库存都受数据库约束保护。
+
+站长可在 `/admin/shop/` 管理商品积分价格、库存、上架状态和发放说明，处理待发放或取消退款的订单，并批量生成积分兑换码。兑换码只保存 SHA-256 哈希，明文仅在生成时显示一次。
+
 站长可在 `/admin/gallery/` 直接上传图片并审核公共投稿。公共投稿入口为 `/upload/`：匿名用户每天 1 张，登录用户每天 5 张，所有公共图片审核通过后才会显示在图库。
 
 ## 部署
@@ -67,5 +71,11 @@ pnpm preview
 - Build command: `pnpm build`
 - Build output directory: `dist`
 - Node.js: 22 或更高版本
+
+部署新版本前先应用 D1 迁移：
+
+```powershell
+pnpm exec wrangler d1 migrations apply yuqing-auth --remote
+```
 
 当前使用的正式站点地址是 `https://xhz6.com`。如需更换域名，请同时修改 `astro.config.mjs` 和 `src/site.config.ts` 中的地址。
