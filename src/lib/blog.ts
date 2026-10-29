@@ -3,7 +3,7 @@ import { getCollection, type CollectionEntry } from "astro:content";
 export type BlogPost = CollectionEntry<"blog">;
 
 export function getPostPublishedAt(post: BlogPost): Date {
-  return post.data.publishedAt ?? post.data.pubDate;
+  return post.data.publishedAt;
 }
 
 export async function getPublishedPosts(): Promise<BlogPost[]> {
