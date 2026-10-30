@@ -5,7 +5,7 @@ pubDate: 2026-10-28
 publishedAt: 2026-10-28T21:43:36+08:00
 category: "日常"
 tags: ["Astro", "Cloudflare", "Better Auth", "D1", "登录", "邮件"]
-cover: "/gallery/uploads/20261028_65c1cdfc056c.png"
+cover: "/gallery/uploads/20261028_65c1cdfc056c_v2.png"
 draft: false
 ---
 
