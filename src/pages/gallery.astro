@@ -103,6 +103,15 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
   </section>
 
   <GalleryLightbox />
+  <p
+    class="gallery-private-notice"
+    data-gallery-private-notice
+    role="status"
+    aria-live="polite"
+    hidden
+  >
+    私密图片，仅上传者可查看原图。
+  </p>
 
   <script>
     const markImageLoaded = (image) => {
@@ -147,11 +156,18 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
 
       const fragment = document.createDocumentFragment();
       payload.images.forEach((image) => {
-        const item = document.createElement("a");
+        const item = document.createElement(
+          image.locked ? "button" : "a",
+        );
         item.className = "waterfall-item";
-        if (image.locked) item.classList.add("is-private");
-        item.href = image.href;
-        if (!image.locked) item.dataset.galleryOpen = "true";
+        if (item instanceof HTMLButtonElement) {
+          item.type = "button";
+          item.classList.add("is-private");
+          item.dataset.galleryPrivate = "";
+        } else {
+          item.href = image.href;
+          item.dataset.galleryOpen = "true";
+        }
         item.dataset.galleryTitle = image.title;
         if (!image.locked) {
           item.dataset.gallerySrcset = image.srcSet;
@@ -204,6 +220,34 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
       });
       grid.prepend(fragment);
     };
+
+    const privateNotice = document.querySelector<HTMLElement>(
+      "[data-gallery-private-notice]",
+    );
+    let privateNoticeTimer = 0;
+
+    const showPrivateNotice = () => {
+      if (!privateNotice) return;
+      window.clearTimeout(privateNoticeTimer);
+      privateNotice.hidden = false;
+      requestAnimationFrame(() => privateNotice.classList.add("is-visible"));
+      privateNoticeTimer = window.setTimeout(() => {
+        privateNotice.classList.remove("is-visible");
+        window.setTimeout(() => {
+          if (!privateNotice.classList.contains("is-visible")) {
+            privateNotice.hidden = true;
+          }
+        }, 180);
+      }, 2600);
+    };
+
+    document.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) return;
+      const privateCard = event.target.closest("[data-gallery-private]");
+      if (!privateCard) return;
+      event.preventDefault();
+      showPrivateNotice();
+    });
 
     const hideRemovedImages = async () => {
       const response = await fetch("/api/gallery/hidden", {
