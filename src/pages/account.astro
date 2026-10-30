@@ -317,6 +317,33 @@ import AuthLayout from "../components/AuthLayout.astro";
     accountGalleryStatus.dataset.state = state;
   };
 
+  const copyText = async (text: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    if (!copied) throw new Error("浏览器不允许复制，请手动打开原图后复制。");
+  };
+
+  const originalLink = (image: OwnedGalleryItem) => {
+    if (image.visibility === "public") {
+      return new URL(image.href, window.location.origin).href;
+    }
+    const url = new URL(image.reviewHref, window.location.origin);
+    url.searchParams.set("variant", "1920");
+    return url.href;
+  };
+
   const loadOwnedGallery = async () => {
     if (!accountGalleryList) return;
     setGalleryStatus("正在读取你的图片…");
@@ -375,6 +402,13 @@ import AuthLayout from "../components/AuthLayout.astro";
       view.target = "_blank";
       view.rel = "noopener";
       view.textContent = "查看原图";
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.dataset.ownedGalleryCopy = originalLink(image);
+      copy.textContent = "复制链接";
+      copy.title = image.locked
+        ? "打开链接时需要登录你的账号"
+        : "复制 1920 宽度的高清图片地址";
       const toggle = document.createElement("button");
       toggle.type = "button";
       toggle.dataset.ownedGalleryVisibility =
@@ -382,7 +416,7 @@ import AuthLayout from "../components/AuthLayout.astro";
       toggle.dataset.ownedGalleryId = image.id;
       toggle.textContent =
         image.visibility === "private" ? "设为公开" : "设为私密";
-      actions.append(view, toggle);
+      actions.append(view, copy, toggle);
 
       body.append(heading, meta, actions);
       card.append(thumbnail, body);
@@ -392,6 +426,33 @@ import AuthLayout from "../components/AuthLayout.astro";
   };
 
   accountGalleryList?.addEventListener("click", async (event) => {
+    const copyButton = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-owned-gallery-copy]",
+    );
+    if (copyButton) {
+      copyButton.disabled = true;
+      try {
+        await copyText(copyButton.dataset.ownedGalleryCopy ?? "");
+        const message = copyButton.title.includes("登录")
+          ? "链接已复制，需登录你的账号才能打开。"
+          : "链接已复制。";
+        setGalleryStatus(message, "success");
+        window.setTimeout(() => {
+          if (accountGalleryStatus?.textContent === message) {
+            setGalleryStatus("");
+          }
+        }, 2600);
+      } catch (error) {
+        setGalleryStatus(
+          error instanceof Error ? error.message : "链接复制失败。",
+          "error",
+        );
+      } finally {
+        copyButton.disabled = false;
+      }
+      return;
+    }
+
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
       "[data-owned-gallery-visibility]",
     );
