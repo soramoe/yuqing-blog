@@ -186,6 +186,40 @@ import "../../styles/admin-story.css";
         <ol data-story-audit-list></ol>
       </section>
 
+      <section class="admin-story-settings admin-image-test-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">IMAGE PROVIDER TEST</p>
+            <h2>生图模型测试</h2>
+          </div>
+          <span>仅管理员可见</span>
+        </div>
+        <form data-image-test-form>
+          <label>
+            <span>测试提示词</span>
+            <textarea
+              rows="3"
+              maxlength="1000"
+              data-image-test-prompt
+              required
+            >雨夜中的中式旧城，一名撑伞的旅人站在河桥边，电影感，水墨与霓虹交织，无文字</textarea>
+            <small>会按后台供应商顺序调用，并产生一次测试任务。</small>
+          </label>
+          <label>
+            <span>图片质量</span>
+            <select data-image-test-quality>
+              <option value="standard">标准图</option>
+              <option value="hd">高清图</option>
+            </select>
+            <small>正式环境默认标准 24 积分，高清 36 积分。</small>
+          </label>
+          <div class="admin-story-form-actions">
+            <button type="submit" data-image-test-submit>开始测试</button>
+          </div>
+          <p data-image-test-status aria-live="polite"></p>
+        </form>
+      </section>
+
       <section class="admin-story-publications">
         <div class="admin-story-section-heading">
           <div>
@@ -286,6 +320,21 @@ import "../../styles/admin-story.css";
   );
   const publicationList = document.querySelector<HTMLElement>(
     "[data-story-publication-list]",
+  );
+  const imageTestForm = document.querySelector<HTMLFormElement>(
+    "[data-image-test-form]",
+  );
+  const imageTestPrompt = document.querySelector<HTMLTextAreaElement>(
+    "[data-image-test-prompt]",
+  );
+  const imageTestQuality = document.querySelector<HTMLSelectElement>(
+    "[data-image-test-quality]",
+  );
+  const imageTestSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-image-test-submit]",
+  );
+  const imageTestStatus = document.querySelector<HTMLElement>(
+    "[data-image-test-status]",
   );
 
   const setStatus = (
@@ -520,6 +569,58 @@ import "../../styles/admin-story.css";
         "error",
       );
     });
+  });
+
+  imageTestForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const prompt = imageTestPrompt?.value.trim() ?? "";
+    if (prompt.length < 6 || !imageTestSubmit) {
+      if (imageTestStatus) imageTestStatus.textContent = "测试提示词过短。";
+      return;
+    }
+    imageTestSubmit.disabled = true;
+    if (imageTestStatus) imageTestStatus.textContent = "正在生成测试图片…";
+    try {
+      const response = await fetch("/api/admin/image/test", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          quality: imageTestQuality?.value === "hd" ? "hd" : "standard",
+          aspectRatio: "1:1",
+          requestId: crypto.randomUUID(),
+        }),
+      });
+      const payload = (await response.json()) as {
+        job?: {
+          providerName?: string;
+          model?: string;
+          r2Key?: string;
+          width?: number;
+          height?: number;
+          pointsCost?: number;
+          balance?: number;
+        };
+        error?: string;
+      };
+      if (!response.ok || !payload.job) {
+        throw new Error(payload.error || "生图测试失败。");
+      }
+      if (imageTestStatus) {
+        imageTestStatus.textContent = `成功：${payload.job.providerName} / ${payload.job.model} / ${payload.job.width}×${payload.job.height} / 扣 ${payload.job.pointsCost} 积分 / 余额 ${payload.job.balance} / ${payload.job.r2Key}`;
+      }
+    } catch (error) {
+      if (imageTestStatus) {
+        imageTestStatus.textContent =
+          error instanceof Error ? error.message : "生图测试失败。";
+      }
+    } finally {
+      imageTestSubmit.disabled = false;
+    }
   });
 
   publicationList?.addEventListener("click", async (event) => {

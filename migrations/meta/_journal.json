@@ -113,6 +113,13 @@
       "when": 1793421425622,
       "tag": "0015_slippery_moon_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1793423218881,
+      "tag": "0016_qwen_dashscope_adapter",
+      "breakpoints": true
     }
   ]
 }

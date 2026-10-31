@@ -244,7 +244,7 @@ async function fetchProviderImage(url: string) {
   return new Uint8Array(await response.arrayBuffer());
 }
 
-async function generateWithOpenAiImages(
+async function generateWithDashScope(
   env: ImageProviderEnv,
   provider: ImageProviderConfig,
   request: ImageGenerationRequest,
@@ -259,12 +259,12 @@ async function generateWithOpenAiImages(
   }
   const baseUrl =
     env.IMAGE_QWEN_BASE_URL?.trim() ||
-    "https://dashscope.aliyuncs.com/compatible-mode/v1";
-  const endpoint = baseUrl.endsWith("/images/generations")
+    "https://dashscope.aliyuncs.com";
+  const endpoint = baseUrl.endsWith("/multimodal-generation/generation")
     ? baseUrl
-    : `${baseUrl.replace(/\/+$/, "")}/images/generations`;
+    : `${baseUrl.replace(/\/+$/, "")}/api/v1/services/aigc/multimodal-generation/generation`;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 28_000);
+  const timeout = setTimeout(() => controller.abort(), 55_000);
   let response: Response;
   try {
     response = await fetch(endpoint, {
@@ -277,12 +277,21 @@ async function generateWithOpenAiImages(
       },
       body: JSON.stringify({
         model: provider.model,
-        prompt: request.prompt,
-        negative_prompt: request.negativePrompt || undefined,
-        n: 1,
-        size: `${request.width}*${request.height}`,
-        prompt_extend: false,
-        watermark: false,
+        input: {
+          messages: [
+            {
+              role: "user",
+              content: [{ text: request.prompt }],
+            },
+          ],
+        },
+        parameters: {
+          negative_prompt: request.negativePrompt || undefined,
+          n: 1,
+          size: `${request.width}*${request.height}`,
+          prompt_extend: false,
+          watermark: false,
+        },
       }),
     });
   } catch (error) {
@@ -318,25 +327,35 @@ async function generateWithOpenAiImages(
   }
 
   const payload = (await response.json()) as {
-    data?: Array<{ url?: string; b64_json?: string }>;
-    output?: { task_id?: string; results?: Array<{ url?: string }> };
+    code?: string;
+    message?: string;
+    output?: {
+      choices?: Array<{
+        message?: {
+          content?: Array<{ image?: string }>;
+        };
+      }>;
+      task_id?: string;
+    };
   };
-  if (payload.output?.task_id && !payload.data?.length) {
+  if (payload.code || payload.message) {
+    throw new ImageProviderError(
+      payload.message || `图片服务错误 ${payload.code}`,
+      payload.code === "Throttling" ? "rate-limited" : "provider-unavailable",
+      false,
+    );
+  }
+  if (payload.output?.task_id) {
     throw new ImageProviderError(
       "图片服务返回了异步任务，当前适配器尚未启用任务轮询。",
       "invalid-response",
       false,
     );
   }
-  const item = payload.data?.[0];
-  if (item?.b64_json) {
-    return normalizeBinary(
-      { b64_json: item.b64_json },
-      request.width,
-      request.height,
-    );
-  }
-  const url = item?.url ?? payload.output?.results?.[0]?.url;
+  const url =
+    payload.output?.choices?.[0]?.message?.content?.find(
+      (item) => typeof item.image === "string" && item.image,
+    )?.image;
   if (!url) {
     throw new ImageProviderError(
       "图片服务没有返回图片。",
@@ -363,8 +382,8 @@ export async function generateWithProvider(
   switch (provider.adapter as ImageProviderAdapter) {
     case "workers-ai":
       return generateWithWorkersAi(env, provider, request);
-    case "openai-images":
-      return generateWithOpenAiImages(env, provider, request);
+    case "dashscope-images":
+      return generateWithDashScope(env, provider, request);
     default:
       throw new ImageProviderError(
         "图片供应商适配器不受支持。",
