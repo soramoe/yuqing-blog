@@ -127,10 +127,89 @@ export const onRequestPatch: PagesFunction<Env> = async ({
   return json({ ok: true, visibility });
 };
 
+export const onRequestDelete: PagesFunction<Env> = async ({
+  request,
+  env,
+}) => {
+  const origin = request.headers.get("Origin");
+  if (origin && origin !== new URL(request.url).origin) {
+    return json({ error: "请求来源不受信任。" }, 403);
+  }
+
+  const auth = createAuth(env, new URL(request.url));
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session?.user) return json({ error: "请先登录。" }, 401);
+
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ error: "请求内容格式无效。" }, 400);
+  }
+  const id = (payload as { id?: unknown }).id;
+  if (typeof id !== "string" || !/^[a-zA-Z0-9-]{8,80}$/.test(id)) {
+    return json({ error: "图片标识无效。" }, 400);
+  }
+
+  const image = await env.DB.prepare(
+    `SELECT
+      base_name AS baseName,
+      uploader_user_id AS uploaderUserId,
+      status,
+      visibility
+    FROM gallery_upload
+    WHERE id = ?`,
+  )
+    .bind(id)
+    .first<GalleryOwnership>();
+  if (!image) return json({ error: "图片记录不存在。" }, 404);
+  if (image.status === "deleted") {
+    return new Response(null, { status: 204 });
+  }
+
+  const isAdmin = isCommentAdmin(
+    env.COMMENT_ADMIN_USER_IDS,
+    session.user.id,
+  );
+  if (!isAdmin && image.uploaderUserId !== session.user.id) {
+    return json({ error: "你不能删除这张图片。" }, 403);
+  }
+
+  const now = Date.now();
+  await env.DB.prepare(
+    `UPDATE gallery_upload
+     SET status = 'deleted', reviewed_by = ?, reviewed_at = ?, updated_at = ?
+     WHERE id = ?`,
+  )
+    .bind(session.user.id, now, now, id)
+    .run();
+
+  const keys = galleryR2Keys(image.baseName);
+  try {
+    await Promise.all([
+      env.MEDIA_BUCKET.delete([...keys.public, keys.preview]),
+      env.MEDIA_PRIVATE_BUCKET.delete(keys.private),
+    ]);
+  } catch {
+    return json(
+      { error: "图片记录已删除，但文件清理未完成，请联系站长重试。" },
+      500,
+    );
+  }
+
+  return new Response(null, {
+    status: 204,
+    headers: { "Cache-Control": "no-store" },
+  });
+};
+
 export const onRequest: PagesFunction<Env> = (context) => {
   if (context.request.method === "PATCH") return onRequestPatch(context);
+  if (context.request.method === "DELETE") {
+    return onRequestDelete(context);
+  }
   return new Response("Method Not Allowed", {
     status: 405,
-    headers: { Allow: "PATCH" },
+    headers: { Allow: "PATCH, DELETE" },
   });
 };

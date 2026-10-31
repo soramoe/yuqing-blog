@@ -420,6 +420,10 @@ body.has-announcement main {
   grid-row: 2;
 }
 
+body.has-announcement {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
 .eyebrow,
 .section-head,
 .page-topline,

@@ -506,7 +506,13 @@ import AuthLayout from "../components/AuthLayout.astro";
       toggle.dataset.ownedGalleryId = image.id;
       toggle.textContent =
         image.visibility === "private" ? "设为公开" : "设为私密";
-      actions.append(view, copy, toggle);
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "is-danger";
+      remove.dataset.ownedGalleryDelete = image.id;
+      remove.dataset.ownedGalleryTitle = image.title;
+      remove.textContent = "删除图片";
+      actions.append(view, copy, toggle, remove);
 
       body.append(heading, meta, actions);
       card.append(thumbnail, body);
@@ -516,6 +522,48 @@ import AuthLayout from "../components/AuthLayout.astro";
   };
 
   accountGalleryList?.addEventListener("click", async (event) => {
+    const deleteButton = (
+      event.target as HTMLElement
+    ).closest<HTMLButtonElement>("[data-owned-gallery-delete]");
+    if (deleteButton) {
+      const id = deleteButton.dataset.ownedGalleryDelete ?? "";
+      const title = deleteButton.dataset.ownedGalleryTitle ?? "这张图片";
+      if (
+        !id ||
+        !window.confirm(
+          `确定永久删除“${title}”吗？公开与私密文件都会被删除，且无法恢复。`,
+        )
+      ) {
+        return;
+      }
+      deleteButton.disabled = true;
+      setGalleryStatus("正在删除图片…");
+      try {
+        const response = await fetch("/api/gallery/visibility", {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id }),
+        });
+        if (!response.ok) {
+          const payload = (await response.json()) as { error?: string };
+          throw new Error(payload.error || "图片删除失败。");
+        }
+        await loadOwnedGallery();
+        setGalleryStatus("图片已永久删除。", "success");
+      } catch (error) {
+        deleteButton.disabled = false;
+        setGalleryStatus(
+          error instanceof Error ? error.message : "图片删除失败。",
+          "error",
+        );
+      }
+      return;
+    }
+
     const copyButton = (event.target as HTMLElement).closest<HTMLButtonElement>(
       "[data-owned-gallery-copy]",
     );

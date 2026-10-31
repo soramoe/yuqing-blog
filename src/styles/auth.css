@@ -787,6 +787,11 @@
   color: var(--accent);
 }
 
+.account-gallery-actions button.is-danger:hover:not(:disabled) {
+  border-color: #d06b62;
+  color: #e38276;
+}
+
 .account-gallery-actions button:disabled {
   cursor: wait;
   opacity: 0.55;
