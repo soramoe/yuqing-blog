@@ -186,6 +186,50 @@ import "../../styles/admin-story.css";
         <ol data-story-audit-list></ol>
       </section>
 
+      <section class="admin-story-settings admin-image-control-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">IMAGE CONTROL</p>
+            <h2>生图控制</h2>
+          </div>
+          <span data-image-config-status>正在读取…</span>
+        </div>
+        <form data-image-config-form>
+          <label class="admin-story-toggle admin-image-master-toggle">
+            <input type="checkbox" data-image-enabled />
+            <span>
+              <strong>开放生图能力</strong>
+              <small>总开关关闭时，管理员测试也不会调用图片模型。</small>
+            </span>
+          </label>
+          <label>
+            <span>标准图积分</span>
+            <input type="number" min="1" max="1000" data-image-standard-points required />
+            <small>推荐 24 积分。</small>
+          </label>
+          <label>
+            <span>高清图积分</span>
+            <input type="number" min="1" max="1000" data-image-hd-points required />
+            <small>推荐 36 积分。</small>
+          </label>
+          <label>
+            <span>每日全站任务上限</span>
+            <input type="number" min="1" max="5000" data-image-daily-limit required />
+            <small>达到上限后自动停止新任务。</small>
+          </label>
+          <label>
+            <span>每月全站预算（元）</span>
+            <input type="number" min="0" max="10000" data-image-monthly-budget required />
+            <small>只统计付费供应商的保守成本。</small>
+          </label>
+          <div class="admin-image-provider-list" data-image-provider-list></div>
+          <div class="admin-story-form-actions">
+            <button type="submit" data-image-config-submit>保存生图控制</button>
+          </div>
+          <p data-image-config-message aria-live="polite"></p>
+        </form>
+      </section>
+
       <section class="admin-story-settings admin-image-test-panel">
         <div class="admin-story-section-heading">
           <div>
@@ -252,6 +296,25 @@ import "../../styles/admin-story.css";
     afterJson: string;
     createdAt: number;
     operatorName: string | null;
+  }
+
+  interface AdminImageProvider {
+    id: string;
+    name: string;
+    adapter: string;
+    model: string;
+    enabled: boolean;
+    priority: number;
+    configured: boolean;
+    cooldownActive: boolean;
+  }
+
+  interface AdminImageConfig {
+    enabled: boolean;
+    standardPoints: number;
+    hdPoints: number;
+    dailyJobLimit: number;
+    monthlyBudgetCents: number;
   }
 
   const status = document.querySelector<HTMLElement>(
@@ -336,6 +399,37 @@ import "../../styles/admin-story.css";
   const imageTestStatus = document.querySelector<HTMLElement>(
     "[data-image-test-status]",
   );
+  const imageConfigForm = document.querySelector<HTMLFormElement>(
+    "[data-image-config-form]",
+  );
+  const imageEnabledInput = document.querySelector<HTMLInputElement>(
+    "[data-image-enabled]",
+  );
+  const imageStandardInput = document.querySelector<HTMLInputElement>(
+    "[data-image-standard-points]",
+  );
+  const imageHdInput = document.querySelector<HTMLInputElement>(
+    "[data-image-hd-points]",
+  );
+  const imageDailyInput = document.querySelector<HTMLInputElement>(
+    "[data-image-daily-limit]",
+  );
+  const imageBudgetInput = document.querySelector<HTMLInputElement>(
+    "[data-image-monthly-budget]",
+  );
+  const imageProviderList = document.querySelector<HTMLElement>(
+    "[data-image-provider-list]",
+  );
+  const imageConfigSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-image-config-submit]",
+  );
+  const imageConfigStatus = document.querySelector<HTMLElement>(
+    "[data-image-config-status]",
+  );
+  const imageConfigMessage = document.querySelector<HTMLElement>(
+    "[data-image-config-message]",
+  );
+  let imageConfigProviders: AdminImageProvider[] = [];
 
   const setStatus = (
     message = "",
@@ -352,6 +446,110 @@ import "../../styles/admin-story.css";
       dateStyle: "medium",
       timeStyle: "short",
     }).format(new Date(timestamp));
+
+  const setImageConfigMessage = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!imageConfigMessage) return;
+    imageConfigMessage.textContent = message;
+    imageConfigMessage.dataset.state = state;
+  };
+
+  const renderImageProviders = () => {
+    if (!imageProviderList) return;
+    imageProviderList.replaceChildren();
+    for (const provider of imageConfigProviders) {
+      const card = document.createElement("article");
+      card.className = "admin-image-provider";
+      card.dataset.imageProviderId = provider.id;
+
+      const heading = document.createElement("header");
+      const active = document.createElement("label");
+      active.className = "admin-image-provider-toggle";
+      const enabled = document.createElement("input");
+      enabled.type = "checkbox";
+      enabled.checked = provider.enabled;
+      enabled.dataset.imageProviderEnabled = "";
+      const name = document.createElement("span");
+      const strong = document.createElement("strong");
+      strong.textContent = provider.name;
+      const state = document.createElement("small");
+      state.textContent = provider.configured
+        ? provider.cooldownActive
+          ? "冷却中"
+          : "已配置"
+        : "缺少密钥";
+      state.dataset.configured = String(provider.configured);
+      name.append(strong, state);
+      active.append(enabled, name);
+      heading.append(active);
+
+      const fields = document.createElement("div");
+      fields.className = "admin-image-provider-fields";
+      const modelLabel = document.createElement("label");
+      const modelSpan = document.createElement("span");
+      modelSpan.textContent = "模型";
+      const modelInput = document.createElement("input");
+      modelInput.type = "text";
+      modelInput.maxLength = 160;
+      modelInput.value = provider.model;
+      modelInput.dataset.imageProviderModel = "";
+      modelLabel.append(modelSpan, modelInput);
+
+      const priorityLabel = document.createElement("label");
+      const prioritySpan = document.createElement("span");
+      prioritySpan.textContent = "优先级";
+      const priorityInput = document.createElement("input");
+      priorityInput.type = "number";
+      priorityInput.min = "0";
+      priorityInput.max = "10000";
+      priorityInput.value = String(provider.priority);
+      priorityInput.dataset.imageProviderPriority = "";
+      priorityLabel.append(prioritySpan, priorityInput);
+      fields.append(modelLabel, priorityLabel);
+      card.append(heading, fields);
+      imageProviderList.append(card);
+    }
+  };
+
+  const fillImageConfig = (
+    settings: AdminImageConfig,
+    providers: AdminImageProvider[],
+  ) => {
+    imageConfigProviders = providers;
+    if (imageEnabledInput) imageEnabledInput.checked = settings.enabled;
+    if (imageStandardInput) {
+      imageStandardInput.value = String(settings.standardPoints);
+    }
+    if (imageHdInput) imageHdInput.value = String(settings.hdPoints);
+    if (imageDailyInput) {
+      imageDailyInput.value = String(settings.dailyJobLimit);
+    }
+    if (imageBudgetInput) {
+      imageBudgetInput.value = String(settings.monthlyBudgetCents / 100);
+    }
+    if (imageConfigStatus) {
+      imageConfigStatus.textContent = settings.enabled ? "生图已开启" : "生图已关闭";
+    }
+    renderImageProviders();
+  };
+
+  const loadImageConfig = async () => {
+    const response = await fetch("/api/admin/image", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as {
+      settings?: AdminImageConfig;
+      providers?: AdminImageProvider[];
+      error?: string;
+    };
+    if (!response.ok || !payload.settings) {
+      throw new Error(payload.error || "生图设置读取失败。");
+    }
+    fillImageConfig(payload.settings, payload.providers ?? []);
+  };
 
   const fillSettings = (settings: StorySettings) => {
     if (pointsInput) pointsInput.value = String(settings.pointsPerTurn);
@@ -623,6 +821,71 @@ import "../../styles/admin-story.css";
     }
   });
 
+  imageConfigForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!imageConfigSubmit) return;
+    imageConfigSubmit.disabled = true;
+    setImageConfigMessage("正在保存生图控制…");
+    const providers = Array.from(
+      imageProviderList?.querySelectorAll<HTMLElement>(
+        "[data-image-provider-id]",
+      ) ?? [],
+    ).map((card) => ({
+      id: card.dataset.imageProviderId,
+      enabled:
+        card.querySelector<HTMLInputElement>(
+          "[data-image-provider-enabled]",
+        )?.checked ?? false,
+      model:
+        card.querySelector<HTMLInputElement>("[data-image-provider-model]")
+          ?.value.trim() ?? "",
+      priority: Number(
+        card.querySelector<HTMLInputElement>(
+          "[data-image-provider-priority]",
+        )?.value ?? 100,
+      ),
+    }));
+    try {
+      const response = await fetch("/api/admin/image", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          settings: {
+            enabled: imageEnabledInput?.checked ?? false,
+            standardPoints: Number(imageStandardInput?.value),
+            hdPoints: Number(imageHdInput?.value),
+            dailyJobLimit: Number(imageDailyInput?.value),
+            monthlyBudgetCents: Math.round(
+              Number(imageBudgetInput?.value ?? 0) * 100,
+            ),
+          },
+          providers,
+        }),
+      });
+      const payload = (await response.json()) as {
+        settings?: AdminImageConfig;
+        providers?: AdminImageProvider[];
+        error?: string;
+      };
+      if (!response.ok || !payload.settings) {
+        throw new Error(payload.error || "生图控制保存失败。");
+      }
+      fillImageConfig(payload.settings, payload.providers ?? []);
+      setImageConfigMessage("生图控制已保存。", "success");
+    } catch (error) {
+      setImageConfigMessage(
+        error instanceof Error ? error.message : "生图控制保存失败。",
+        "error",
+      );
+    } finally {
+      imageConfigSubmit.disabled = false;
+    }
+  });
+
   publicationList?.addEventListener("click", async (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
       "[data-publication-id]",
@@ -665,7 +928,11 @@ import "../../styles/admin-story.css";
         return;
       }
       try {
-        await Promise.all([loadSettings(), loadPublications()]);
+        await Promise.all([
+          loadSettings(),
+          loadPublications(),
+          loadImageConfig(),
+        ]);
         gate?.setAttribute("hidden", "");
         content?.removeAttribute("hidden");
       } catch (error) {
