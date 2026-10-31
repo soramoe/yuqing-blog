@@ -2209,6 +2209,7 @@ body.has-announcement .site-footer {
   .site-header {
     position: sticky;
     top: 0;
+    z-index: 40;
     width: 100%;
     height: auto;
     padding: 0 16px;
