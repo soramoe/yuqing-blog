@@ -81,11 +81,83 @@
 }
 
 .admin-story-settings,
-.admin-story-audit {
+.admin-story-audit,
+.admin-story-publications {
   margin-top: 26px;
   padding: 18px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--surface) 68%, transparent);
+}
+
+.admin-story-section-heading select {
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.64rem;
+}
+
+.admin-story-publication-list {
+  display: grid;
+  gap: 9px;
+}
+
+.admin-story-publication {
+  display: grid;
+  gap: 7px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  background: var(--background);
+}
+
+.admin-story-publication header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-story-publication header strong {
+  font-size: 0.74rem;
+}
+
+.admin-story-publication header span {
+  color: #d48d62;
+  font-family: Consolas, monospace;
+  font-size: 0.54rem;
+}
+
+.admin-story-publication p,
+.admin-story-publication small {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.58rem;
+  line-height: 1.55;
+}
+
+.admin-story-publication > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-story-publication > div a,
+.admin-story-publication > div button {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.58rem;
+}
+
+.admin-story-publication > div a:hover,
+.admin-story-publication > div button:hover:not(:disabled) {
+  color: #d48d62;
 }
 
 .admin-story-section-heading {

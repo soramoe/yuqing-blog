@@ -1,0 +1,204 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Comments from "../../components/Comments.astro";
+import "../../styles/stories.css";
+---
+
+<BaseLayout
+  title="阅读互动故事"
+  description="阅读渔情公共书库中的互动故事。"
+  bodyClass="page-public-story"
+  noindex
+>
+  <div class="container public-story-shell" data-public-story>
+    <p class="public-story-status" data-public-story-status>正在读取故事…</p>
+
+    <div data-public-story-content hidden>
+      <header class="public-story-header">
+        <p class="eyebrow" data-public-story-meta></p>
+        <h1 data-public-story-title></h1>
+        <p data-public-story-summary></p>
+        <div class="public-story-stats">
+          <span data-public-story-author></span>
+          <span data-public-story-reads></span>
+          <span data-public-story-tips></span>
+        </div>
+      </header>
+
+      <div class="public-story-transcript" data-public-story-transcript></div>
+
+      <form class="public-story-tip" data-public-story-tip>
+        <div>
+          <strong>投喂积分</strong>
+          <span>从你的积分余额中支持这位作者，单次 1～50 积分。</span>
+        </div>
+        <input type="number" min="1" max="50" value="1" data-tip-amount />
+        <button type="submit" data-tip-submit>投喂</button>
+        <a href="/login/" data-tip-login hidden>登录后投喂</a>
+        <p data-tip-status aria-live="polite"></p>
+      </form>
+
+      <Comments postSlug="story-waiting" />
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+  import { getStoryDifficulty } from "../../lib/story-templates";
+
+  interface PublicStory {
+    id: string;
+    slug: string;
+    title: string;
+    summary: string;
+    difficultyId: string;
+    style: string;
+    status: string;
+    authorName: string;
+    readCount: number;
+    tipTotal: number;
+    content: {
+      history?: Array<{ action?: string; narrative?: string }>;
+      turnIndex?: number;
+    };
+  }
+
+  const root = document.querySelector<HTMLElement>("[data-public-story]");
+  const status = document.querySelector<HTMLElement>(
+    "[data-public-story-status]",
+  );
+  const content = document.querySelector<HTMLElement>(
+    "[data-public-story-content]",
+  );
+  const title = document.querySelector<HTMLElement>("[data-public-story-title]");
+  const summary = document.querySelector<HTMLElement>(
+    "[data-public-story-summary]",
+  );
+  const meta = document.querySelector<HTMLElement>("[data-public-story-meta]");
+  const author = document.querySelector<HTMLElement>(
+    "[data-public-story-author]",
+  );
+  const reads = document.querySelector<HTMLElement>("[data-public-story-reads]");
+  const tips = document.querySelector<HTMLElement>("[data-public-story-tips]");
+  const transcript = document.querySelector<HTMLElement>(
+    "[data-public-story-transcript]",
+  );
+  const tipForm = document.querySelector<HTMLFormElement>(
+    "[data-public-story-tip]",
+  );
+  const tipAmount = document.querySelector<HTMLInputElement>("[data-tip-amount]");
+  const tipSubmit = document.querySelector<HTMLButtonElement>("[data-tip-submit]");
+  const tipLogin = document.querySelector<HTMLAnchorElement>("[data-tip-login]");
+  const tipStatus = document.querySelector<HTMLElement>("[data-tip-status]");
+  const slug = new URLSearchParams(location.search).get("slug");
+  let story: PublicStory | null = null;
+
+  if (!slug) {
+    if (status) status.textContent = "缺少故事标识。";
+  } else {
+    void fetch(`/api/story/publication/${encodeURIComponent(slug)}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        const payload = (await response.json()) as {
+          story?: PublicStory;
+          error?: string;
+        };
+        if (!response.ok || !payload.story) {
+          throw new Error(payload.error || "故事读取失败。");
+        }
+        return payload.story;
+      })
+      .then((loaded) => {
+        story = loaded;
+        if (status) status.hidden = true;
+        content?.removeAttribute("hidden");
+        if (title) title.textContent = loaded.title;
+        if (summary) summary.textContent = loaded.summary;
+        if (meta) {
+          const difficulty = getStoryDifficulty(loaded.difficultyId);
+          meta.textContent = `INTERACTIVE STORY · ${difficulty.title} · ${loaded.style}`;
+        }
+        if (author) author.textContent = `作者：${loaded.authorName}`;
+        if (reads) reads.textContent = `${loaded.readCount} 阅读`;
+        if (tips) tips.textContent = `${loaded.tipTotal} 积分支持`;
+        if (transcript) {
+          transcript.replaceChildren();
+          for (const [index, turn] of (loaded.content.history ?? []).entries()) {
+            const article = document.createElement("article");
+            const choice = document.createElement("p");
+            choice.className = "story-player-action";
+            choice.textContent =
+              index === 0 && turn.action === "开始故事"
+                ? "故事开始"
+                : `选择：${turn.action ?? ""}`;
+            const narrative = document.createElement("div");
+            narrative.className = "story-narrative";
+            narrative.textContent = turn.narrative ?? "";
+            article.append(choice, narrative);
+            transcript.append(article);
+          }
+        }
+        const commentsRoot = document.querySelector<HTMLElement>("[data-comments]");
+        if (commentsRoot) {
+          commentsRoot.dataset.postSlug = `story-${loaded.id}`;
+          window.dispatchEvent(new CustomEvent("comments-target-change"));
+        }
+      })
+      .catch((error) => {
+        if (status) {
+          status.textContent =
+            error instanceof Error ? error.message : "故事读取失败。";
+        }
+      });
+  }
+
+  void authClient.getSession().then(({ data }) => {
+    if (!data?.user) {
+      if (tipForm) tipForm.classList.add("is-guest");
+      if (tipSubmit) tipSubmit.hidden = true;
+      if (tipLogin) tipLogin.hidden = false;
+    }
+  });
+
+  tipForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!story || !tipAmount || !tipSubmit) return;
+    const amount = Number(tipAmount.value);
+    tipSubmit.disabled = true;
+    if (tipStatus) tipStatus.textContent = "正在投喂…";
+    try {
+      const response = await fetch("/api/story/tip", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          publicationId: story.id,
+          amount,
+          requestId: crypto.randomUUID(),
+        }),
+      });
+      const payload = (await response.json()) as {
+        tipTotal?: number;
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || "投喂失败。");
+      if (tips && typeof payload.tipTotal === "number") {
+        tips.textContent = `${payload.tipTotal} 积分支持`;
+      }
+      if (tipStatus) tipStatus.textContent = `已投喂 ${amount} 积分。`;
+    } catch (error) {
+      if (tipStatus) {
+        tipStatus.textContent =
+          error instanceof Error ? error.message : "投喂失败。";
+      }
+    } finally {
+      tipSubmit.disabled = false;
+    }
+  });
+</script>

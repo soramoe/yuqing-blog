@@ -118,6 +118,25 @@ import "../../styles/admin-story.css";
         </div>
         <ol data-story-audit-list></ol>
       </section>
+
+      <section class="admin-story-publications">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">PUBLIC STORY REVIEW</p>
+            <h2>公共故事审核</h2>
+          </div>
+          <label>
+            <span class="sr-only">筛选状态</span>
+            <select data-story-publication-filter>
+              <option value="pending">待审核</option>
+              <option value="approved">已发布</option>
+              <option value="rejected">已拒绝</option>
+              <option value="all">全部</option>
+            </select>
+          </label>
+        </div>
+        <div class="admin-story-publication-list" data-story-publication-list></div>
+      </section>
     </div>
   </div>
 </BaseLayout>
@@ -176,6 +195,12 @@ import "../../styles/admin-story.css";
   );
   const auditList = document.querySelector<HTMLElement>(
     "[data-story-audit-list]",
+  );
+  const publicationFilter = document.querySelector<HTMLSelectElement>(
+    "[data-story-publication-filter]",
+  );
+  const publicationList = document.querySelector<HTMLElement>(
+    "[data-story-publication-list]",
   );
 
   const setStatus = (
@@ -263,6 +288,83 @@ import "../../styles/admin-story.css";
     setStatus("");
   };
 
+  const loadPublications = async () => {
+    if (!publicationList) return;
+    const status = publicationFilter?.value ?? "pending";
+    const response = await fetch(
+      `/api/admin/story/publications?status=${encodeURIComponent(status)}`,
+      {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      },
+    );
+    const payload = (await response.json()) as {
+      stories?: Array<{
+        id: string;
+        slug: string;
+        title: string;
+        summary: string;
+        status: string;
+        authorName: string;
+        difficultyId: string;
+        style: string;
+        readCount: number;
+        tipTotal: number;
+        updatedAt: number;
+      }>;
+      error?: string;
+    };
+    if (!response.ok) throw new Error(payload.error || "公共故事读取失败。");
+    publicationList.replaceChildren();
+    if (!payload.stories?.length) {
+      const empty = document.createElement("p");
+      empty.className = "admin-story-empty";
+      empty.textContent = "当前状态下没有故事。";
+      publicationList.append(empty);
+      return;
+    }
+    for (const story of payload.stories) {
+      const card = document.createElement("article");
+      card.className = "admin-story-publication";
+      const heading = document.createElement("header");
+      const title = document.createElement("strong");
+      title.textContent = story.title;
+      const state = document.createElement("span");
+      state.textContent =
+        {
+          pending: "待审核",
+          approved: "已发布",
+          rejected: "已拒绝",
+        }[story.status] ?? story.status;
+      heading.append(title, state);
+      const summary = document.createElement("p");
+      summary.textContent = story.summary;
+      const meta = document.createElement("small");
+      meta.textContent = `${story.authorName} · ${story.difficultyId} · ${story.style} · ${story.readCount} 阅读 · ${story.tipTotal} 积分`;
+      const actions = document.createElement("div");
+      const preview = document.createElement("a");
+      preview.href = `/stories/read/?slug=${encodeURIComponent(story.slug)}`;
+      preview.target = "_blank";
+      preview.rel = "noopener";
+      preview.textContent = "预览";
+      actions.append(preview);
+      for (const [nextStatus, label] of [
+        ["approved", "通过"],
+        ["rejected", "拒绝"],
+      ] as const) {
+        if (story.status === nextStatus) continue;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = label;
+        button.dataset.publicationId = story.id;
+        button.dataset.publicationStatus = nextStatus;
+        actions.append(button);
+      }
+      card.append(heading, summary, meta, actions);
+      publicationList.append(card);
+    }
+  };
+
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (submitButton) submitButton.disabled = true;
@@ -304,6 +406,47 @@ import "../../styles/admin-story.css";
     }
   });
 
+  publicationFilter?.addEventListener("change", () => {
+    void loadPublications().catch((error) => {
+      setStatus(
+        error instanceof Error ? error.message : "公共故事读取失败。",
+        "error",
+      );
+    });
+  });
+
+  publicationList?.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-publication-id]",
+    );
+    if (!button) return;
+    button.disabled = true;
+    try {
+      const response = await fetch("/api/admin/story/publications", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: button.dataset.publicationId,
+          status: button.dataset.publicationStatus,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "审核失败。");
+      await loadPublications();
+      setStatus("故事审核状态已更新。", "success");
+    } catch (error) {
+      button.disabled = false;
+      setStatus(
+        error instanceof Error ? error.message : "故事审核失败。",
+        "error",
+      );
+    }
+  });
+
   void authClient
     .getSession()
     .then(async ({ data }) => {
@@ -314,7 +457,7 @@ import "../../styles/admin-story.css";
         return;
       }
       try {
-        await loadSettings();
+        await Promise.all([loadSettings(), loadPublications()]);
         gate?.setAttribute("hidden", "");
         content?.removeAttribute("hidden");
       } catch (error) {

@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import {
+  STORY_DIFFICULTIES,
   STORY_POINTS_PER_TURN,
   STORY_STYLES,
   STORY_TEMPLATES,
@@ -21,6 +22,9 @@ import "../styles/stories.css";
         选择世界、开局和文风。你可以点击推荐行动，也可以直接写下自己的选择。
         AI 会根据当前状态实时续写，并记住已经发生的关键剧情。
       </p>
+      <div class="stories-hero-links">
+        <a href="/stories/community/">浏览公共故事</a>
+      </div>
     </div>
     <div class="stories-hero-mark" aria-hidden="true">
       <span>因</span>
@@ -69,7 +73,44 @@ import "../styles/stories.css";
       </section>
 
       <section class="story-setup-section">
-        <span class="story-field-label">03 / 角色（可选）</span>
+        <span class="story-field-label">03 / 难度</span>
+        <div class="story-difficulty-list">
+          {
+            STORY_DIFFICULTIES.map((difficulty, index) => (
+              <button
+                type="button"
+                class:list={[
+                  "story-difficulty-button",
+                  { "is-selected": difficulty.id === "normal" },
+                ]}
+                data-story-difficulty={difficulty.id}
+                aria-pressed={difficulty.id === "normal" ? "true" : "false"}
+              >
+                <strong>{difficulty.title}</strong>
+                <span>{difficulty.description}</span>
+                <small>撤回 {difficulty.undoLimit} 次</small>
+              </button>
+            ))
+          }
+        </div>
+        <label class="story-custom-difficulty" data-custom-difficulty-field hidden>
+          <span>自定义规则</span>
+          <input
+            type="text"
+            maxlength="200"
+            placeholder="例如：不能杀人，每回合都会失去物资"
+            data-custom-difficulty
+          />
+          <small>自定义难度默认 3 次撤回，可在下方单独调整。</small>
+        </label>
+        <label class="story-custom-undo" data-custom-undo-field hidden>
+          <span>自定义撤回次数</span>
+          <input type="number" min="0" max="10" step="1" value="3" data-custom-undo />
+        </label>
+      </section>
+
+      <section class="story-setup-section">
+        <span class="story-field-label">04 / 角色（可选）</span>
         <details class="story-character-settings" data-character-settings>
           <summary>
             <span>自定义主角与配角</span>
@@ -123,7 +164,7 @@ import "../styles/stories.css";
 
       <section class="story-setup-section">
         <label class="story-select-field">
-          <span class="story-field-label">04 / 文风</span>
+          <span class="story-field-label">05 / 文风</span>
           <select data-story-style>
             {STORY_STYLES.map((style) => <option value={style}>{style}</option>)}
           </select>
@@ -131,7 +172,7 @@ import "../styles/stories.css";
       </section>
 
       <section class="story-setup-section">
-        <span class="story-field-label">05 / 模型 Key</span>
+        <span class="story-field-label">06 / 模型 Key</span>
         <fieldset class="story-key-options">
           <label>
             <input type="radio" name="story-key-mode" value="site" checked />
@@ -162,6 +203,13 @@ import "../styles/stories.css";
             只发送给本站 Worker 完成生成，不写入数据库、日志或浏览器存储。
           </small>
         </label>
+      </section>
+
+      <section class="story-setup-section">
+        <span class="story-field-label">07 / 云存档</span>
+        <div class="story-cloud-saves" data-cloud-save-list>
+          <p>登录后可以保存到云端。</p>
+        </div>
       </section>
 
       <p class="story-login-note" data-story-login-note>
@@ -196,12 +244,17 @@ import "../styles/stories.css";
           </div>
           <div class="story-game-actions">
             <span data-story-turn>第 1 回合</span>
+            <button type="button" data-story-undo disabled>撤回 · 剩余 0</button>
             <button type="button" data-story-settings-toggle>故事设置</button>
             <button type="button" data-story-reset>重新开始</button>
           </div>
         </header>
 
         <div class="story-state" data-story-state aria-label="当前故事状态"></div>
+        <details class="story-memory" data-story-memory>
+          <summary>长期记忆</summary>
+          <div data-story-memory-content></div>
+        </details>
         <div class="story-transcript" data-story-transcript></div>
         <div class="story-thinking" data-story-thinking hidden>
           <span></span><span></span><span></span>
@@ -228,6 +281,28 @@ import "../styles/stories.css";
           </div>
         </form>
         <p class="story-reader-status" data-story-reader-status aria-live="polite"></p>
+
+        <div class="story-export-actions">
+          <button type="button" data-story-export-html>下载 HTML</button>
+          <button type="button" data-story-export-json>下载存档</button>
+          <button type="button" data-story-export-epub>下载 EPUB</button>
+        </div>
+
+        <details class="story-publish-panel" data-story-publish-panel>
+          <summary>发布到渔情公共书库</summary>
+          <form data-story-publish-form>
+            <label>
+              <span>公开标题</span>
+              <input type="text" maxlength="80" data-publish-title required />
+            </label>
+            <label>
+              <span>公开简介</span>
+              <textarea maxlength="300" data-publish-summary required></textarea>
+            </label>
+            <button type="submit" data-story-publish-submit>提交站长审核</button>
+          </form>
+          <p data-story-publish-status aria-live="polite"></p>
+        </details>
       </div>
     </section>
   </div>
@@ -245,12 +320,30 @@ import "../styles/stories.css";
 <script>
   import type {
     StoryCharacters,
+    StoryDifficulty,
+    StoryMemory,
     StoryModelResult,
     StoryState,
     StoryTemplate,
     StoryTurn,
   } from "../lib/story-templates";
-  import { emptyStoryCharacters } from "../lib/story-templates";
+  import {
+    applyDifficultyToInitialState,
+    createInitialStoryMemory,
+    emptyStoryCharacters,
+    getStoryDifficulty,
+    sanitizeStoryMemory,
+  } from "../lib/story-templates";
+
+  interface StorySnapshot {
+    turnIndex: number;
+    state: StoryState;
+    summary: string;
+    history: StoryTurn[];
+    choices: string[];
+    ending: boolean;
+    memory: StoryMemory;
+  }
 
   interface StorySave {
     sessionId: string;
@@ -265,6 +358,12 @@ import "../styles/stories.css";
     choices: string[];
     ending: boolean;
     characters?: StoryCharacters;
+    difficultyId?: StoryDifficulty["id"];
+    customDifficulty?: string;
+    undoLimit?: number;
+    undoRemaining?: number;
+    undoStack?: StorySnapshot[];
+    memory?: StoryMemory;
     updatedAt: number;
   }
 
@@ -276,6 +375,14 @@ import "../styles/stories.css";
   interface StreamResult extends StoryModelResult {
     balance?: number | null;
     cost?: number;
+  }
+
+  interface CloudSave {
+    slot: number;
+    title: string;
+    turnIndex: number;
+    updatedAt: number;
+    data: StorySave | null;
   }
 
   const SAVE_KEY = "yuqing-interactive-story-v1";
@@ -290,6 +397,21 @@ import "../styles/stories.css";
     document.querySelectorAll<HTMLButtonElement>("[data-story-template]"),
   );
   const modeList = document.querySelector<HTMLElement>("[data-story-modes]");
+  const difficultyButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-story-difficulty]"),
+  );
+  const customDifficultyField = document.querySelector<HTMLElement>(
+    "[data-custom-difficulty-field]",
+  );
+  const customDifficultyInput = document.querySelector<HTMLInputElement>(
+    "[data-custom-difficulty]",
+  );
+  const customUndoField = document.querySelector<HTMLElement>(
+    "[data-custom-undo-field]",
+  );
+  const customUndoInput = document.querySelector<HTMLInputElement>(
+    "[data-custom-undo]",
+  );
   const styleSelect = document.querySelector<HTMLSelectElement>(
     "[data-story-style]",
   );
@@ -316,6 +438,9 @@ import "../styles/stories.css";
   );
   const setupStatus = document.querySelector<HTMLElement>(
     "[data-story-setup-status]",
+  );
+  const cloudSaveList = document.querySelector<HTMLElement>(
+    "[data-cloud-save-list]",
   );
   const setupPanel = document.querySelector<HTMLElement>(
     "[data-story-setup-panel]",
@@ -375,7 +500,13 @@ import "../styles/stories.css";
   const storyTurnLabel = document.querySelector<HTMLElement>(
     "[data-story-turn]",
   );
+  const undoButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-undo]",
+  );
   const statePanel = document.querySelector<HTMLElement>("[data-story-state]");
+  const memoryPanel = document.querySelector<HTMLElement>(
+    "[data-story-memory-content]",
+  );
   const transcript = document.querySelector<HTMLElement>(
     "[data-story-transcript]",
   );
@@ -406,11 +537,36 @@ import "../styles/stories.css";
   const newEndingButton = document.querySelector<HTMLButtonElement>(
     "[data-story-new-ending]",
   );
+  const exportHtmlButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-export-html]",
+  );
+  const exportJsonButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-export-json]",
+  );
+  const exportEpubButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-export-epub]",
+  );
+  const publishForm = document.querySelector<HTMLFormElement>(
+    "[data-story-publish-form]",
+  );
+  const publishTitle = document.querySelector<HTMLInputElement>(
+    "[data-publish-title]",
+  );
+  const publishSummary = document.querySelector<HTMLTextAreaElement>(
+    "[data-publish-summary]",
+  );
+  const publishSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-story-publish-submit]",
+  );
+  const publishStatus = document.querySelector<HTMLElement>(
+    "[data-story-publish-status]",
+  );
 
   let selectedTemplate =
     config.templates.find((template) => template.id === "cultivation") ??
     config.templates[0];
   let selectedMode = selectedTemplate?.modes[0];
+  let selectedDifficultyId: StoryDifficulty["id"] = "normal";
   let currentSave: StorySave | null = null;
   let runtimeApiKey = "";
   let busy = false;
@@ -443,6 +599,13 @@ import "../styles/stories.css";
     if (startButton) startButton.disabled = value || !loggedIn;
     if (actionSubmit) actionSubmit.disabled = value || !loggedIn;
     if (thinkingPanel) thinkingPanel.hidden = !value || !currentSave;
+    if (undoButton && currentSave) {
+      undoButton.disabled =
+        value ||
+        (currentSave.undoRemaining ?? 0) <= 0 ||
+        currentSave.history.length < 2 ||
+        (currentSave.undoStack?.length ?? 0) === 0;
+    }
   };
 
   const parsePersonality = (value: string) =>
@@ -633,6 +796,44 @@ import "../styles/stories.css";
     if (characterSettings) characterSettings.open = true;
   });
 
+  const selectDifficulty = (difficultyId: StoryDifficulty["id"]) => {
+    selectedDifficultyId = difficultyId;
+    difficultyButtons.forEach((button) => {
+      const active = button.dataset.storyDifficulty === difficultyId;
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    const isCustom = difficultyId === "custom";
+    if (customDifficultyField) customDifficultyField.hidden = !isCustom;
+    if (customUndoField) customUndoField.hidden = !isCustom;
+  };
+
+  const selectedDifficulty = () => {
+    const difficulty = getStoryDifficulty(
+      selectedDifficultyId,
+      customDifficultyInput?.value ?? "",
+    );
+    if (difficulty.id === "custom") {
+      const parsed = Number(customUndoInput?.value);
+      return {
+        ...difficulty,
+        undoLimit: Number.isInteger(parsed)
+          ? Math.min(10, Math.max(0, parsed))
+          : 3,
+      };
+    }
+    return difficulty;
+  };
+
+  difficultyButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const difficultyId = button.dataset.storyDifficulty as
+        | StoryDifficulty["id"]
+        | undefined;
+      if (difficultyId) selectDifficulty(difficultyId);
+    });
+  });
+
   const selectedKeyMode = () =>
     (keyModeInputs.find((input) => input.checked)?.value ?? "site") as
       | "site"
@@ -687,16 +888,493 @@ import "../styles/stories.css";
     localStorage.setItem(SAVE_KEY, JSON.stringify(currentSave));
   };
 
+  const normalizeStorySave = (value: unknown): StorySave | null => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      return null;
+    }
+    const parsed = value as Partial<StorySave>;
+    if (!parsed.sessionId || !parsed.templateId) return null;
+    const difficulty = getStoryDifficulty(
+      parsed.difficultyId,
+      parsed.customDifficulty,
+    );
+    return {
+      ...(parsed as StorySave),
+      difficultyId: difficulty.id,
+      customDifficulty: parsed.customDifficulty ?? "",
+      undoLimit:
+        typeof parsed.undoLimit === "number"
+          ? parsed.undoLimit
+          : difficulty.undoLimit,
+      undoRemaining:
+        typeof parsed.undoRemaining === "number"
+          ? parsed.undoRemaining
+          : difficulty.undoLimit,
+      undoStack: Array.isArray(parsed.undoStack) ? parsed.undoStack : [],
+      memory: sanitizeStoryMemory(parsed.memory),
+      characters: parsed.characters,
+      history: Array.isArray(parsed.history) ? parsed.history : [],
+      choices: Array.isArray(parsed.choices) ? parsed.choices : [],
+      state:
+        parsed.state && typeof parsed.state === "object" ? parsed.state : {},
+      summary: typeof parsed.summary === "string" ? parsed.summary : "",
+      ending: Boolean(parsed.ending),
+      turnIndex: Number(parsed.turnIndex) || 0,
+      style: typeof parsed.style === "string" ? parsed.style : "热血成长",
+      keyMode: parsed.keyMode === "user" ? "user" : "site",
+      updatedAt: Number(parsed.updatedAt) || Date.now(),
+      modeId: String(parsed.modeId || ""),
+      templateId: String(parsed.templateId),
+      sessionId: String(parsed.sessionId),
+    };
+  };
+
   const loadSavedStory = () => {
     try {
       const value = localStorage.getItem(SAVE_KEY);
       if (!value) return null;
-      const parsed = JSON.parse(value) as StorySave;
-      if (!parsed.sessionId || !parsed.templateId) return null;
-      return parsed;
+      return normalizeStorySave(JSON.parse(value));
     } catch {
       return null;
     }
+  };
+
+  let cloudSaves: CloudSave[] = [];
+
+  const storyDisplayTitle = (save: StorySave | null) => {
+    if (!save) return "空存档";
+    const template = config.templates.find(
+      (item) => item.id === save.templateId,
+    );
+    const protagonist = save.characters?.protagonist.name;
+    return `${template?.title ?? "互动小说"}${protagonist ? ` · ${protagonist}` : ""}`;
+  };
+
+  const renderCloudSaves = () => {
+    if (!cloudSaveList) return;
+    cloudSaveList.replaceChildren();
+    for (let slot = 0; slot < 3; slot += 1) {
+      const save = cloudSaves.find((item) => item.slot === slot);
+      const card = document.createElement("article");
+      card.className = "story-cloud-save";
+      const heading = document.createElement("header");
+      const title = document.createElement("strong");
+      title.textContent = `云端 ${slot + 1}`;
+      const meta = document.createElement("span");
+      meta.textContent = save
+        ? `${save.title} · ${save.turnIndex} 回合`
+        : "空";
+      heading.append(title, meta);
+
+      const actions = document.createElement("div");
+      const saveButton = document.createElement("button");
+      saveButton.type = "button";
+      saveButton.textContent = "保存到此";
+      saveButton.disabled = !loggedIn || !currentSave;
+      saveButton.addEventListener("click", () => void saveCloud(slot));
+
+      const loadButton = document.createElement("button");
+      loadButton.type = "button";
+      loadButton.textContent = "载入";
+      loadButton.disabled = !save?.data;
+      loadButton.addEventListener("click", () => {
+        const loaded = normalizeStorySave(save?.data);
+        if (!loaded) return;
+        if (
+          currentSave &&
+          !window.confirm("载入云存档会覆盖当前本地进度，确定继续吗？")
+        ) {
+          return;
+        }
+        currentSave = loaded;
+        fillCharacterForm(loaded.characters);
+        selectDifficulty(loaded.difficultyId ?? "normal");
+        if (customDifficultyInput) {
+          customDifficultyInput.value = loaded.customDifficulty ?? "";
+        }
+        if (customUndoInput) {
+          customUndoInput.value = String(loaded.undoLimit ?? 3);
+        }
+        renderGame();
+        setSetupStatus("已载入云存档。", "success");
+      });
+
+      const deleteButton = document.createElement("button");
+      deleteButton.type = "button";
+      deleteButton.textContent = "删除";
+      deleteButton.disabled = !save;
+      deleteButton.addEventListener("click", () => void deleteCloud(slot));
+      actions.append(saveButton, loadButton, deleteButton);
+
+      card.append(heading, actions);
+      cloudSaveList.append(card);
+    }
+  };
+
+  const loadCloudSaves = async () => {
+    if (!loggedIn) {
+      cloudSaves = [];
+      renderCloudSaves();
+      return;
+    }
+    const response = await fetch("/api/story/saves", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (!response.ok) throw new Error("云存档读取失败。");
+    const payload = (await response.json()) as { saves?: CloudSave[] };
+    cloudSaves = payload.saves ?? [];
+    renderCloudSaves();
+  };
+
+  const saveCloud = async (slot: number) => {
+    if (!currentSave) {
+      setSetupStatus("当前没有可保存的故事。", "error");
+      return;
+    }
+    if (!loggedIn) {
+      setSetupStatus("请先登录后再使用云存档。", "error");
+      return;
+    }
+    setSetupStatus(`正在保存到云端 ${slot + 1}…`);
+    try {
+      const response = await fetch("/api/story/saves", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          slot,
+          title: storyDisplayTitle(currentSave),
+          data: currentSave,
+        }),
+      });
+      const payload = (await response.json()) as {
+        saves?: CloudSave[];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || "云存档保存失败。");
+      cloudSaves = payload.saves ?? [];
+      renderCloudSaves();
+      setSetupStatus(`故事已保存到云端 ${slot + 1}。`, "success");
+    } catch (error) {
+      setSetupStatus(
+        error instanceof Error ? error.message : "云存档保存失败。",
+        "error",
+      );
+    }
+  };
+
+  const deleteCloud = async (slot: number) => {
+    if (!window.confirm(`确定删除云端 ${slot + 1} 的存档吗？`)) return;
+    try {
+      const response = await fetch(`/api/story/saves?slot=${slot}`, {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json()) as {
+        saves?: CloudSave[];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || "云端存档删除失败。");
+      cloudSaves = payload.saves ?? [];
+      renderCloudSaves();
+      setSetupStatus("云端存档已删除。", "success");
+    } catch (error) {
+      setSetupStatus(
+        error instanceof Error ? error.message : "云端存档删除失败。",
+        "error",
+      );
+    }
+  };
+
+  const escapeHtml = (value: string) =>
+    value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&apos;");
+
+  const currentStoryTitle = () =>
+    currentSave ? storyDisplayTitle(currentSave) : "互动小说";
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const exportHtml = () => {
+    if (!currentSave) return;
+    const template = config.templates.find(
+      (item) => item.id === currentSave?.templateId,
+    );
+    const title = currentStoryTitle();
+    const chapters = currentSave.history
+      .map(
+        (turn, index) => `
+          <section>
+            <p class="choice">${index === 0 && turn.action === "开始故事" ? "故事开始" : `你的选择：${escapeHtml(turn.action)}`}</p>
+            <div class="story">${escapeHtml(turn.narrative).replaceAll("\n", "<br>")}</div>
+          </section>`,
+      )
+      .join("");
+    const html = `<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width">
+<title>${escapeHtml(title)}</title>
+<style>
+body{max-width:760px;margin:48px auto;padding:0 20px;background:#10110f;color:#e8e5df;font-family:system-ui,sans-serif;line-height:1.8}
+h1{font-size:2.3rem;line-height:1.15}.meta{color:#929b91;font-size:.8rem;border-bottom:1px solid #343934;padding-bottom:18px;margin-bottom:28px}
+section{padding:20px 0;border-bottom:1px solid #2e332f}.choice{color:#d48d62;font-size:.72rem;font-family:monospace}.story{font-family:serif;font-size:1.05rem}
+</style></head><body><h1>${escapeHtml(title)}</h1>
+<p class="meta">${escapeHtml(template?.title ?? "互动小说")} · ${currentSave.difficultyId ?? "normal"} · ${escapeHtml(currentSave.style)} · ${currentSave.turnIndex} 回合</p>
+${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
+    downloadBlob(
+      new Blob([html], { type: "text/html;charset=utf-8" }),
+      `${currentStoryTitle().replace(/[\\/:*?"<>|]/g, "-")}.html`,
+    );
+  };
+
+  const exportJson = () => {
+    if (!currentSave) return;
+    downloadBlob(
+      new Blob([JSON.stringify({
+        exportedAt: new Date().toISOString(),
+        title: currentStoryTitle(),
+        save: currentSave,
+      }, null, 2)], { type: "application/json;charset=utf-8" }),
+      `${currentStoryTitle().replace(/[\\/:*?"<>|]/g, "-")}.json`,
+    );
+  };
+
+  const crcTable = (() => {
+    const table = new Uint32Array(256);
+    for (let index = 0; index < 256; index += 1) {
+      let value = index;
+      for (let bit = 0; bit < 8; bit += 1) {
+        value = (value & 1) !== 0 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+      }
+      table[index] = value >>> 0;
+    }
+    return table;
+  })();
+
+  const crc32 = (bytes: Uint8Array) => {
+    let value = 0xffffffff;
+    for (const byte of bytes) {
+      value = crcTable[(value ^ byte) & 0xff] ^ (value >>> 8);
+    }
+    return (value ^ 0xffffffff) >>> 0;
+  };
+
+  const createZip = (entries: Array<{ name: string; data: Uint8Array }>) => {
+    const encoder = new TextEncoder();
+    const localParts: Uint8Array[] = [];
+    const centralParts: Uint8Array[] = [];
+    let offset = 0;
+    for (const entry of entries) {
+      const name = encoder.encode(entry.name);
+      const crc = crc32(entry.data);
+      const utf8Flag = entry.name === "mimetype" ? 0 : 0x0800;
+      const local = new Uint8Array(30 + name.length);
+      const localView = new DataView(local.buffer);
+      localView.setUint32(0, 0x04034b50, true);
+      localView.setUint16(4, 20, true);
+      localView.setUint16(6, utf8Flag, true);
+      localView.setUint16(8, 0, true);
+      localView.setUint16(10, 0, true);
+      localView.setUint16(12, 0, true);
+      localView.setUint32(14, crc, true);
+      localView.setUint32(18, entry.data.length, true);
+      localView.setUint32(22, entry.data.length, true);
+      localView.setUint16(26, name.length, true);
+      localView.setUint16(28, 0, true);
+      local.set(name, 30);
+      localParts.push(local, entry.data);
+
+      const central = new Uint8Array(46 + name.length);
+      const centralView = new DataView(central.buffer);
+      centralView.setUint32(0, 0x02014b50, true);
+      centralView.setUint16(4, 20, true);
+      centralView.setUint16(6, 20, true);
+      centralView.setUint16(8, utf8Flag, true);
+      centralView.setUint16(10, 0, true);
+      centralView.setUint16(12, 0, true);
+      centralView.setUint16(14, 0, true);
+      centralView.setUint32(16, crc, true);
+      centralView.setUint32(20, entry.data.length, true);
+      centralView.setUint32(24, entry.data.length, true);
+      centralView.setUint16(28, name.length, true);
+      centralView.setUint32(42, offset, true);
+      central.set(name, 46);
+      centralParts.push(central);
+      offset += local.length + entry.data.length;
+    }
+    const centralSize = centralParts.reduce(
+      (total, part) => total + part.length,
+      0,
+    );
+    const end = new Uint8Array(22);
+    const endView = new DataView(end.buffer);
+    endView.setUint32(0, 0x06054b50, true);
+    endView.setUint16(8, entries.length, true);
+    endView.setUint16(10, entries.length, true);
+    endView.setUint32(12, centralSize, true);
+    endView.setUint32(16, offset, true);
+    return new Blob([...localParts, ...centralParts, end], {
+      type: "application/epub+zip",
+    });
+  };
+
+  const exportEpub = () => {
+    if (!currentSave) return;
+    const encoder = new TextEncoder();
+    const title = currentStoryTitle();
+    const identifier = `urn:uuid:${currentSave.sessionId}`;
+    const chapterFiles = currentSave.history.map((turn, index) => ({
+      id: `chapter-${index + 1}`,
+      name: `chapter-${String(index + 1).padStart(3, "0")}.xhtml`,
+      title: `第 ${index + 1} 回合`,
+      body: `<p class="choice">${escapeHtml(index === 0 && turn.action === "开始故事" ? "故事开始" : `你的选择：${turn.action}`)}</p><p>${escapeHtml(turn.narrative).replaceAll("\n", "</p><p>")}</p>`,
+    }));
+    const manifest = chapterFiles
+      .map(
+        (chapter) =>
+          `<item id="${chapter.id}" href="${chapter.name}" media-type="application/xhtml+xml"/>`,
+      )
+      .join("");
+    const spine = chapterFiles
+      .map((chapter) => `<itemref idref="${chapter.id}"/>`)
+      .join("");
+    const navItems = chapterFiles
+      .map(
+        (chapter) =>
+          `<li><a href="${chapter.name}">${chapter.title}</a></li>`,
+      )
+      .join("");
+    const entries = [
+      {
+        name: "mimetype",
+        data: encoder.encode("application/epub+zip"),
+      },
+      {
+        name: "META-INF/container.xml",
+        data: encoder.encode(
+          '<?xml version="1.0"?><container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>',
+        ),
+      },
+      {
+        name: "OEBPS/style.css",
+        data: encoder.encode(
+          "body{font-family:serif;line-height:1.8;color:#222}h1{font-size:1.8em}.choice{color:#a85f32;font-size:.8em}p{text-indent:2em}",
+        ),
+      },
+      {
+        name: "OEBPS/content.opf",
+        data: encoder.encode(
+          `<?xml version="1.0" encoding="utf-8"?><package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="book-id"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:identifier id="book-id">${escapeHtml(identifier)}</dc:identifier><dc:title>${escapeHtml(title)}</dc:title><dc:language>zh-CN</dc:language></metadata><manifest><item id="nav" href="toc.xhtml" media-type="application/xhtml+xml" properties="nav"/><item id="css" href="style.css" media-type="text/css"/>${manifest}</manifest><spine>${spine}</spine></package>`,
+        ),
+      },
+      {
+        name: "OEBPS/toc.xhtml",
+        data: encoder.encode(
+          `<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><head><title>目录</title></head><body><nav epub:type="toc"><h1>${escapeHtml(title)}</h1><ol>${navItems}</ol></nav></body></html>`,
+        ),
+      },
+      ...chapterFiles.map((chapter) => ({
+        name: `OEBPS/${chapter.name}`,
+        data: encoder.encode(
+          `<?xml version="1.0" encoding="utf-8"?><html xmlns="http://www.w3.org/1999/xhtml"><head><title>${escapeHtml(chapter.title)}</title><link rel="stylesheet" href="style.css"/></head><body><h1>${escapeHtml(chapter.title)}</h1>${chapter.body}</body></html>`,
+        ),
+      })),
+    ];
+    downloadBlob(
+      createZip(entries),
+      `${title.replace(/[\\/:*?"<>|]/g, "-")}.epub`,
+    );
+  };
+
+  exportHtmlButton?.addEventListener("click", exportHtml);
+  exportJsonButton?.addEventListener("click", exportJson);
+  exportEpubButton?.addEventListener("click", exportEpub);
+
+  publishForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!currentSave || !publishSubmit) return;
+    const title = publishTitle?.value.trim() ?? "";
+    const summary = publishSummary?.value.trim() ?? "";
+    if (title.length < 2 || summary.length < 6) {
+      if (publishStatus) publishStatus.textContent = "请填写完整标题和简介。";
+      return;
+    }
+    publishSubmit.disabled = true;
+    if (publishStatus) publishStatus.textContent = "正在提交审核…";
+    try {
+      const response = await fetch("/api/story/publications", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          summary,
+          data: currentSave,
+        }),
+      });
+      const payload = (await response.json()) as {
+        story?: { status?: string };
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || "故事投稿失败。");
+      if (publishStatus) {
+        publishStatus.textContent =
+          payload.story?.status === "pending"
+            ? "已提交站长审核。审核通过后会出现在公共书库。"
+            : "故事已提交。";
+      }
+    } catch (error) {
+      if (publishStatus) {
+        publishStatus.textContent =
+          error instanceof Error ? error.message : "故事投稿失败。";
+      }
+    } finally {
+      publishSubmit.disabled = false;
+    }
+  });
+
+  const snapshotStory = (): StorySnapshot => ({
+    turnIndex: currentSave?.turnIndex ?? 0,
+    state: structuredClone(currentSave?.state ?? {}),
+    summary: currentSave?.summary ?? "",
+    history: structuredClone(currentSave?.history ?? []),
+    choices: [...(currentSave?.choices ?? [])],
+    ending: currentSave?.ending ?? false,
+    memory: structuredClone(
+      currentSave?.memory ?? createInitialStoryMemory(),
+    ),
+  });
+
+  const restoreSnapshot = (snapshot: StorySnapshot) => {
+    if (!currentSave) return;
+    currentSave.turnIndex = snapshot.turnIndex;
+    currentSave.state = structuredClone(snapshot.state);
+    currentSave.summary = snapshot.summary;
+    currentSave.history = structuredClone(snapshot.history);
+    currentSave.choices = [...snapshot.choices];
+    currentSave.ending = snapshot.ending;
+    currentSave.memory = structuredClone(snapshot.memory);
+    saveProgress();
+    renderGame();
   };
 
   const stateLabels: Record<string, string> = {
@@ -728,6 +1406,43 @@ import "../styles/stories.css";
         : String(value);
       item.append(label, content);
       statePanel.append(item);
+    }
+  };
+
+  const renderMemory = (memory?: StoryMemory) => {
+    if (!memoryPanel) return;
+    const value = sanitizeStoryMemory(memory);
+    const groups: Array<[string, string[]]> = [
+      [
+        "人物关系",
+        Object.entries(value.relationships).map(
+          ([name, relation]) => `${name}：${relation}`,
+        ),
+      ],
+      ["承诺", value.promises],
+      ["未解决线索", value.threads],
+      ["已知秘密", value.discoveries],
+    ];
+    memoryPanel.replaceChildren();
+    if (groups.every(([, items]) => items.length === 0)) {
+      const empty = document.createElement("p");
+      empty.textContent = "尚未形成需要长期保留的剧情记忆。";
+      memoryPanel.append(empty);
+      return;
+    }
+    for (const [label, items] of groups) {
+      if (items.length === 0) continue;
+      const group = document.createElement("div");
+      const heading = document.createElement("strong");
+      heading.textContent = label;
+      const list = document.createElement("ul");
+      items.forEach((item) => {
+        const row = document.createElement("li");
+        row.textContent = item;
+        list.append(row);
+      });
+      group.append(heading, list);
+      memoryPanel.append(group);
     }
   };
 
@@ -783,6 +1498,11 @@ import "../styles/stories.css";
           ? `站长 Key · ${pointsPerTurn} 积分/回合`
           : "自己的 Key · 不消耗积分";
       storySubtitle.textContent = `${mode?.title ?? ""} · ${currentSave.style} · ${keyText}`;
+      const difficulty = getStoryDifficulty(
+        currentSave.difficultyId,
+        currentSave.customDifficulty,
+      );
+      storySubtitle.textContent += ` · ${difficulty.title}难度`;
     }
     if (castSummary) {
       const protagonist =
@@ -792,15 +1512,32 @@ import "../styles/stories.css";
           .length ?? 0;
       castSummary.textContent = `${protagonist}${castCount > 0 ? ` · ${castCount} 位关键配角` : ""}`;
     }
+    if (publishTitle && !publishTitle.value) {
+      publishTitle.value = storyDisplayTitle(currentSave);
+    }
+    if (publishSummary && !publishSummary.value && currentSave.summary) {
+      publishSummary.value = currentSave.summary.slice(0, 300);
+    }
     if (storyTurnLabel) {
       storyTurnLabel.textContent = `第 ${Math.max(1, currentSave.turnIndex)} 回合`;
     }
+    if (undoButton) {
+      const remaining = currentSave.undoRemaining ?? 0;
+      undoButton.textContent = `撤回 · 剩余 ${remaining}`;
+      undoButton.disabled =
+        busy ||
+        remaining <= 0 ||
+        currentSave.history.length < 2 ||
+        (currentSave.undoStack?.length ?? 0) === 0;
+    }
     if (endingPanel) endingPanel.hidden = !currentSave.ending;
     renderState(currentSave.state);
+    renderMemory(currentSave.memory);
     renderHistory();
     renderChoices();
     if (actionForm) actionForm.hidden = currentSave.ending;
     enterStoryView();
+    renderCloudSaves();
   };
 
   const renderModes = () => {
@@ -880,6 +1617,7 @@ import "../styles/stories.css";
       return;
     }
 
+    const checkpoint = snapshotStory();
     setBusy(true);
     setReaderStatus("正在连接 AI…");
     if (choicesPanel) choicesPanel.replaceChildren();
@@ -921,6 +1659,10 @@ import "../styles/stories.css";
           state: currentSave.state,
           summary: currentSave.summary,
           characters: currentSave.characters ?? emptyStoryCharacters(),
+          difficultyId:
+            currentSave.difficultyId ?? "normal",
+          customDifficulty: currentSave.customDifficulty ?? "",
+          memory: currentSave.memory ?? createInitialStoryMemory(),
           keyMode: currentSave.keyMode,
           userApiKey:
             currentSave.keyMode === "user" ? runtimeApiKey : undefined,
@@ -976,6 +1718,13 @@ import "../styles/stories.css";
       currentSave.summary = result.summary;
       currentSave.choices = result.choices;
       currentSave.ending = result.ending;
+      currentSave.memory = sanitizeStoryMemory(result.memory);
+      if (!currentSave.undoStack) currentSave.undoStack = [];
+      currentSave.undoStack.push(checkpoint);
+      const undoLimit = Math.max(1, currentSave.undoLimit ?? 1);
+      currentSave.undoStack = currentSave.undoStack.slice(
+        -undoLimit,
+      );
       if (typeof result.balance === "number") balance = result.balance;
       saveProgress();
       renderGame();
@@ -1029,6 +1778,15 @@ import "../styles/stories.css";
       }
       if (apiKeyInput) apiKeyInput.value = "";
     }
+    const difficulty = selectedDifficulty();
+    if (
+      difficulty.id === "custom" &&
+      !difficulty.customDifficulty
+    ) {
+      setSetupStatus("请填写自定义难度规则。", "error");
+      customDifficultyInput?.focus();
+      return;
+    }
 
     currentSave = {
       sessionId: crypto.randomUUID(),
@@ -1043,8 +1801,18 @@ import "../styles/stories.css";
       choices: [],
       ending: false,
       characters: collectCharacters(),
+      difficultyId: difficulty.id,
+      customDifficulty: difficulty.customDifficulty,
+      undoLimit: difficulty.undoLimit,
+      undoRemaining: difficulty.undoLimit,
+      undoStack: [],
+      memory: createInitialStoryMemory(),
       updatedAt: Date.now(),
     };
+    currentSave.state = applyDifficultyToInitialState(
+      currentSave.state,
+      difficulty.id,
+    );
     setSetupStatus("");
     renderGame();
     if (isMobileStoryLayout()) {
@@ -1063,6 +1831,13 @@ import "../styles/stories.css";
     }
     currentSave = saved;
     fillCharacterForm(saved.characters);
+    selectDifficulty(saved.difficultyId ?? "normal");
+    if (customDifficultyInput) {
+      customDifficultyInput.value = saved.customDifficulty ?? "";
+    }
+    if (customUndoInput) {
+      customUndoInput.value = String(saved.undoLimit ?? 3);
+    }
     keyModeInputs.forEach((input) => {
       input.checked = input.value === saved.keyMode;
     });
@@ -1092,6 +1867,27 @@ import "../styles/stories.css";
     void requestTurn(action);
   });
 
+  undoButton?.addEventListener("click", () => {
+    if (!currentSave || busy) return;
+    const remaining = currentSave.undoRemaining ?? 0;
+    const checkpoint = currentSave.undoStack?.at(-1);
+    if (remaining <= 0 || !checkpoint) return;
+    if (
+      !window.confirm(
+        `确定撤回上一回合吗？本局还剩 ${remaining} 次。已完成的模型回合不会退还积分。`,
+      )
+    ) {
+      return;
+    }
+    currentSave.undoStack?.pop();
+    currentSave.undoRemaining = remaining - 1;
+    restoreSnapshot(checkpoint);
+    setReaderStatus(
+      `已撤回上一回合，剩余 ${currentSave.undoRemaining} 次。`,
+      "success",
+    );
+  });
+
   const resetStory = () => {
     if (!window.confirm("确定清除当前故事进度吗？")) return;
     localStorage.removeItem(SAVE_KEY);
@@ -1103,6 +1899,7 @@ import "../styles/stories.css";
     if (choicesPanel) choicesPanel.replaceChildren();
     leaveStoryView();
     clearCharacterForm();
+    renderCloudSaves();
     setSetupStatus("当前进度已清除。", "success");
   };
 
@@ -1121,6 +1918,7 @@ import "../styles/stories.css";
   renderModes();
   showKeyField();
   updateCharacterSummary();
+  renderCloudSaves();
   if (priceLabel) priceLabel.textContent = String(pointsPerTurn);
 
   void fetch("/api/story/status", {
@@ -1185,6 +1983,16 @@ import "../styles/stories.css";
       }
       if (startButton) startButton.disabled = !loggedIn;
       setBusy(false);
+      if (loggedIn) {
+        void loadCloudSaves().catch((error) =>
+          setSetupStatus(
+            error instanceof Error
+              ? error.message
+              : "云存档暂时无法读取。",
+            "error",
+          ),
+        );
+      }
     })
     .catch(() => {
       loggedIn = false;

@@ -89,7 +89,7 @@ const loginHref = `/login/?next=${encodeURIComponent(Astro.url.pathname)}`;
   } from "../lib/comment-utils";
 
   const root = document.querySelector<HTMLElement>("[data-comments]");
-  const postSlug = root?.dataset.postSlug;
+  const getPostSlug = () => root?.dataset.postSlug;
   const signin = root?.querySelector<HTMLElement>("[data-comment-signin]");
   const form = root?.querySelector<HTMLFormElement>("[data-comment-form]");
   const textarea = root?.querySelector<HTMLTextAreaElement>("[data-comment-body]");
@@ -224,6 +224,7 @@ const loginHref = `/login/?next=${encodeURIComponent(Astro.url.pathname)}`;
   };
 
   const readComments = async (cursor?: string | null) => {
+    const postSlug = getPostSlug();
     if (!postSlug) return;
     const params = new URLSearchParams({ post: postSlug });
     if (cursor) params.set("cursor", cursor);
@@ -288,8 +289,14 @@ const loginHref = `/login/?next=${encodeURIComponent(Astro.url.pathname)}`;
 
   textarea?.addEventListener("input", updateLength);
 
+  window.addEventListener("comments-target-change", () => {
+    clearReply();
+    void refreshComments();
+  });
+
   form?.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const postSlug = getPostSlug();
     if (!postSlug || !textarea || !submit) return;
     const body = textarea.value.trim();
     if (!body) return;

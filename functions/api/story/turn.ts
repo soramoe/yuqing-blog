@@ -7,9 +7,11 @@ import {
 } from "../../../src/lib/story-points";
 import {
   applyStoryStatePatch,
+  getStoryDifficulty,
   getStoryMode,
   getStoryTemplate,
   sanitizeStoryCharacters,
+  sanitizeStoryMemory,
   sanitizeStoryState,
   STORY_MAX_ACTION_LENGTH,
   STORY_MAX_HISTORY_TURNS,
@@ -83,6 +85,12 @@ const parseRequest = (
     state: sanitizeStoryState(templateId, body.state),
     summary: safeString(body.summary, 1200),
     characters: sanitizeStoryCharacters(body.characters),
+    difficultyId: getStoryDifficulty(
+      body.difficultyId,
+      body.customDifficulty,
+    ).id,
+    customDifficulty: safeString(body.customDifficulty, 200),
+    memory: sanitizeStoryMemory(body.memory),
   } as StoryPayload;
 };
 
@@ -91,6 +99,10 @@ const buildPrompt = (
 ) => {
   const template = getStoryTemplate(payload.templateId)!;
   const mode = getStoryMode(payload.templateId, payload.modeId)!;
+  const difficulty = getStoryDifficulty(
+    payload.difficultyId,
+    payload.customDifficulty,
+  );
   const history = payload.history
     .map(
       (turn, index) =>
@@ -104,9 +116,14 @@ const buildPrompt = (
 模式：${mode.title}。${mode.description}
 规则：${template.rules}
 文风：${payload.style}
+难度：${difficulty.title}。${difficulty.rule}
+${difficulty.customDifficulty ? `自定义难度规则：${difficulty.customDifficulty}` : ""}
 
 角色设定：
 ${JSON.stringify(payload.characters)}
+
+长期剧情记忆：
+${JSON.stringify(payload.memory)}
 
 当前结构化状态：
 ${JSON.stringify(payload.state)}
@@ -128,7 +145,8 @@ ${payload.userAction || "开始故事，请写出有吸引力的开场，并给�
 5. 不输出 Markdown、解释、思考过程或格式之外的文字。
 6. 避免露骨色情、仇恨、真实个人信息和详细违法伤害步骤。
 7. 主角姓名、性别、年龄、性格和背景必须保持稳定；配角只能按已设定的姓名、关系和性格行动。留空字段由你一次性确定，之后不得随意更改。
-8. 严格使用以下格式：
+8. 维护长期记忆：人物关系用简短关系描述；承诺、未解决线索和已知秘密只保留仍有效的内容，最多各 12 条。
+9. 严格使用以下格式：
 
 @@STORY@@
 剧情正文
@@ -136,6 +154,8 @@ ${payload.userAction || "开始故事，请写出有吸引力的开场，并给�
 ["行动一","行动二","行动三"]
 @@STATE@@
 {"字段变化":"只写本回合增加或减少的数值，以及新增物品"}
+@@MEMORY@@
+{"relationships":{"角色名":"当前关系"},"promises":[],"threads":[],"discoveries":[]}
 @@SUMMARY@@
 用不超过 160 字更新全局剧情摘要
 @@ENDING@@
@@ -163,12 +183,14 @@ const fallbackChoices = (templateId: string) =>
 const parseModelResult = (
   raw: string,
   templateId: string,
+  currentMemory: StoryPayload["memory"],
 ): StoryModelResult => {
   const narrative = extractSection(raw, "@@STORY@@", "@@CHOICES@@");
   let choices = fallbackChoices(templateId);
   let statePatch: StoryStatePatch = {};
   let summary = narrative.slice(0, 160);
   let ending = false;
+  let memory = structuredClone(currentMemory);
 
   try {
     const parsedChoices = JSON.parse(
@@ -188,7 +210,7 @@ const parseModelResult = (
 
   try {
     const parsedState = JSON.parse(
-      extractSection(raw, "@@STATE@@", "@@SUMMARY@@"),
+      extractSection(raw, "@@STATE@@", "@@MEMORY@@"),
     );
     if (
       parsedState &&
@@ -199,6 +221,15 @@ const parseModelResult = (
     }
   } catch {
     // Keep the state unchanged.
+  }
+
+  try {
+    const parsedMemory = JSON.parse(
+      extractSection(raw, "@@MEMORY@@", "@@SUMMARY@@"),
+    );
+    memory = sanitizeStoryMemory(parsedMemory);
+  } catch {
+    // Keep the existing memory if the model omits the section.
   }
 
   const parsedSummary = extractSection(
@@ -220,6 +251,7 @@ const parseModelResult = (
         .slice(0, 5000),
     choices,
     statePatch,
+    memory,
     summary,
     ending,
   };
@@ -419,18 +451,24 @@ const handleStoryTurn: PagesFunction<Env> = async ({
       choices?: Array<{ message?: { content?: string } }>;
     };
     const raw = providerPayload.choices?.[0]?.message?.content ?? "";
-    const result = parseModelResult(raw, payload.templateId);
+    const result = parseModelResult(
+      raw,
+      payload.templateId,
+      payload.memory,
+    );
     if (!result.narrative) throw new Error("empty_story");
     const nextState = applyStoryStatePatch(
       payload.templateId,
       payload.state,
       result.statePatch,
+      payload.difficultyId,
     );
     return json({
       narrative: result.narrative,
       choices: result.choices,
       state: nextState,
       summary: result.summary,
+      memory: result.memory,
       ending: result.ending,
       balance: charged.balance,
       cost: charged.cost,

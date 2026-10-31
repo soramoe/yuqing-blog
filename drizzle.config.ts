@@ -10,6 +10,7 @@ export default defineConfig({
     "./src/lib/gallery-upload-schema.ts",
     "./src/lib/account-binding-schema.ts",
     "./src/lib/story-settings-schema.ts",
+    "./src/lib/story-cloud-schema.ts",
   ],
   out: "./migrations",
 });
