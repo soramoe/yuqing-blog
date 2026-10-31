@@ -20,8 +20,6 @@ import {
   type StoryTurn,
 } from "../../../src/lib/story-templates";
 
-const encoder = new TextEncoder();
-
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -219,7 +217,7 @@ const parseModelResult = (
   };
 };
 
-export const onRequestPost: PagesFunction<Env> = async ({
+const handleStoryTurn: PagesFunction<Env> = async ({
   request,
   env,
 }) => {
@@ -233,7 +231,6 @@ export const onRequestPost: PagesFunction<Env> = async ({
   if (!session?.user) {
     return json({ error: "请先登录后开始互动小说。" }, 401);
   }
-
   let body: Record<string, unknown>;
   try {
     const contents = await request.text();
@@ -319,7 +316,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        Accept: "text/event-stream",
+        Accept: "application/json",
       },
       body: JSON.stringify({
         model,
@@ -331,11 +328,10 @@ export const onRequestPost: PagesFunction<Env> = async ({
           },
           { role: "user", content: prompt },
         ],
-        stream: true,
+        stream: false,
         temperature: 0.9,
         max_tokens: 1200,
       }),
-      signal: request.signal,
     });
   } catch {
     if (chargedSitePoints) {
@@ -348,9 +344,8 @@ export const onRequestPost: PagesFunction<Env> = async ({
         ),
       };
     }
-    return json({ error: "AI 服务暂时无法连接，本回合积分已退回。" }, 502);
+    return json({ error: "AI 服务暂时无法连接，本回合积分已退回。" }, 503);
   }
-
   if (!providerResponse.ok || !providerResponse.body) {
     if (chargedSitePoints) {
       charged = {
@@ -363,6 +358,12 @@ export const onRequestPost: PagesFunction<Env> = async ({
       };
     }
     const providerStatus = providerResponse.status;
+    const responseStatus =
+      providerStatus === 401
+        ? 400
+        : providerStatus === 429
+          ? 429
+          : 503;
     return json(
       {
         error:
@@ -373,138 +374,77 @@ export const onRequestPost: PagesFunction<Env> = async ({
               : "AI 服务响应失败，本回合积分已退回。",
         balance: charged.balance,
       },
-      502,
+      responseStatus,
     );
   }
 
-  const stream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      const send = (event: string, data: unknown) => {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
-        );
-      };
+  try {
+    const providerPayload = (await providerResponse.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const raw = providerPayload.choices?.[0]?.message?.content ?? "";
+    const result = parseModelResult(raw, payload.templateId);
+    if (!result.narrative) throw new Error("empty_story");
+    const nextState = applyStoryStatePatch(
+      payload.templateId,
+      payload.state,
+      result.statePatch,
+    );
+    return json({
+      narrative: result.narrative,
+      choices: result.choices,
+      state: nextState,
+      summary: result.summary,
+      ending: result.ending,
+      balance: charged.balance,
+      cost: charged.cost,
+    });
+  } catch {
+    const balance = chargedSitePoints
+      ? await refundStoryTurn(
+          env.DB,
+          session.user.id,
+          payload.requestId,
+        )
+      : charged.balance;
+    return json(
+      {
+        error: chargedSitePoints
+          ? "AI 剧情生成失败，本回合积分已退回。"
+          : "AI 剧情生成失败，请重新尝试。",
+        balance,
+      },
+      503,
+    );
+  }
+};
 
-      send("ready", {
-        cost: charged.cost,
-        balance: charged.balance,
-        pointsPerTurn: STORY_POINTS_PER_TURN,
-      });
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+  try {
+    return await handleStoryTurn(context);
+  } catch (error) {
+    return json(
+      {
+        error: `剧情接口运行失败（${error instanceof Error ? error.name : "UnknownError"}）。`,
+      },
+      500,
+    );
+  }
+};
 
-      const reader = providerResponse.body!.getReader();
-      const decoder = new TextDecoder();
-      let providerBuffer = "";
-      let raw = "";
-      let emittedNarrativeLength = 0;
-      let startedNarrative = false;
-      let completed = false;
-
-      const emitNarrative = (final = false) => {
-        const storyStart = raw.indexOf("@@STORY@@");
-        if (storyStart < 0) return;
-        const bodyStart = storyStart + "@@STORY@@".length;
-        const choicesStart = raw.indexOf("@@CHOICES@@", bodyStart);
-        const safeEnd =
-          choicesStart >= 0
-            ? choicesStart
-            : final
-              ? raw.length
-              : Math.max(bodyStart, raw.length - 24);
-        const narrative = raw.slice(bodyStart, safeEnd);
-        if (narrative.length <= emittedNarrativeLength) return;
-        const delta = narrative.slice(emittedNarrativeLength);
-        emittedNarrativeLength = narrative.length;
-        const text = startedNarrative ? delta : delta.replace(/^\s+/, "");
-        if (text) {
-          startedNarrative = true;
-          send("delta", { text });
-        }
-      };
-
-      const consumeProviderLine = (line: string) => {
-        if (!line.startsWith("data:")) return;
-        const data = line.slice(5).trim();
-        if (!data || data === "[DONE]") return;
-        try {
-          const payload = JSON.parse(data) as {
-            choices?: Array<{ delta?: { content?: string } }>;
-          };
-          const content = payload.choices?.[0]?.delta?.content;
-          if (typeof content === "string" && content) {
-            raw += content;
-            emitNarrative();
-          }
-        } catch {
-          // Ignore individual malformed provider events.
-        }
-      };
-
-      try {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          providerBuffer += decoder.decode(value, { stream: true });
-          const lines = providerBuffer.split(/\r?\n/);
-          providerBuffer = lines.pop() ?? "";
-          for (const line of lines) consumeProviderLine(line);
-        }
-        providerBuffer += decoder.decode();
-        if (providerBuffer) consumeProviderLine(providerBuffer);
-        emitNarrative(true);
-
-        const result = parseModelResult(raw, payload.templateId);
-        if (!result.narrative) {
-          throw new Error("empty_story");
-        }
-        const nextState = applyStoryStatePatch(
-          payload.templateId,
-          payload.state,
-          result.statePatch,
-        );
-        completed = true;
-        send("done", {
-          narrative: result.narrative,
-          choices: result.choices,
-          state: nextState,
-          summary: result.summary,
-          ending: result.ending,
-          balance: charged.balance,
-          cost: charged.cost,
-        });
-      } catch {
-        if (chargedSitePoints && !completed) {
-          const balance = await refundStoryTurn(
-            env.DB,
-            session.user.id,
-            payload.requestId,
-          );
-          send("error", {
-            error: "AI 剧情生成中断，本回合积分已退回。",
-            balance,
-          });
-        } else {
-          send("error", { error: "AI 剧情生成中断，请重新尝试。" });
-        }
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-store",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-    },
+export const onRequestGet: PagesFunction<Env> = async () => {
+  return json({
+    ready: true,
+    transport: "json-v1",
+    pointsPerTurn: STORY_POINTS_PER_TURN,
   });
 };
 
 export const onRequest: PagesFunction<Env> = (context) => {
   if (context.request.method === "POST") return onRequestPost(context);
+  if (context.request.method === "GET") return onRequestGet(context);
   return new Response("Method Not Allowed", {
     status: 405,
-    headers: { Allow: "POST" },
+    headers: { Allow: "GET, POST" },
   });
 };
