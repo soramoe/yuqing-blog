@@ -575,6 +575,8 @@ import "../styles/stories.css";
   let siteKeyConfigured = true;
   let siteKeyEnabled = true;
   let pointsPerTurn = config.pointsPerTurn;
+  let undoConfirmArmed = false;
+  let undoConfirmTimer = 0;
 
   const setSetupStatus = (
     message = "",
@@ -1599,6 +1601,8 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
 
   const requestTurn = async (action: string) => {
     if (!currentSave || !selectedTemplate || busy) return;
+    undoConfirmArmed = false;
+    window.clearTimeout(undoConfirmTimer);
     if (!loggedIn) {
       setReaderStatus("请先登录后再开始故事。", "error");
       return;
@@ -1872,13 +1876,18 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     const remaining = currentSave.undoRemaining ?? 0;
     const checkpoint = currentSave.undoStack?.at(-1);
     if (remaining <= 0 || !checkpoint) return;
-    if (
-      !window.confirm(
-        `确定撤回上一回合吗？本局还剩 ${remaining} 次。已完成的模型回合不会退还积分。`,
-      )
-    ) {
+    if (!undoConfirmArmed) {
+      undoConfirmArmed = true;
+      undoButton.textContent = "再次点击确认";
+      window.clearTimeout(undoConfirmTimer);
+      undoConfirmTimer = window.setTimeout(() => {
+        undoConfirmArmed = false;
+        renderGame();
+      }, 2600);
       return;
     }
+    undoConfirmArmed = false;
+    window.clearTimeout(undoConfirmTimer);
     currentSave.undoStack?.pop();
     currentSave.undoRemaining = remaining - 1;
     restoreSnapshot(checkpoint);
