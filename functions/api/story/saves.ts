@@ -113,7 +113,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
   }
   const data = stripSecrets(input.data) as Record<string, unknown>;
   const dataJson = JSON.stringify(data);
-  if (dataJson.length > 150_000) {
+  if (new TextEncoder().encode(dataJson).byteLength > 900_000) {
     return json({ error: "故事数据过大，暂时无法保存到云端。" }, 413);
   }
   const sessionId =

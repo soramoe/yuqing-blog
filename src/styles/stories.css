@@ -1090,6 +1090,53 @@ body.story-library-mode .story-view-tabs {
   gap: 8px;
 }
 
+.story-points-hud {
+  display: grid;
+  min-width: 176px;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid color-mix(in srgb, #d48d62 52%, var(--border));
+  background: rgba(212, 141, 98, 0.06);
+  color: var(--text);
+  justify-items: end;
+}
+
+.story-points-hud strong {
+  color: #e3a277;
+  font-family: Consolas, monospace;
+  font-size: 0.72rem;
+}
+
+.story-points-hud small {
+  color: var(--muted);
+  font-size: 0.54rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.story-points-hud:hover {
+  border-color: #d48d62;
+}
+
+.story-points-hud.is-free {
+  border-color: color-mix(in srgb, #79b98b 45%, var(--border));
+  background: rgba(121, 185, 139, 0.055);
+}
+
+.story-points-hud.is-free strong {
+  color: #91cba1;
+}
+
+.story-points-hud.is-low {
+  border-color: #d96e62;
+  background: rgba(217, 110, 98, 0.09);
+}
+
+.story-points-hud.is-low strong,
+.story-points-hud.is-low small {
+  color: #e88b80;
+}
+
 .story-game-actions button,
 .story-ending button {
   padding: 0;
@@ -1498,6 +1545,16 @@ body.story-library-mode .story-view-tabs {
   .story-game-actions {
     width: 100%;
     justify-items: start;
+  }
+
+  .story-points-hud {
+    width: 100%;
+    min-width: 0;
+    justify-items: start;
+  }
+
+  .story-points-hud small {
+    text-align: left;
   }
 
   .story-protagonist-fields,

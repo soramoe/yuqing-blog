@@ -294,6 +294,10 @@ import "../styles/stories.css";
           </div>
           <div class="story-game-actions">
             <span data-story-turn>第 1 回合</span>
+            <a class="story-points-hud" href="/points/" data-story-points-hud>
+              <strong data-story-hud-balance>积分 —</strong>
+              <small data-story-hud-cost>正在读取积分状态…</small>
+            </a>
             <button type="button" data-story-undo disabled>撤回 · 剩余 0</button>
             <button type="button" data-story-settings-toggle>故事设置</button>
             <button type="button" data-story-reset>重新开始</button>
@@ -398,7 +402,8 @@ import "../styles/stories.css";
     turnIndex: number;
     state: StoryState;
     summary: string;
-    history: StoryTurn[];
+    history?: StoryTurn[];
+    historyLength?: number;
     choices: string[];
     ending: boolean;
     memory: StoryMemory;
@@ -424,6 +429,7 @@ import "../styles/stories.css";
     undoStack?: StorySnapshot[];
     memory?: StoryMemory;
     trialRemaining?: number;
+    pointsSpent?: number;
     updatedAt: number;
   }
 
@@ -536,6 +542,15 @@ import "../styles/stories.css";
     "[data-story-setup-panel]",
   );
   const storyReader = document.querySelector<HTMLElement>("[data-story-reader]");
+  const pointsHud = document.querySelector<HTMLAnchorElement>(
+    "[data-story-points-hud]",
+  );
+  const hudBalance = document.querySelector<HTMLElement>(
+    "[data-story-hud-balance]",
+  );
+  const hudCost = document.querySelector<HTMLElement>(
+    "[data-story-hud-cost]",
+  );
   const settingsToggle = document.querySelector<HTMLButtonElement>(
     "[data-story-settings-toggle]",
   );
@@ -701,6 +716,7 @@ import "../styles/stories.css";
   let trialTurnsRemaining = 0;
   let trialBoundSessionId: string | null = null;
   let pointsPerTurn = config.pointsPerTurn;
+  let contextTurns = 4;
   let undoConfirmArmed = false;
   let undoConfirmTimer = 0;
   let storyView: "create" | "library" = "create";
@@ -723,6 +739,61 @@ import "../styles/stories.css";
     if (!readerStatus) return;
     readerStatus.textContent = message;
     readerStatus.dataset.state = state;
+  };
+
+  const renderPointIndicators = () => {
+    const keyMode = currentSave?.keyMode ?? selectedKeyMode();
+    const pointsSpent = currentSave?.pointsSpent ?? 0;
+    const affordableTurns =
+      balance === null ? null : Math.floor(balance / pointsPerTurn);
+    const isLow =
+      keyMode === "site" &&
+      balance !== null &&
+      balance < pointsPerTurn;
+
+    if (hudBalance) {
+      hudBalance.textContent = loggedIn
+        ? `剩余 ${balance ?? "—"} 积分`
+        : "登录后查看积分";
+    }
+    if (hudCost) {
+      if (!loggedIn) {
+        hudCost.textContent = "登录后显示试玩与积分状态";
+      } else if (keyMode === "trial") {
+        hudCost.textContent = `免费试玩 · 剩余 ${currentSave?.trialRemaining ?? trialTurnsRemaining} 回合`;
+      } else if (keyMode === "user") {
+        hudCost.textContent = "使用自己的 Key · 不扣积分";
+      } else if (isLow) {
+        hudCost.textContent = `余额不足本回合 ${pointsPerTurn} 积分`;
+      } else {
+        const lowHint =
+          affordableTurns !== null && affordableTurns <= 2
+            ? ` · 仅够 ${affordableTurns} 回合`
+            : "";
+        hudCost.textContent = `本回合 -${pointsPerTurn} · 已消耗 ${pointsSpent}${lowHint}`;
+      }
+    }
+    pointsHud?.classList.toggle("is-low", isLow);
+    pointsHud?.classList.toggle("is-free", keyMode !== "site");
+    pointsHud?.setAttribute("data-mode", keyMode);
+
+    if (startButton) {
+      startButton.textContent = !loggedIn
+        ? "登录后开始故事"
+        : keyMode === "trial"
+          ? "开始故事 · 免费试玩"
+          : keyMode === "user"
+            ? "开始故事 · 不消耗积分"
+            : `开始故事 · 消耗 ${pointsPerTurn} 积分`;
+    }
+    if (actionSubmit) {
+      actionSubmit.textContent =
+        currentSave?.keyMode === "trial"
+          ? "执行行动 · 免费"
+          : currentSave?.keyMode === "site"
+            ? `执行行动 · -${pointsPerTurn}`
+            : "执行行动";
+    }
   };
 
   const setBusy = (value: boolean) => {
@@ -1005,6 +1076,7 @@ import "../styles/stories.css";
       if (userInput) userInput.checked = true;
     }
     showKeyField();
+    renderPointIndicators();
   };
 
   const isMobileStoryLayout = () =>
@@ -1125,9 +1197,18 @@ import "../styles/stories.css";
   };
 
   const saveProgress = () => {
-    if (!currentSave) return;
+    if (!currentSave) return false;
     currentSave.updatedAt = Date.now();
-    localStorage.setItem(SAVE_KEY, JSON.stringify(currentSave));
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(currentSave));
+      return true;
+    } catch {
+      setSetupStatus(
+        "浏览器本地存储空间不足。建议立即保存到云端，避免后续进度丢失。",
+        "error",
+      );
+      return false;
+    }
   };
 
   const normalizeStorySave = (value: unknown): StorySave | null => {
@@ -1173,6 +1254,10 @@ import "../styles/stories.css";
         typeof parsed.trialRemaining === "number"
           ? parsed.trialRemaining
           : undefined,
+      pointsSpent:
+        typeof parsed.pointsSpent === "number"
+          ? Math.max(0, Math.round(parsed.pointsSpent))
+          : 0,
       updatedAt: Number(parsed.updatedAt) || Date.now(),
       modeId: String(parsed.modeId || ""),
       templateId: String(parsed.templateId),
@@ -1750,7 +1835,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     turnIndex: currentSave?.turnIndex ?? 0,
     state: structuredClone(currentSave?.state ?? {}),
     summary: currentSave?.summary ?? "",
-    history: structuredClone(currentSave?.history ?? []),
+    historyLength: currentSave?.history.length ?? 0,
     choices: [...(currentSave?.choices ?? [])],
     ending: currentSave?.ending ?? false,
     memory: structuredClone(
@@ -1763,7 +1848,18 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     currentSave.turnIndex = snapshot.turnIndex;
     currentSave.state = structuredClone(snapshot.state);
     currentSave.summary = snapshot.summary;
-    currentSave.history = structuredClone(snapshot.history);
+    currentSave.history = Array.isArray(snapshot.history)
+      ? structuredClone(snapshot.history)
+      : currentSave.history.slice(
+          0,
+          Math.max(
+            0,
+            Math.min(
+              currentSave.history.length,
+              snapshot.historyLength ?? currentSave.history.length,
+            ),
+          ),
+        );
     currentSave.choices = [...snapshot.choices];
     currentSave.ending = snapshot.ending;
     currentSave.memory = structuredClone(snapshot.memory);
@@ -1937,6 +2033,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     renderHistory();
     renderChoices();
     if (actionForm) actionForm.hidden = currentSave.ending;
+    renderPointIndicators();
     enterStoryView();
     renderCloudSaves();
   };
@@ -2019,7 +2116,10 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
   });
 
   keyModeInputs.forEach((input) => {
-    input.addEventListener("change", showKeyField);
+    input.addEventListener("change", () => {
+      showKeyField();
+      renderPointIndicators();
+    });
   });
 
   settingsToggle?.addEventListener("click", () => toggleSetup());
@@ -2085,7 +2185,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
           modeId: currentSave.modeId,
           style: currentSave.style,
           userAction: action,
-          history: currentSave.history,
+          history: currentSave.history.slice(-Math.max(1, contextTurns)),
           state: currentSave.state,
           summary: currentSave.summary,
           characters: currentSave.characters ?? emptyStoryCharacters(),
@@ -2154,12 +2254,15 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         action,
         narrative: result.narrative,
       });
-      currentSave.history = currentSave.history.slice(-20);
       currentSave.state = result.state;
       currentSave.summary = result.summary;
       currentSave.choices = result.choices;
       currentSave.ending = result.ending;
       currentSave.memory = sanitizeStoryMemory(result.memory);
+      if (typeof result.cost === "number" && result.cost > 0) {
+        currentSave.pointsSpent =
+          (currentSave.pointsSpent ?? 0) + result.cost;
+      }
       if (currentSave.keyMode === "trial") {
         currentSave.trialRemaining =
           typeof result.trialRemaining === "number"
@@ -2181,10 +2284,12 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         -undoLimit,
       );
       if (typeof result.balance === "number") balance = result.balance;
-      saveProgress();
+      const savedLocally = saveProgress();
       renderGame();
       setReaderStatus(
-        currentSave.ending
+        !savedLocally
+          ? "剧情已经生成，但浏览器空间不足；请立即使用云存档。"
+          : currentSave.ending
           ? "故事已经抵达结局。"
           : trialJustFinished
             ? `免费试玩已结束；下一回合将使用站长 Key，每回合 ${pointsPerTurn} 积分。`
@@ -2202,6 +2307,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     } finally {
       setBusy(false);
       if (balanceLabel) balanceLabel.textContent = `积分 ${balance ?? "—"}`;
+      renderPointIndicators();
       renderChoices();
     }
   };
@@ -2268,6 +2374,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       undoStack: [],
       memory: createInitialStoryMemory(),
       trialRemaining: keyMode === "trial" ? trialTurnsRemaining : undefined,
+      pointsSpent: 0,
       updatedAt: Date.now(),
     };
     currentSave.state = applyDifficultyToInitialState(
@@ -2392,6 +2499,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
   updateCharacterSummary();
   renderCloudSaves();
   if (priceLabel) priceLabel.textContent = String(pointsPerTurn);
+  renderPointIndicators();
 
   let wasMobileSetupLayout = isMobileStoryLayout();
   window.addEventListener("resize", () => {
@@ -2418,6 +2526,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
           siteKeyConfigured?: boolean;
           siteKeyEnabled?: boolean;
           pointsPerTurn?: number;
+          contextTurns?: number;
           trialEnabled?: boolean;
           trial?: StoryTrial | null;
         } | null,
@@ -2438,7 +2547,14 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       ) {
         pointsPerTurn = payload.pointsPerTurn;
       }
+      if (
+        typeof payload?.contextTurns === "number" &&
+        payload.contextTurns > 0
+      ) {
+        contextTurns = payload.contextTurns;
+      }
       if (priceLabel) priceLabel.textContent = String(pointsPerTurn);
+      renderPointIndicators();
       const trialInput = keyModeInputs.find(
         (input) => input.value === "trial",
       );
@@ -2494,6 +2610,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       }
       if (startButton) startButton.disabled = !loggedIn;
       applySiteKeyAvailability();
+      renderPointIndicators();
       setBusy(false);
       if (loggedIn) {
         void loadCloudSaves().catch((error) =>
@@ -2509,6 +2626,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     .catch(() => {
       loggedIn = false;
       if (balanceLabel) balanceLabel.textContent = "登录状态未知";
+      renderPointIndicators();
       if (loginNote) {
         loginNote.innerHTML =
           '<a href="/login/?next=%2Fstories%2F">登录后开始互动小说 →</a>';

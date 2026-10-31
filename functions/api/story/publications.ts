@@ -164,8 +164,10 @@ export const onRequestPost: PagesFunction<Env> = async ({
     ...data,
     keyMode: undefined,
     undoStack: undefined,
+    trialRemaining: undefined,
+    pointsSpent: undefined,
   });
-  if (contentJson.length > 180_000) {
+  if (new TextEncoder().encode(contentJson).byteLength > 900_000) {
     return json({ error: "故事内容过大，暂时无法发布。" }, 413);
   }
 
