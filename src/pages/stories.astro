@@ -1,0 +1,856 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+  STORY_POINTS_PER_TURN,
+  STORY_STYLES,
+  STORY_TEMPLATES,
+} from "../lib/story-templates";
+import "../styles/stories.css";
+---
+
+<BaseLayout
+  title="互动小说"
+  description="选择修仙、末世等世界，在 AI 实时续写的互动小说中决定自己的道路。"
+  bodyClass="page-stories"
+>
+  <section class="container stories-hero">
+    <div>
+      <p class="eyebrow">AI INTERACTIVE FICTION</p>
+      <h1>每一步，<br />都是新的故事。</h1>
+      <p>
+        选择世界、开局和文风。你可以点击推荐行动，也可以直接写下自己的选择。
+        AI 会根据当前状态实时续写，并记住已经发生的关键剧情。
+      </p>
+    </div>
+    <div class="stories-hero-mark" aria-hidden="true">
+      <span>因</span>
+      <i>果</i>
+      <small>STORY / {String(STORY_TEMPLATES.length).padStart(2, "0")}</small>
+    </div>
+  </section>
+
+  <div class="container stories-layout" data-story-app>
+    <aside class="story-setup" aria-labelledby="story-setup-title">
+      <div class="story-panel-heading">
+        <div>
+          <p class="eyebrow">STORY SETUP</p>
+          <h2 id="story-setup-title">创建故事</h2>
+        </div>
+        <span data-story-balance>正在读取积分…</span>
+      </div>
+
+      <section class="story-setup-section">
+        <span class="story-field-label">01 / 世界</span>
+        <div class="story-template-grid">
+          {
+            STORY_TEMPLATES.map((template, index) => (
+              <button
+                type="button"
+                class:list={[
+                  "story-template-card",
+                  `is-${template.id}`,
+                  { "is-selected": index === 0 },
+                ]}
+                data-story-template={template.id}
+                aria-pressed={index === 0 ? "true" : "false"}
+              >
+                <span>{template.eyebrow}</span>
+                <strong>{template.title}</strong>
+                <small>{template.description}</small>
+              </button>
+            ))
+          }
+        </div>
+      </section>
+
+      <section class="story-setup-section">
+        <span class="story-field-label">02 / 开局</span>
+        <div class="story-mode-list" data-story-modes></div>
+      </section>
+
+      <section class="story-setup-section">
+        <label class="story-select-field">
+          <span class="story-field-label">03 / 文风</span>
+          <select data-story-style>
+            {STORY_STYLES.map((style) => <option value={style}>{style}</option>)}
+          </select>
+        </label>
+      </section>
+
+      <section class="story-setup-section">
+        <span class="story-field-label">04 / 模型 Key</span>
+        <fieldset class="story-key-options">
+          <label>
+            <input type="radio" name="story-key-mode" value="site" checked />
+            <span>
+              <strong>站长 Key</strong>
+              <small>每回合消耗 {STORY_POINTS_PER_TURN} 积分</small>
+            </span>
+          </label>
+          <label>
+            <input type="radio" name="story-key-mode" value="user" />
+            <span>
+              <strong>自己的 Key</strong>
+              <small>不消耗积分，只在当前页面使用</small>
+            </span>
+          </label>
+        </fieldset>
+        <label class="story-api-key" data-story-key-field hidden>
+          <span>DeepSeek API Key</span>
+          <input
+            type="password"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="256"
+            placeholder="sk-..."
+            data-story-api-key
+          />
+          <small>
+            只发送给本站 Worker 完成生成，不写入数据库、日志或浏览器存储。
+          </small>
+        </label>
+      </section>
+
+      <p class="story-login-note" data-story-login-note>
+        正在确认登录状态…
+      </p>
+      <button class="story-start-button" type="button" data-story-start>
+        开始故事
+      </button>
+      <button class="story-resume-button" type="button" data-story-resume hidden>
+        继续上次故事
+      </button>
+      <p class="story-setup-status" data-story-setup-status aria-live="polite"></p>
+    </aside>
+
+    <section class="story-reader" aria-live="polite">
+      <div class="story-empty" data-story-empty>
+        <span aria-hidden="true">序</span>
+        <h2>故事尚未开始</h2>
+        <p>在左侧选择世界与开局。第一段剧情会由 AI 即时生成。</p>
+      </div>
+
+      <div class="story-game" data-story-game hidden>
+        <header class="story-game-header">
+          <div>
+            <p class="eyebrow" data-story-eyebrow>INTERACTIVE STORY</p>
+            <h2 data-story-title></h2>
+            <span data-story-subtitle></span>
+          </div>
+          <div class="story-game-actions">
+            <span data-story-turn>第 1 回合</span>
+            <button type="button" data-story-reset>重新开始</button>
+          </div>
+        </header>
+
+        <div class="story-state" data-story-state aria-label="当前故事状态"></div>
+        <div class="story-transcript" data-story-transcript></div>
+        <div class="story-thinking" data-story-thinking hidden>
+          <span></span><span></span><span></span>
+          <p>AI 正在续写剧情…</p>
+        </div>
+        <div class="story-ending" data-story-ending hidden>
+          <span>本故事已经抵达结局</span>
+          <button type="button" data-story-new-ending>开启新故事</button>
+        </div>
+
+        <div class="story-choices" data-story-choices></div>
+        <form class="story-action-form" data-story-action-form>
+          <label for="story-action">或者，写下你想做的事</label>
+          <div>
+            <input
+              id="story-action"
+              type="text"
+              maxlength="500"
+              placeholder="例如：检查背包，然后悄悄靠近那扇门"
+              autocomplete="off"
+              data-story-action
+            />
+            <button type="submit" data-story-submit>执行行动</button>
+          </div>
+        </form>
+        <p class="story-reader-status" data-story-reader-status aria-live="polite"></p>
+      </div>
+    </section>
+  </div>
+
+  <script
+    type="application/json"
+    data-story-config
+    set:html={JSON.stringify({
+      templates: STORY_TEMPLATES,
+      pointsPerTurn: STORY_POINTS_PER_TURN,
+    })}
+  />
+</BaseLayout>
+
+<script>
+  import type {
+    StoryModelResult,
+    StoryState,
+    StoryTemplate,
+    StoryTurn,
+  } from "../lib/story-templates";
+
+  interface StorySave {
+    sessionId: string;
+    templateId: string;
+    modeId: string;
+    style: string;
+    keyMode: "site" | "user";
+    turnIndex: number;
+    state: StoryState;
+    summary: string;
+    history: StoryTurn[];
+    choices: string[];
+    ending: boolean;
+    updatedAt: number;
+  }
+
+  interface StoryConfig {
+    templates: StoryTemplate[];
+    pointsPerTurn: number;
+  }
+
+  interface StreamResult extends StoryModelResult {
+    balance?: number | null;
+    cost?: number;
+  }
+
+  const SAVE_KEY = "yuqing-interactive-story-v1";
+  const configElement = document.querySelector<HTMLScriptElement>(
+    "[data-story-config]",
+  );
+  const config = configElement?.textContent
+    ? (JSON.parse(configElement.textContent) as StoryConfig)
+    : { templates: [], pointsPerTurn: 2 };
+
+  const templateButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-story-template]"),
+  );
+  const modeList = document.querySelector<HTMLElement>("[data-story-modes]");
+  const styleSelect = document.querySelector<HTMLSelectElement>(
+    "[data-story-style]",
+  );
+  const keyModeInputs = Array.from(
+    document.querySelectorAll<HTMLInputElement>('input[name="story-key-mode"]'),
+  );
+  const keyField = document.querySelector<HTMLElement>(
+    "[data-story-key-field]",
+  );
+  const apiKeyInput = document.querySelector<HTMLInputElement>(
+    "[data-story-api-key]",
+  );
+  const balanceLabel = document.querySelector<HTMLElement>(
+    "[data-story-balance]",
+  );
+  const loginNote = document.querySelector<HTMLElement>(
+    "[data-story-login-note]",
+  );
+  const startButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-start]",
+  );
+  const resumeButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-resume]",
+  );
+  const setupStatus = document.querySelector<HTMLElement>(
+    "[data-story-setup-status]",
+  );
+  const emptyState = document.querySelector<HTMLElement>("[data-story-empty]");
+  const gamePanel = document.querySelector<HTMLElement>("[data-story-game]");
+  const storyEyebrow = document.querySelector<HTMLElement>(
+    "[data-story-eyebrow]",
+  );
+  const storyTitle = document.querySelector<HTMLElement>("[data-story-title]");
+  const storySubtitle = document.querySelector<HTMLElement>(
+    "[data-story-subtitle]",
+  );
+  const storyTurnLabel = document.querySelector<HTMLElement>(
+    "[data-story-turn]",
+  );
+  const statePanel = document.querySelector<HTMLElement>("[data-story-state]");
+  const transcript = document.querySelector<HTMLElement>(
+    "[data-story-transcript]",
+  );
+  const thinkingPanel = document.querySelector<HTMLElement>(
+    "[data-story-thinking]",
+  );
+  const endingPanel = document.querySelector<HTMLElement>(
+    "[data-story-ending]",
+  );
+  const choicesPanel = document.querySelector<HTMLElement>(
+    "[data-story-choices]",
+  );
+  const actionForm = document.querySelector<HTMLFormElement>(
+    "[data-story-action-form]",
+  );
+  const actionInput = document.querySelector<HTMLInputElement>(
+    "[data-story-action]",
+  );
+  const actionSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-story-submit]",
+  );
+  const readerStatus = document.querySelector<HTMLElement>(
+    "[data-story-reader-status]",
+  );
+  const resetButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-reset]",
+  );
+  const newEndingButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-new-ending]",
+  );
+
+  let selectedTemplate =
+    config.templates.find((template) => template.id === "cultivation") ??
+    config.templates[0];
+  let selectedMode = selectedTemplate?.modes[0];
+  let currentSave: StorySave | null = null;
+  let runtimeApiKey = "";
+  let busy = false;
+  let loggedIn = false;
+  let balance: number | null = null;
+  let siteKeyConfigured = true;
+
+  const setSetupStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!setupStatus) return;
+    setupStatus.textContent = message;
+    setupStatus.dataset.state = state;
+  };
+
+  const setReaderStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!readerStatus) return;
+    readerStatus.textContent = message;
+    readerStatus.dataset.state = state;
+  };
+
+  const setBusy = (value: boolean) => {
+    busy = value;
+    if (startButton) startButton.disabled = value || !loggedIn;
+    if (actionSubmit) actionSubmit.disabled = value || !loggedIn;
+    if (thinkingPanel) thinkingPanel.hidden = !value || !currentSave;
+  };
+
+  const selectedKeyMode = () =>
+    (keyModeInputs.find((input) => input.checked)?.value ?? "site") as
+      | "site"
+      | "user";
+
+  const showKeyField = () => {
+    if (keyField) keyField.hidden = selectedKeyMode() !== "user";
+  };
+
+  const applySiteKeyAvailability = () => {
+    const siteInput = keyModeInputs.find((input) => input.value === "site");
+    if (siteInput) siteInput.disabled = !siteKeyConfigured;
+    if (!siteKeyConfigured) {
+      const userInput = keyModeInputs.find((input) => input.value === "user");
+      if (userInput) userInput.checked = true;
+      showKeyField();
+    }
+  };
+
+  const saveProgress = () => {
+    if (!currentSave) return;
+    currentSave.updatedAt = Date.now();
+    localStorage.setItem(SAVE_KEY, JSON.stringify(currentSave));
+  };
+
+  const loadSavedStory = () => {
+    try {
+      const value = localStorage.getItem(SAVE_KEY);
+      if (!value) return null;
+      const parsed = JSON.parse(value) as StorySave;
+      if (!parsed.sessionId || !parsed.templateId) return null;
+      return parsed;
+    } catch {
+      return null;
+    }
+  };
+
+  const stateLabels: Record<string, string> = {
+    realm: "境界",
+    cultivation: "修为",
+    spiritStones: "灵石",
+    reputation: "声望",
+    inventory: "物品",
+    day: "天数",
+    food: "食物",
+    water: "饮水",
+    baseLevel: "基地",
+    defense: "防御",
+    survivors: "幸存者",
+  };
+
+  const renderState = (state: StoryState) => {
+    if (!statePanel) return;
+    statePanel.replaceChildren();
+    for (const [key, value] of Object.entries(state)) {
+      const item = document.createElement("div");
+      const label = document.createElement("span");
+      const content = document.createElement("strong");
+      label.textContent = stateLabels[key] ?? key;
+      content.textContent = Array.isArray(value)
+        ? value.length > 0
+          ? value.join(" / ")
+          : "空"
+        : String(value);
+      item.append(label, content);
+      statePanel.append(item);
+    }
+  };
+
+  const renderHistory = () => {
+    if (!transcript || !currentSave) return;
+    transcript.replaceChildren();
+    for (const [index, turn] of currentSave.history.entries()) {
+      const article = document.createElement("article");
+      article.className = "story-chapter";
+      const action = document.createElement("p");
+      action.className = "story-player-action";
+      action.textContent =
+        index === 0 && turn.action === "开始故事"
+          ? "故事开始"
+          : `你的选择：${turn.action}`;
+      const narrative = document.createElement("div");
+      narrative.className = "story-narrative";
+      narrative.textContent = turn.narrative;
+      article.append(action, narrative);
+      transcript.append(article);
+    }
+  };
+
+  const renderChoices = () => {
+    if (!choicesPanel || !currentSave) return;
+    choicesPanel.replaceChildren();
+    if (currentSave.ending) return;
+    for (const choice of currentSave.choices) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = choice;
+      button.disabled = busy || !loggedIn;
+      button.addEventListener("click", () => void requestTurn(choice));
+      choicesPanel.append(button);
+    }
+  };
+
+  const renderGame = () => {
+    if (!currentSave) return;
+    const template = config.templates.find(
+      (item) => item.id === currentSave?.templateId,
+    );
+    const mode = template?.modes.find(
+      (item) => item.id === currentSave?.modeId,
+    );
+    if (emptyState) emptyState.hidden = true;
+    if (gamePanel) gamePanel.hidden = false;
+    if (storyEyebrow) storyEyebrow.textContent = template?.eyebrow ?? "STORY";
+    if (storyTitle) storyTitle.textContent = template?.title ?? "互动小说";
+    if (storySubtitle) {
+      storySubtitle.textContent = `${mode?.title ?? ""} · ${currentSave.style}`;
+    }
+    if (storyTurnLabel) {
+      storyTurnLabel.textContent = `第 ${Math.max(1, currentSave.turnIndex)} 回合`;
+    }
+    if (endingPanel) endingPanel.hidden = !currentSave.ending;
+    renderState(currentSave.state);
+    renderHistory();
+    renderChoices();
+    if (actionForm) actionForm.hidden = currentSave.ending;
+  };
+
+  const renderModes = () => {
+    if (!modeList || !selectedTemplate) return;
+    modeList.replaceChildren();
+    selectedMode = selectedTemplate.modes[0];
+    selectedTemplate.modes.forEach((mode, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "story-mode-button";
+      button.classList.toggle("is-selected", index === 0);
+      button.dataset.storyMode = mode.id;
+      button.setAttribute("aria-pressed", String(index === 0));
+      const title = document.createElement("strong");
+      title.textContent = mode.title;
+      const description = document.createElement("span");
+      description.textContent = mode.description;
+      button.append(title, description);
+      button.addEventListener("click", () => {
+        selectedMode = mode;
+        modeList
+          .querySelectorAll<HTMLButtonElement>("[data-story-mode]")
+          .forEach((item) => {
+            const active = item === button;
+            item.classList.toggle("is-selected", active);
+            item.setAttribute("aria-pressed", String(active));
+          });
+      });
+      modeList.append(button);
+    });
+  };
+
+  const selectTemplate = (templateId: string) => {
+    selectedTemplate =
+      config.templates.find((template) => template.id === templateId) ??
+      selectedTemplate;
+    templateButtons.forEach((button) => {
+      const active = button.dataset.storyTemplate === selectedTemplate?.id;
+      button.classList.toggle("is-selected", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    renderModes();
+  };
+
+  templateButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (busy) return;
+      const templateId = button.dataset.storyTemplate;
+      if (templateId) selectTemplate(templateId);
+    });
+  });
+
+  keyModeInputs.forEach((input) => {
+    input.addEventListener("change", showKeyField);
+  });
+
+  const parseSseBlock = (block: string) => {
+    let event = "message";
+    const dataLines: string[] = [];
+    for (const line of block.split(/\r?\n/)) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+    }
+    if (dataLines.length === 0) return null;
+    try {
+      return { event, data: JSON.parse(dataLines.join("\n")) } as {
+        event: string;
+        data: Record<string, unknown>;
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const requestTurn = async (action: string) => {
+    if (!currentSave || !selectedTemplate || busy) return;
+    if (!loggedIn) {
+      setReaderStatus("请先登录后再开始故事。", "error");
+      return;
+    }
+    if (currentSave.keyMode === "user" && !runtimeApiKey) {
+      setReaderStatus("请先在左侧填写自己的 DeepSeek Key。", "error");
+      apiKeyInput?.focus();
+      return;
+    }
+    if (currentSave.keyMode === "site" && balance !== null && balance < 2) {
+      setReaderStatus("积分不足。可以签到获得积分，或改用你自己的 Key。", "error");
+      return;
+    }
+
+    setBusy(true);
+    setReaderStatus("正在连接 AI…");
+    if (choicesPanel) choicesPanel.replaceChildren();
+    if (endingPanel) endingPanel.hidden = true;
+
+    const liveArticle = document.createElement("article");
+    liveArticle.className = "story-chapter is-live";
+    const liveAction = document.createElement("p");
+    liveAction.className = "story-player-action";
+    liveAction.textContent =
+      currentSave.turnIndex === 0 && action === "开始故事"
+        ? "故事开始"
+        : `你的选择：${action}`;
+    const liveNarrative = document.createElement("div");
+    liveNarrative.className = "story-narrative";
+    liveNarrative.textContent = "";
+    liveArticle.append(liveAction, liveNarrative);
+    transcript?.append(liveArticle);
+    liveArticle.scrollIntoView({ block: "nearest", behavior: "smooth" });
+
+    const requestId = crypto.randomUUID();
+    try {
+      const response = await fetch("/api/story/turn", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "text/event-stream, application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId,
+          sessionId: currentSave.sessionId,
+          turnIndex: currentSave.turnIndex,
+          templateId: currentSave.templateId,
+          modeId: currentSave.modeId,
+          style: currentSave.style,
+          userAction: action,
+          history: currentSave.history,
+          state: currentSave.state,
+          summary: currentSave.summary,
+          keyMode: currentSave.keyMode,
+          userApiKey:
+            currentSave.keyMode === "user" ? runtimeApiKey : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = (await response.json()) as {
+          error?: string;
+          balance?: number;
+        };
+        if (typeof payload.balance === "number") balance = payload.balance;
+        throw new Error(payload.error || "剧情生成失败。");
+      }
+
+      if (!response.body) throw new Error("浏览器没有收到剧情数据。");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let result: StreamResult | null = null;
+      let streamError = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() ?? "";
+        for (const block of blocks) {
+          const parsed = parseSseBlock(block);
+          if (!parsed) continue;
+          if (parsed.event === "ready") {
+            if (typeof parsed.data.balance === "number") {
+              balance = parsed.data.balance;
+            }
+            if (balanceLabel) {
+              balanceLabel.textContent = `积分 ${balance ?? "—"}`;
+            }
+          } else if (parsed.event === "delta") {
+            const text = parsed.data.text;
+            if (typeof text === "string") {
+              liveNarrative.textContent += text;
+            }
+          } else if (parsed.event === "done") {
+            result = parsed.data as unknown as StreamResult;
+          } else if (parsed.event === "error") {
+            streamError =
+              typeof parsed.data.error === "string"
+                ? parsed.data.error
+                : "剧情生成中断。";
+            if (typeof parsed.data.balance === "number") {
+              balance = parsed.data.balance;
+            }
+          }
+        }
+      }
+
+      if (streamError || !result) {
+        throw new Error(streamError || "AI 没有返回完整剧情。");
+      }
+
+      liveArticle.classList.remove("is-live");
+      liveNarrative.textContent = result.narrative;
+      currentSave.turnIndex += 1;
+      currentSave.history.push({
+        action,
+        narrative: result.narrative,
+      });
+      currentSave.history = currentSave.history.slice(-20);
+      currentSave.state = result.state;
+      currentSave.summary = result.summary;
+      currentSave.choices = result.choices;
+      currentSave.ending = result.ending;
+      if (typeof result.balance === "number") balance = result.balance;
+      saveProgress();
+      renderGame();
+      setReaderStatus(
+        currentSave.ending ? "故事已经抵达结局。" : "剧情已保存。",
+        "success",
+      );
+      liveArticle.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    } catch (error) {
+      liveArticle.remove();
+      setReaderStatus(
+        error instanceof Error ? error.message : "剧情生成失败，请重试。",
+        "error",
+      );
+    } finally {
+      setBusy(false);
+      if (balanceLabel) balanceLabel.textContent = `积分 ${balance ?? "—"}`;
+      renderChoices();
+    }
+  };
+
+  const getInitialState = (template: StoryTemplate, modeId: string) =>
+    structuredClone(
+      template.modes.find((mode) => mode.id === modeId)?.initialState ??
+        template.modes[0].initialState,
+    );
+
+  const startNewStory = async () => {
+    if (!selectedTemplate || !selectedMode || !loggedIn) {
+      setSetupStatus(
+        loggedIn ? "请选择故事模板。" : "请先登录后再开始故事。",
+        "error",
+      );
+      return;
+    }
+    const existingSave = currentSave ?? loadSavedStory();
+    if (
+      existingSave &&
+      !window.confirm("开始新故事会覆盖当前浏览器中保存的进度，确定继续吗？")
+    ) {
+      return;
+    }
+
+    const keyMode = selectedKeyMode();
+    if (keyMode === "user") {
+      runtimeApiKey = apiKeyInput?.value.trim() ?? "";
+      if (!runtimeApiKey) {
+        setSetupStatus("请填写自己的 DeepSeek API Key。", "error");
+        apiKeyInput?.focus();
+        return;
+      }
+      if (apiKeyInput) apiKeyInput.value = "";
+    }
+
+    currentSave = {
+      sessionId: crypto.randomUUID(),
+      templateId: selectedTemplate.id,
+      modeId: selectedMode.id,
+      style: styleSelect?.value || "热血成长",
+      keyMode,
+      turnIndex: 0,
+      state: getInitialState(selectedTemplate, selectedMode.id),
+      summary: "",
+      history: [],
+      choices: [],
+      ending: false,
+      updatedAt: Date.now(),
+    };
+    setSetupStatus("");
+    renderGame();
+    await requestTurn("开始故事");
+  };
+
+  startButton?.addEventListener("click", () => void startNewStory());
+  resumeButton?.addEventListener("click", () => {
+    const saved = loadSavedStory();
+    if (!saved) {
+      resumeButton.hidden = true;
+      setSetupStatus("没有找到可继续的故事。", "error");
+      return;
+    }
+    currentSave = saved;
+    keyModeInputs.forEach((input) => {
+      input.checked = input.value === saved.keyMode;
+    });
+    showKeyField();
+    const template = config.templates.find(
+      (item) => item.id === saved.templateId,
+    );
+    selectedTemplate = template ?? selectedTemplate;
+    selectedMode = template?.modes.find((mode) => mode.id === saved.modeId);
+    renderGame();
+    setSetupStatus(
+      saved.keyMode === "user"
+        ? "继续使用自己的 Key：请在左侧重新输入一次。"
+        : "已恢复上次剧情。",
+      saved.keyMode === "user" ? "error" : "success",
+    );
+  });
+
+  actionForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const action = actionInput?.value.trim() ?? "";
+    if (!action) {
+      setReaderStatus("请先输入行动。", "error");
+      return;
+    }
+    if (actionInput) actionInput.value = "";
+    void requestTurn(action);
+  });
+
+  const resetStory = () => {
+    if (!window.confirm("确定清除当前故事进度吗？")) return;
+    localStorage.removeItem(SAVE_KEY);
+    currentSave = null;
+    runtimeApiKey = "";
+    if (gamePanel) gamePanel.hidden = true;
+    if (emptyState) emptyState.hidden = false;
+    if (transcript) transcript.replaceChildren();
+    if (choicesPanel) choicesPanel.replaceChildren();
+    setSetupStatus("当前进度已清除。", "success");
+  };
+
+  resetButton?.addEventListener("click", resetStory);
+  newEndingButton?.addEventListener("click", resetStory);
+
+  const saved = loadSavedStory();
+  if (saved && resumeButton) {
+    resumeButton.hidden = false;
+    const template = config.templates.find(
+      (item) => item.id === saved.templateId,
+    );
+    resumeButton.textContent = `继续《${template?.title ?? "互动小说"}》`;
+  }
+
+  renderModes();
+  showKeyField();
+
+  void fetch("/api/story/status", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((payload: { siteKeyConfigured?: boolean } | null) => {
+      siteKeyConfigured = payload?.siteKeyConfigured !== false;
+      applySiteKeyAvailability();
+      if (!siteKeyConfigured) {
+        setSetupStatus(
+          "站长 AI Key 尚未配置。当前可使用自己的 DeepSeek Key，不消耗积分。",
+          "error",
+        );
+      }
+    })
+    .catch(() => undefined);
+
+  void fetch("/api/points", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  })
+    .then(async (response) => {
+      if (!response.ok) return null;
+      return (await response.json()) as { balance?: number };
+    })
+    .then((payload) => {
+      loggedIn = Boolean(payload);
+      balance =
+        typeof payload?.balance === "number" ? payload.balance : null;
+      if (balanceLabel) {
+        balanceLabel.textContent = loggedIn
+          ? `积分 ${balance ?? 0}`
+          : "未登录";
+      }
+      if (loginNote) {
+        loginNote.innerHTML = loggedIn
+          ? "两种模式都需要登录，以便保存用户身份并限制滥用。"
+          : '<a href="/login/?next=%2Fstories%2F">登录后开始互动小说 →</a>';
+      }
+      if (startButton) startButton.disabled = !loggedIn;
+      setBusy(false);
+    })
+    .catch(() => {
+      loggedIn = false;
+      if (balanceLabel) balanceLabel.textContent = "登录状态未知";
+      if (loginNote) {
+        loginNote.innerHTML =
+          '<a href="/login/?next=%2Fstories%2F">登录后开始互动小说 →</a>';
+      }
+    });
+</script>

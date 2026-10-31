@@ -64,6 +64,22 @@ pnpm preview
 
 站长可在 `/admin/gallery/` 直接上传图片并审核公共投稿。公共投稿入口为 `/upload/`：匿名用户每天 1 张，登录用户每天 5 张，所有公共图片审核通过后才会显示在图库。
 
+## 互动小说
+
+`/stories/` 提供 AI 实时互动小说。第一版包含修仙与末世基地两个模板，支持推荐选项、自由行动、浏览器本地续读，以及站长 Key 和用户自己的 DeepSeek Key 两种模式。
+
+使用站长 Key 时，每个剧情回合消耗 2 积分；失败会退回。用户自己的 Key 只用于当次请求，不会写入数据库、日志或浏览器存储。
+
+站长 Key 需要在 Cloudflare Pages 的生产环境中配置以下变量：
+
+```text
+STORY_AI_API_KEY
+STORY_AI_BASE_URL=https://api.deepseek.com
+STORY_AI_MODEL=deepseek-chat
+```
+
+其中 `STORY_AI_API_KEY` 应使用加密 Secret。未配置时，页面会自动切换到用户自己的 Key 模式。
+
 ## 部署
 
 推荐部署到 Cloudflare Pages：

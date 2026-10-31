@@ -5,6 +5,7 @@ const navItems = [
   { href: "/", label: "首页" },
   { href: "/blog/", label: "博客" },
   { href: "/gallery/", label: "图库" },
+  { href: "/stories/", label: "互动小说" },
   { href: "/games/", label: "游戏" },
   { href: "/shop/", label: "兑换" },
   { href: "/about/", label: "关于" },
@@ -44,7 +45,9 @@ const isActive = (href: string) =>
         }}
         data-auth-nav
       >
-        <span class="nav-index" aria-hidden="true">07</span>
+        <span class="nav-index" aria-hidden="true">
+          {String(navItems.length + 1).padStart(2, "0")}
+        </span>
         <span data-auth-label>登录</span>
       </a>
     </nav>

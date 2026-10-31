@@ -13,6 +13,9 @@ interface Env {
   COMMENT_ADMIN_USER_IDS?: string;
   RESEND_API_KEY?: string;
   EMAIL_FROM?: string;
+  STORY_AI_API_KEY?: string;
+  STORY_AI_BASE_URL?: string;
+  STORY_AI_MODEL?: string;
 }
 
 interface ImportMetaEnv {}
