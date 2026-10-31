@@ -146,6 +146,8 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
       };
       if (payload.images.length === 0) return;
 
+      document.querySelector(".gallery-empty")?.remove();
+
       let grid = document.querySelector<HTMLElement>("[data-gallery-grid]");
       if (!grid) {
         grid = document.createElement("div");
