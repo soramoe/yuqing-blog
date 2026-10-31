@@ -416,6 +416,10 @@ main {
   grid-row: 1;
 }
 
+body.has-announcement main {
+  grid-row: 2;
+}
+
 .eyebrow,
 .section-head,
 .page-topline,
@@ -2149,6 +2153,10 @@ body.gallery-lightbox-open {
   border-top: 1px solid var(--border);
   grid-column: 2;
   grid-row: 2;
+}
+
+body.has-announcement .site-footer {
+  grid-row: 3;
 }
 
 .footer-lead {
