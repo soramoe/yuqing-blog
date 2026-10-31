@@ -229,7 +229,13 @@ export function applyDifficultyToInitialState(
           ? 1 / difficulty.riskFactor
           : 1
         : 1;
-  const resourceKeys = ["spiritStones", "food", "water", "defense"];
+  const resourceKeys = [
+    "spiritStones",
+    "food",
+    "water",
+    "defense",
+    "money",
+  ];
   for (const key of resourceKeys) {
     if (typeof next[key] === "number") {
       next[key] = Math.max(
@@ -398,6 +404,105 @@ export const STORY_TEMPLATES: StoryTemplate[] = [
       },
     ],
   },
+  {
+    id: "urban",
+    title: "浮城人间",
+    eyebrow: "URBAN STORY",
+    description: "在现代都市里谋生、追查秘密，或从零开始建立自己的事业。",
+    premise:
+      "一座节奏极快、阶层交错的海滨大都市。机会与风险同时藏在写字楼、旧城区、深夜地铁和人际关系之中。故事保持现实逻辑，不出现超自然力量。",
+    rules:
+      "金钱、时间、精力和人脉都是有限资源，收入和晋升必须有合理依据。调查线索需要主动行动获得，不能凭空知道真相。职场、商业和人际选择会留下持续影响。",
+    modes: [
+      {
+        id: "newcomer",
+        title: "初入都市",
+        description: "刚下高铁，带着有限积蓄和一份并不稳定的工作机会。",
+        initialState: {
+          day: 1,
+          money: 3000,
+          energy: 100,
+          reputation: 0,
+          clues: 0,
+          inventory: ["租房合同", "地铁卡"],
+        },
+      },
+      {
+        id: "urban-mystery",
+        title: "都市悬疑",
+        description: "一条匿名短信把你牵进失踪案，城市表面之下另有规则。",
+        initialState: {
+          day: 1,
+          money: 1200,
+          energy: 85,
+          reputation: 0,
+          clues: 0,
+          inventory: ["旧手机", "匿名短信"],
+        },
+      },
+      {
+        id: "startup",
+        title: "白手创业",
+        description: "账上只有第一笔启动资金，你需要团队、客户和一次关键机会。",
+        initialState: {
+          day: 1,
+          money: 50000,
+          energy: 90,
+          reputation: 10,
+          clues: 0,
+          inventory: ["商业计划书", "合伙人名片"],
+        },
+      },
+    ],
+  },
+  {
+    id: "folklore",
+    title: "诡乡旧俗",
+    eyebrow: "OCCULT FOLKLORE",
+    description: "走进一座守旧山城，在禁忌、傩戏与旧民俗之间寻找活路。",
+    premise:
+      "一座被雾气和山路包围的南方旧城，保留着外人看不懂的红白喜事、傩戏、河祭与夜禁。这里流传的每条规矩都像是迷信，直到有人违反它。",
+    rules:
+      "诡异现象必须遵守故事内部规则，线索来自观察、询问和仪式记录。理智与猜疑会随经历变化，不能靠无代价暴力解决超自然问题。尊重现实民俗背景，不把真实群体简单写成邪恶。",
+    modes: [
+      {
+        id: "outsider",
+        title: "外乡来客",
+        description: "末班车把你留在雾里的旧城，回程道路却从地图上消失。",
+        initialState: {
+          day: 1,
+          sanity: 100,
+          suspicion: 0,
+          clues: 0,
+          inventory: ["旧车票", "外婆的平安符"],
+        },
+      },
+      {
+        id: "village-keeper",
+        title: "守村人",
+        description: "你熟悉每一条夜禁，却在今年祭礼前发现祖辈的记录被改过。",
+        initialState: {
+          day: 1,
+          sanity: 90,
+          suspicion: 20,
+          clues: 2,
+          inventory: ["铜铃", "村志残页"],
+        },
+      },
+      {
+        id: "folk-investigator",
+        title: "民俗调查",
+        description: "你带着录音笔来记录祭礼，却发现全村都认识照片里的你。",
+        initialState: {
+          day: 1,
+          sanity: 95,
+          suspicion: 10,
+          clues: 1,
+          inventory: ["录音笔", "县志抄本"],
+        },
+      },
+    ],
+  },
 ];
 
 export function getStoryTemplate(templateId: string) {
@@ -463,6 +568,49 @@ export function sanitizeStoryState(
     };
   }
 
+  if (templateId === "urban") {
+    return {
+      day: clamp(Math.round(Number(input.day) || 1), 1, 99_999),
+      money: clamp(
+        Math.round(Number(input.money) || 0),
+        0,
+        9_999_999_999,
+      ),
+      energy: clamp(Math.round(Number(input.energy) || 0), 0, 100),
+      reputation: clamp(
+        Math.round(Number(input.reputation) || 0),
+        -100_000,
+        100_000,
+      ),
+      clues: clamp(Math.round(Number(input.clues) || 0), 0, 10_000),
+      inventory: Array.isArray(input.inventory)
+        ? input.inventory
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.slice(0, 40))
+            .slice(0, 20)
+        : [],
+    };
+  }
+
+  if (templateId === "folklore") {
+    return {
+      day: clamp(Math.round(Number(input.day) || 1), 1, 99_999),
+      sanity: clamp(Math.round(Number(input.sanity) || 0), 0, 100),
+      suspicion: clamp(
+        Math.round(Number(input.suspicion) || 0),
+        0,
+        100,
+      ),
+      clues: clamp(Math.round(Number(input.clues) || 0), 0, 10_000),
+      inventory: Array.isArray(input.inventory)
+        ? input.inventory
+            .filter((item): item is string => typeof item === "string")
+            .map((item) => item.slice(0, 40))
+            .slice(0, 20)
+        : [],
+    };
+  }
+
   return structuredClone(defaultState);
 }
 
@@ -509,6 +657,31 @@ export function applyStoryStatePatch(
         next[key] =
           Number(next[key]) +
           clamp(scaleDelta(key, value), -10_000, 10_000);
+      }
+    }
+  }
+
+  if (templateId === "urban") {
+    for (const key of ["money", "energy", "reputation", "clues", "day"]) {
+      const value = Number(patch[key]);
+      if (Number.isFinite(value) && typeof next[key] === "number") {
+        next[key] =
+          Number(next[key]) +
+          clamp(scaleDelta(key, value), -100_000_000, 100_000_000);
+      }
+    }
+  }
+
+  if (templateId === "folklore") {
+    for (const key of ["sanity", "suspicion", "clues", "day"]) {
+      const value = Number(patch[key]);
+      if (Number.isFinite(value) && typeof next[key] === "number") {
+        const scaled =
+          key === "suspicion"
+            ? Math.round(value * difficulty.riskFactor)
+            : scaleDelta(key, value);
+        next[key] =
+          Number(next[key]) + clamp(scaled, -100_000, 100_000);
       }
     }
   }

@@ -182,10 +182,18 @@ const extractSection = (
   return (end < 0 ? text.slice(contentStart) : text.slice(contentStart, end)).trim();
 };
 
-const fallbackChoices = (templateId: string) =>
-  templateId === "cultivation"
-    ? ["询问眼前之人的来历", "检查四周的灵气变化", "谨慎离开这里"]
-    : ["检查随身物资", "观察可供藏身的地点", "尝试寻找其他幸存者"];
+const fallbackChoices = (templateId: string) => {
+  if (templateId === "cultivation") {
+    return ["询问眼前之人的来历", "检查四周的灵气变化", "谨慎离开这里"];
+  }
+  if (templateId === "urban") {
+    return ["查看手机里的新消息", "观察周围人的反应", "先离开这里再整理线索"];
+  }
+  if (templateId === "folklore") {
+    return ["检查随身护身物", "寻找附近是否有人守夜", "默记墙上的禁忌"];
+  }
+  return ["检查随身物资", "观察可供藏身的地点", "尝试寻找其他幸存者"];
+};
 
 const parseModelResult = (
   raw: string,

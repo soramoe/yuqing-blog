@@ -58,6 +58,14 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+body.story-library-mode .stories-hero {
+  display: none;
+}
+
+body.story-library-mode .story-view-tabs {
+  margin-top: 0;
+}
+
 .story-view-tabs button {
   display: grid;
   align-items: center;
@@ -416,6 +424,14 @@
 
 .story-template-card.is-apocalypse {
   --story-card-accent: #d48d62;
+}
+
+.story-template-card.is-urban {
+  --story-card-accent: #7fa8c9;
+}
+
+.story-template-card.is-folklore {
+  --story-card-accent: #c57a72;
 }
 
 .story-template-card:hover,
