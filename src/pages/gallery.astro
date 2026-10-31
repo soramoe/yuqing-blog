@@ -264,6 +264,8 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
         });
     };
 
-    void Promise.all([loadOnlineImages(), hideRemovedImages()]);
+    void Promise.all([loadOnlineImages(), hideRemovedImages()]).finally(() => {
+      document.querySelector(".gallery-page")?.classList.add("is-gallery-ready");
+    });
   </script>
 </BaseLayout>

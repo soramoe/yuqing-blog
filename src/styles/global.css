@@ -1802,6 +1802,25 @@ h3,
   padding: 0 0 80px;
 }
 
+.js .page-gallery .waterfall-grid {
+  visibility: hidden;
+}
+
+.js .page-gallery.is-gallery-ready .waterfall-grid {
+  visibility: visible;
+  animation: gallery-grid-reveal 180ms ease both;
+}
+
+@keyframes gallery-grid-reveal {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .gallery-page-toolbar {
   display: flex;
   align-items: center;
