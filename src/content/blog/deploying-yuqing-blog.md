@@ -5,7 +5,6 @@ pubDate: 2026-10-27
 publishedAt: 2026-10-27T20:14:13+08:00
 category: "日常"
 tags: ["部署", "Astro", "Cloudflare"]
-cover: "/covers/deploying-yuqing-blog.png"
 draft: false
 ---
 

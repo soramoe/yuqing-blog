@@ -5,7 +5,6 @@ pubDate: 2026-10-31
 publishedAt: 2026-10-31T03:52:00+08:00
 category: "日常"
 tags: ["Cloudflare", "Astro", "缓存", "CSS", "排错", "部署"]
-cover: "/gallery/uploads/20261031_827338207c2f.png"
 draft: false
 ---
 

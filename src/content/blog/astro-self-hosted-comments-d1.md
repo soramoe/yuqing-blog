@@ -5,7 +5,6 @@ pubDate: 2026-10-28
 publishedAt: 2026-10-28T17:54:54+08:00
 category: "日常"
 tags: ["Astro", "Cloudflare", "D1", "评论", "Pages Functions"]
-cover: "/gallery/20261027_045746_5a4f66598da6_1.png"
 draft: false
 ---
 

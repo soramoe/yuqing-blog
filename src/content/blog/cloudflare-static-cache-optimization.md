@@ -5,7 +5,6 @@ pubDate: 2026-10-28
 publishedAt: 2026-10-28T15:33:53+08:00
 category: "日常"
 tags: ["Cloudflare", "Astro", "缓存", "性能", "部署"]
-cover: "/gallery/20261027_050242_80858373fd28_1.png"
 draft: false
 ---
 

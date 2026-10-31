@@ -5,7 +5,6 @@ pubDate: 2026-10-28
 publishedAt: 2026-10-28T14:16:33+08:00
 category: "日常"
 tags: ["DeepSeek", "鲸鱼娘", "AI", "网络文化"]
-cover: "/covers/deepseek-whale-girl-viral-trend.png"
 draft: false
 ---
 

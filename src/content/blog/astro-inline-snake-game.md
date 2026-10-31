@@ -5,8 +5,6 @@ pubDate: 2026-10-29
 publishedAt: 2026-10-29T00:59:05+08:00
 category: "日常"
 tags: ["Astro", "Canvas", "JavaScript", "游戏", "交互设计"]
-cover: "/gallery/20261019_094141_b8d85581b0d5_1.png"
-hideCover: true
 draft: false
 ---
 

@@ -5,7 +5,6 @@ pubDate: 2026-10-27
 publishedAt: 2026-10-27T22:02:39+08:00
 category: "AI"
 tags: ["AI", "行业观察", "GPT-6.1", "Gemini 4", "Agent"]
-cover: "/covers/recent-ai-updates-october-2026.png"
 draft: false
 ---
 

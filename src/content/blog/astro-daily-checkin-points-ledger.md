@@ -5,7 +5,6 @@ pubDate: 2026-10-28
 publishedAt: 2026-10-28T18:51:55+08:00
 category: "日常"
 tags: ["Astro", "Cloudflare", "D1", "签到", "积分"]
-cover: "/gallery/20261027_045948_6e555f6df68c_1.png"
 draft: false
 ---
 

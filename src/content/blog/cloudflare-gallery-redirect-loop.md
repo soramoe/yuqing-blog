@@ -5,7 +5,6 @@ pubDate: 2026-10-28
 publishedAt: 2026-10-28T19:27:08+08:00
 category: "日常"
 tags: ["Cloudflare", "Pages", "重定向", "部署", "排错"]
-cover: "/gallery/20261017_095130_0fe5ca7798a2_1.png"
 draft: false
 ---
 

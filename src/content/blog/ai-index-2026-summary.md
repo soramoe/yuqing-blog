@@ -5,7 +5,6 @@ pubDate: 2026-10-27
 publishedAt: 2026-10-27T20:14:13+08:00
 category: "AI"
 tags: ["AI", "行业报告", "Stanford HAI"]
-cover: "/covers/ai-index-2026-cover.jpg"
 draft: false
 ---
 

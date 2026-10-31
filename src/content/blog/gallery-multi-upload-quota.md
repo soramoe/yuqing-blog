@@ -5,7 +5,6 @@ pubDate: 2026-10-28
 publishedAt: 2026-10-28T20:08:00+08:00
 category: "日常"
 tags: ["图库", "Cloudflare", "R2", "D1", "交互设计"]
-cover: "/gallery/20261019_052417_ce1ba05be448_1.png"
 draft: false
 ---
 

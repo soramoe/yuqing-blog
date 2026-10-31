@@ -5,7 +5,6 @@ pubDate: 2026-10-27
 publishedAt: 2026-10-27T23:04:43+08:00
 category: "安全"
 tags: ["安全", "RCE", "PHP", "AI安全"]
-cover: "/covers/php2shell-php-rce-october-2026.png"
 draft: false
 ---
 
