@@ -256,7 +256,10 @@ export function applyStoryStatePatch(
       .filter((item): item is string => typeof item === "string")
       .map((item) => item.trim().slice(0, 40))
       .filter(Boolean);
-    next.inventory = [...currentInventory, ...additions].slice(0, 20);
+    next.inventory = [...new Set([...currentInventory, ...additions])].slice(
+      0,
+      20,
+    );
   }
 
   return sanitizeStoryState(templateId, next);
