@@ -18,6 +18,8 @@ export interface ImageProviderEnv {
   AI?: WorkersAiBinding;
   IMAGE_QWEN_API_KEY?: string;
   IMAGE_QWEN_BASE_URL?: string;
+  IMAGE_SILICONFLOW_API_KEY?: string;
+  IMAGE_SILICONFLOW_BASE_URL?: string;
 }
 
 export interface ImageGenerationRequest {
@@ -58,7 +60,10 @@ export function isProviderConfigured(
   provider: ImageProviderConfig,
 ) {
   if (provider.adapter === "workers-ai") return Boolean(env.AI);
-  return Boolean(env.IMAGE_QWEN_API_KEY?.trim());
+  if (provider.adapter === "dashscope-images") {
+    return Boolean(env.IMAGE_QWEN_API_KEY?.trim());
+  }
+  return Boolean(env.IMAGE_SILICONFLOW_API_KEY?.trim());
 }
 
 const arrayBufferBytes = (value: ArrayBuffer | ArrayBufferView) => {
@@ -373,6 +378,99 @@ async function generateWithDashScope(
   return normalizeBinary(bytes, request.width, request.height);
 }
 
+async function generateWithOpenAiImages(
+  env: ImageProviderEnv,
+  provider: ImageProviderConfig,
+  request: ImageGenerationRequest,
+) {
+  const apiKey = env.IMAGE_SILICONFLOW_API_KEY?.trim();
+  if (!apiKey) {
+    throw new ImageProviderError(
+      "硅基流动 API Key 尚未配置。",
+      "not-configured",
+      false,
+    );
+  }
+  const baseUrl =
+    env.IMAGE_SILICONFLOW_BASE_URL?.trim() ||
+    "https://api.siliconflow.cn/v1";
+  const endpoint = baseUrl.endsWith("/images/generations")
+    ? baseUrl
+    : `${baseUrl.replace(/\/+$/, "")}/images/generations`;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55_000);
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-Enable-Watermark": "0",
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        prompt: request.prompt,
+        negative_prompt: request.negativePrompt || undefined,
+        image_size: `${request.width}x${request.height}`,
+        batch_size: 1,
+        num_inference_steps: request.quality === "hd" ? 35 : 20,
+      }),
+    });
+  } catch {
+    throw new ImageProviderError(
+      controller.signal.aborted
+        ? "硅基流动图片服务响应超时。"
+        : "硅基流动图片服务暂时无法连接。",
+      controller.signal.aborted ? "timeout" : "provider-unavailable",
+      true,
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+  if (!response.ok) {
+    throw new ImageProviderError(
+      response.status === 429
+        ? "硅基流动图片请求过于频繁或额度不足。"
+        : `硅基流动图片服务返回 HTTP ${response.status}。`,
+      response.status === 429
+        ? "rate-limited"
+        : response.status === 402
+          ? "quota-exhausted"
+          : "provider-unavailable",
+      response.status === 429 || response.status >= 500,
+    );
+  }
+  const payload = (await response.json()) as {
+    images?: Array<{ url?: string }>;
+    data?: Array<{ url?: string; b64_json?: string }>;
+    image?: string;
+  };
+  const image =
+    payload.images?.find((item) => item.url)?.url ??
+    payload.data?.find((item) => item.url)?.url;
+  if (image) {
+    const bytes = await fetchProviderImage(image);
+    return normalizeBinary(bytes, request.width, request.height);
+  }
+  const base64 =
+    payload.image ?? payload.data?.find((item) => item.b64_json)?.b64_json;
+  if (base64) {
+    return normalizeBinary(
+      { b64_json: base64 },
+      request.width,
+      request.height,
+    );
+  }
+  throw new ImageProviderError(
+    "硅基流动没有返回图片。",
+    "invalid-response",
+    true,
+  );
+}
+
 export async function generateWithProvider(
   env: ImageProviderEnv,
   provider: ImageProviderConfig,
@@ -390,6 +488,8 @@ export async function generateWithProvider(
       return generateWithWorkersAi(env, provider, request);
     case "dashscope-images":
       return generateWithDashScope(env, provider, request);
+    case "openai-images":
+      return generateWithOpenAiImages(env, provider, request);
     default:
       throw new ImageProviderError(
         "图片供应商适配器不受支持。",

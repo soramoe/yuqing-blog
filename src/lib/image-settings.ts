@@ -5,7 +5,10 @@ export const IMAGE_HD_POINTS = 32;
 export type ImageQuality = "standard" | "hd";
 export type ImageFeature = "story_chapter" | "image_studio" | "admin_test";
 export type ImagePermission = "private" | "public";
-export type ImageProviderAdapter = "workers-ai" | "dashscope-images";
+export type ImageProviderAdapter =
+  | "workers-ai"
+  | "dashscope-images"
+  | "openai-images";
 
 export interface ImageSettings {
   enabled: boolean;
@@ -181,7 +184,11 @@ export async function listImageProviders(db: D1Database) {
       id: row.id,
       name: row.name,
       adapter:
-        row.adapter === "workers-ai" ? "workers-ai" : "dashscope-images",
+        row.adapter === "workers-ai"
+          ? "workers-ai"
+          : row.adapter === "openai-images"
+            ? "openai-images"
+            : "dashscope-images",
       model: row.model,
       enabled: Boolean(row.enabled),
       priority: Number(row.priority),

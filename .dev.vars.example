@@ -9,3 +9,5 @@ STORY_AI_BASE_URL=https://api.deepseek.com
 STORY_AI_MODEL=deepseek-flash
 IMAGE_QWEN_API_KEY=
 IMAGE_QWEN_BASE_URL=https://dashscope.aliyuncs.com
+IMAGE_SILICONFLOW_API_KEY=
+IMAGE_SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1

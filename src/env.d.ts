@@ -19,6 +19,8 @@ interface Env {
   STORY_AI_MODEL?: string;
   IMAGE_QWEN_API_KEY?: string;
   IMAGE_QWEN_BASE_URL?: string;
+  IMAGE_SILICONFLOW_API_KEY?: string;
+  IMAGE_SILICONFLOW_BASE_URL?: string;
 }
 
 interface ImportMetaEnv {}
