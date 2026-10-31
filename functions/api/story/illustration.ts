@@ -21,18 +21,11 @@ const json = (body: unknown, status = 200) =>
 const safeText = (value: unknown, maximum: number) =>
   typeof value === "string" ? value.trim().slice(0, maximum) : "";
 
-const buildIllustrationPrompt = (input: {
-  narrative: string;
-  summary: string;
-  templateId: string;
-  style: string;
-  characters: unknown;
-}) => {
-  const template = getStoryTemplate(input.templateId);
-  const characters = sanitizeStoryCharacters(input.characters);
+const characterBrief = (value: unknown) => {
+  const characters = sanitizeStoryCharacters(value);
   const protagonist = characters.protagonist;
   const protagonistText = [
-    protagonist.name,
+    protagonist.name && `主角：${protagonist.name}`,
     protagonist.gender,
     protagonist.age,
     protagonist.appearance,
@@ -49,14 +42,147 @@ const buildIllustrationPrompt = (input: {
         `${character.name || "关键配角"}（${character.relationship || character.role || "与主角相关"}）`,
     )
     .join("；");
+  return [protagonistText, castText ? `配角：${castText}` : ""]
+    .filter(Boolean)
+    .join("。");
+};
+
+const fallbackSceneBrief = (narrative: string) =>
+  narrative
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 700);
+
+async function createSceneBrief(
+  env: Env,
+  input: {
+    narrative: string;
+    summary: string;
+    characters: unknown;
+    style: string;
+  },
+) {
+  const apiKey = env.STORY_AI_API_KEY?.trim();
+  if (!apiKey) {
+    return {
+      zh: fallbackSceneBrief(input.narrative),
+      en: "",
+    };
+  }
+  const baseUrl =
+    env.STORY_AI_BASE_URL?.trim() || "https://api.deepseek.com";
+  const endpoint = baseUrl.endsWith("/chat/completions")
+    ? baseUrl
+    : `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
+  const model = env.STORY_AI_MODEL?.trim() || "deepseek-chat";
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 18_000);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          {
+            role: "system",
+            content:
+              "你是插画分镜编辑。只提取章节中真实存在的画面，不添加正文没有的地点、角色或关键道具。",
+          },
+          {
+            role: "user",
+            content: `从下面的互动小说章节中，选择最能代表本章冲突或转折的一个瞬间，改写成可直接交给生图模型的中英文画面提示词。
+
+人物设定：${characterBrief(input.characters) || "按正文识别"}
+视觉风格：${input.style}
+上下文摘要：${input.summary || "无"}
+本章正文：
+${input.narrative.slice(0, 2600)}
+
+要求：
+1. 具体写出谁在什么地点、正在做什么、面向谁，以及画面中的关键道具。
+2. 描述镜头景别、光线和氛围，但不要写“总结整章”或解释故事。
+3. 控制在 120～260 个汉字，只写一个连续画面。
+4. 不生成文字、字幕、水印、标志或排版。
+5. 中文控制在 120～260 个汉字，英文控制在 80～180 个英文单词。
+6. 严格输出：
+@@SCENE_ZH@@
+中文画面提示词
+@@SCENE_EN@@
+English image prompt
+@@END@@`,
+          },
+        ],
+        temperature: 0.5,
+        max_tokens: 420,
+        stream: false,
+      }),
+    });
+    if (!response.ok) {
+      return {
+        zh: fallbackSceneBrief(input.narrative),
+        en: "",
+      };
+    }
+    const payload = (await response.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const raw = payload.choices?.[0]?.message?.content ?? "";
+    const zhStart = raw.indexOf("@@SCENE_ZH@@");
+    const enStart = raw.indexOf("@@SCENE_EN@@", zhStart + 12);
+    const end = raw.indexOf("@@END@@", enStart + 12);
+    const zh =
+      zhStart >= 0
+        ? raw
+            .slice(zhStart + 12, enStart >= 0 ? enStart : end)
+            .trim()
+        : fallbackSceneBrief(input.narrative);
+    const en =
+      enStart >= 0
+        ? raw
+            .slice(enStart + 13, end >= 0 ? end : undefined)
+            .trim()
+        : "";
+    return {
+      zh:
+        zh.length >= 30
+          ? zh.slice(0, 700)
+          : fallbackSceneBrief(input.narrative),
+      en: en.length >= 50 ? en.slice(0, 1200) : "",
+    };
+  } catch {
+    return {
+      zh: fallbackSceneBrief(input.narrative),
+      en: "",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+const buildIllustrationPrompt = (input: {
+  sceneBrief: string;
+  narrative: string;
+  summary: string;
+  templateId: string;
+  style: string;
+  characters: unknown;
+}) => {
+  const template = getStoryTemplate(input.templateId);
   return [
-    "为一章中文互动小说绘制叙事插画。",
-    `世界氛围：${template?.premise ?? "虚构故事世界"}。`,
-    `视觉风格：${input.style}，电影感构图，画面完整，细节丰富。`,
-    `本章画面：${input.narrative.slice(0, 1600)}`,
+    "绘制一幅中文互动小说的章节插画。",
+    `画面主体（最高优先级，必须严格表现）：${input.sceneBrief}`,
+    characterBrief(input.characters)
+      ? `人物固定设定：${characterBrief(input.characters)}。`
+      : "",
     input.summary ? `上下文摘要：${input.summary.slice(0, 500)}` : "",
-    protagonistText ? `主角固定外观：${protagonistText}。` : "",
-    castText ? `出场配角：${castText}。` : "",
+    `世界类型：${template?.title ?? "虚构世界"}。视觉风格：${input.style}，电影感构图，画面完整，细节丰富。`,
+    `再次强调核心画面：${input.sceneBrief}`,
     "只绘制场景、人物和氛围，不生成任何文字、字幕、水印、标志或排版。",
     "避免真实公众人物、现实商标、畸形肢体、低清晰度和过度血腥。",
   ]
@@ -105,7 +231,14 @@ export const onRequestPost: PagesFunction<Env> = async ({
     return json({ error: "章节生图参数无效。" }, 400);
   }
 
+  const sceneBriefs = await createSceneBrief(env, {
+    narrative,
+    summary,
+    style: style || "叙事插画",
+    characters: input.characters,
+  });
   const prompt = buildIllustrationPrompt({
+    sceneBrief: sceneBriefs.zh,
     narrative,
     summary,
     templateId,
@@ -119,6 +252,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
       feature: "story_chapter",
       sourceId: `story:${storySessionId}:turn:${turnIndex}`,
       prompt,
+      englishPrompt: sceneBriefs.en,
       negativePrompt:
         "文字，字幕，水印，标志，低清晰度，肢体畸形，真实公众人物，现实商标",
       quality: input.quality === "hd" ? "hd" : "standard",

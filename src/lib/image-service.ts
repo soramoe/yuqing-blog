@@ -17,6 +17,7 @@ export interface CreateImageJobInput {
   feature: ImageFeature;
   sourceId?: string;
   prompt: string;
+  englishPrompt?: string;
   negativePrompt?: string;
   quality: ImageQuality;
   aspectRatio?: string;
@@ -397,6 +398,7 @@ export async function createAndRunImageJob(
   try {
     const generated = await routeImageGeneration(env, jobId, {
       prompt,
+      englishPrompt: input.englishPrompt?.trim().slice(0, 2000),
       negativePrompt,
       width,
       height,

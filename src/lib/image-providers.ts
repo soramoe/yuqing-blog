@@ -22,6 +22,7 @@ export interface ImageProviderEnv {
 
 export interface ImageGenerationRequest {
   prompt: string;
+  englishPrompt?: string;
   negativePrompt: string;
   width: number;
   height: number;
@@ -183,12 +184,17 @@ async function generateWithWorkersAi(
   }
   try {
     const isFluxSchnell = provider.model.includes("flux-1-schnell");
-    const prompt = request.negativePrompt
-      ? `${request.prompt}\n避免出现：${request.negativePrompt}`.slice(
+    const basePrompt =
+      request.englishPrompt?.trim() || request.prompt;
+    const negativePrompt = request.englishPrompt
+      ? "text, subtitles, captions, watermark, logo, low resolution, deformed anatomy, extra limbs, real celebrities, trademarks"
+      : request.negativePrompt;
+    const prompt = negativePrompt
+      ? `${basePrompt}\nAvoid: ${negativePrompt}`.slice(
           0,
           isFluxSchnell ? 2048 : 3000,
         )
-      : request.prompt.slice(0, isFluxSchnell ? 2048 : 3000);
+      : basePrompt.slice(0, isFluxSchnell ? 2048 : 3000);
     const result = await env.AI.run(
       provider.model,
       isFluxSchnell
