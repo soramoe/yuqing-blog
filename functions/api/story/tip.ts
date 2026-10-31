@@ -124,7 +124,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
         `INSERT INTO point_transaction
           (id, user_id, amount, type, description, reference_id,
            balance_after, created_at)
-         VALUES (?, ?, ?, 'story_tip_income', ?, ?, 
+         VALUES (?, ?, ?, 'story_tip_income', ?, ?,
            (SELECT balance FROM point_account WHERE user_id = ?), ?)`,
       ).bind(
         authorTx,
