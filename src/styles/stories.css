@@ -1076,6 +1076,11 @@ body.story-library-mode .story-view-tabs {
   border-bottom: 1px solid var(--border);
 }
 
+.story-game-header > div:first-child {
+  min-width: 0;
+  flex: 1;
+}
+
 .story-game-header > div > span {
   display: block;
   margin-top: 5px;
@@ -1086,8 +1091,37 @@ body.story-library-mode .story-view-tabs {
 
 .story-game-actions {
   display: grid;
+  grid-template-columns: repeat(3, auto);
+  grid-template-rows: auto auto;
+  align-items: center;
   justify-items: end;
-  gap: 8px;
+  gap: 8px 14px;
+}
+
+.story-game-actions > [data-story-turn] {
+  align-self: center;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.story-game-actions > [data-story-points-hud] {
+  grid-column: 2 / -1;
+  grid-row: 1;
+}
+
+.story-game-actions > [data-story-undo] {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.story-game-actions > [data-story-settings-toggle] {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.story-game-actions > [data-story-reset] {
+  grid-column: 3;
+  grid-row: 2;
 }
 
 .story-points-hud {
@@ -1544,17 +1578,18 @@ body.story-library-mode .story-view-tabs {
 
   .story-game-actions {
     width: 100%;
-    justify-items: start;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-items: end;
   }
 
   .story-points-hud {
     width: 100%;
     min-width: 0;
-    justify-items: start;
+    justify-items: end;
   }
 
   .story-points-hud small {
-    text-align: left;
+    text-align: right;
   }
 
   .story-protagonist-fields,
