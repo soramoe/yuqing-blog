@@ -14,8 +14,8 @@ export const imageSetting = sqliteTable("image_setting", {
   id: text("id").primaryKey(),
   enabled: integer("enabled", { mode: "boolean" }).default(false).notNull(),
   pointValueCents: integer("point_value_cents").default(1).notNull(),
-  standardPoints: integer("standard_points").default(24).notNull(),
-  hdPoints: integer("hd_points").default(36).notNull(),
+  standardPoints: integer("standard_points").default(20).notNull(),
+  hdPoints: integer("hd_points").default(32).notNull(),
   dailyJobLimit: integer("daily_job_limit").default(100).notNull(),
   monthlyBudgetCents: integer("monthly_budget_cents")
     .default(5000)

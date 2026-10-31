@@ -253,6 +253,17 @@ import "../styles/stories.css";
             只发送给本站 Worker 完成生成，不写入数据库、日志或浏览器存储。
           </small>
         </label>
+        <label class="story-illustration-setting" data-illustration-field hidden>
+          <input type="checkbox" data-story-illustrations-enabled />
+          <span>
+            <strong>开启章节生图</strong>
+            <small>
+              每回合额外消耗
+              <b data-story-illustration-price>20</b>
+              积分，失败自动退回
+            </small>
+          </span>
+        </label>
       </section>
 
       <section class="story-setup-section">
@@ -430,7 +441,20 @@ import "../styles/stories.css";
     memory?: StoryMemory;
     trialRemaining?: number;
     pointsSpent?: number;
+    illustrationsEnabled?: boolean;
+    illustrations?: Record<string, StoryIllustration>;
     updatedAt: number;
+  }
+
+  interface StoryIllustration {
+    status: "processing" | "succeeded" | "failed";
+    jobId?: string;
+    url?: string;
+    providerName?: string;
+    model?: string;
+    pointsCost?: number;
+    error?: string;
+    createdAt: number;
   }
 
   interface StoryConfig {
@@ -482,6 +506,16 @@ import "../styles/stories.css";
   }
 
   const SAVE_KEY = "yuqing-interactive-story-v1";
+  const initialQuery = new URLSearchParams(window.location.search);
+  if (initialQuery.get("resetLocal") === "1") {
+    localStorage.removeItem(SAVE_KEY);
+    initialQuery.delete("resetLocal");
+    history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${initialQuery.size > 0 ? `?${initialQuery}` : ""}${window.location.hash}`,
+    );
+  }
   const configElement = document.querySelector<HTMLScriptElement>(
     "[data-story-config]",
   );
@@ -696,6 +730,15 @@ import "../styles/stories.css";
   const trialCopy = document.querySelector<HTMLElement>(
     "[data-story-trial-copy]",
   );
+  const illustrationField = document.querySelector<HTMLElement>(
+    "[data-illustration-field]",
+  );
+  const illustrationsEnabledInput = document.querySelector<HTMLInputElement>(
+    "[data-story-illustrations-enabled]",
+  );
+  const illustrationPriceLabel = document.querySelector<HTMLElement>(
+    "[data-story-illustration-price]",
+  );
 
   let selectedTemplate =
     config.templates.find((template) => template.id === "cultivation") ??
@@ -717,6 +760,8 @@ import "../styles/stories.css";
   let trialBoundSessionId: string | null = null;
   let pointsPerTurn = config.pointsPerTurn;
   let contextTurns = 4;
+  let imageGenerationEnabled = false;
+  let imageStandardPoints = 20;
   let undoConfirmArmed = false;
   let undoConfirmTimer = 0;
   let storyView: "create" | "library" = "create";
@@ -744,12 +789,17 @@ import "../styles/stories.css";
   const renderPointIndicators = () => {
     const keyMode = currentSave?.keyMode ?? selectedKeyMode();
     const pointsSpent = currentSave?.pointsSpent ?? 0;
+    const illustrationsEnabled =
+      keyMode === "site" &&
+      Boolean(currentSave?.illustrationsEnabled ?? illustrationsEnabledInput?.checked);
+    const turnCost =
+      pointsPerTurn + (illustrationsEnabled ? imageStandardPoints : 0);
     const affordableTurns =
-      balance === null ? null : Math.floor(balance / pointsPerTurn);
+      balance === null ? null : Math.floor(balance / Math.max(1, turnCost));
     const isLow =
       keyMode === "site" &&
       balance !== null &&
-      balance < pointsPerTurn;
+      balance < turnCost;
 
     if (hudBalance) {
       hudBalance.textContent = loggedIn
@@ -764,13 +814,15 @@ import "../styles/stories.css";
       } else if (keyMode === "user") {
         hudCost.textContent = "使用自己的 Key · 不扣积分";
       } else if (isLow) {
-        hudCost.textContent = `余额不足本回合 ${pointsPerTurn} 积分`;
+        hudCost.textContent = `余额不足本回合 ${turnCost} 积分`;
       } else {
         const lowHint =
           affordableTurns !== null && affordableTurns <= 2
             ? ` · 仅够 ${affordableTurns} 回合`
             : "";
-        hudCost.textContent = `本回合 -${pointsPerTurn} · 已消耗 ${pointsSpent}${lowHint}`;
+        hudCost.textContent = illustrationsEnabled
+          ? `文本 -${pointsPerTurn} · 生图 -${imageStandardPoints} · 已消耗 ${pointsSpent}${lowHint}`
+          : `本回合 -${pointsPerTurn} · 已消耗 ${pointsSpent}${lowHint}`;
       }
     }
     pointsHud?.classList.toggle("is-low", isLow);
@@ -784,14 +836,18 @@ import "../styles/stories.css";
           ? "开始故事 · 免费试玩"
           : keyMode === "user"
             ? "开始故事 · 不消耗积分"
-            : `开始故事 · 消耗 ${pointsPerTurn} 积分`;
+            : illustrationsEnabled
+              ? `开始故事 · 消耗 ${turnCost} 积分`
+              : `开始故事 · 消耗 ${pointsPerTurn} 积分`;
     }
     if (actionSubmit) {
       actionSubmit.textContent =
         currentSave?.keyMode === "trial"
           ? "执行行动 · 免费"
           : currentSave?.keyMode === "site"
-            ? `执行行动 · -${pointsPerTurn}`
+            ? illustrationsEnabled
+              ? `执行行动 · -${turnCost}`
+              : `执行行动 · -${pointsPerTurn}`
             : "执行行动";
     }
   };
@@ -1042,6 +1098,19 @@ import "../styles/stories.css";
       | "site"
       | "user";
 
+  const updateIllustrationField = () => {
+    const keyMode = currentSave?.keyMode ?? selectedKeyMode();
+    const allowed = imageGenerationEnabled && keyMode === "site";
+    if (illustrationField) illustrationField.hidden = !allowed;
+    if (illustrationsEnabledInput) {
+      illustrationsEnabledInput.disabled = !allowed;
+      if (!allowed) illustrationsEnabledInput.checked = false;
+    }
+    if (illustrationPriceLabel) {
+      illustrationPriceLabel.textContent = String(imageStandardPoints);
+    }
+  };
+
   const showKeyField = () => {
     if (keyField) keyField.hidden = selectedKeyMode() !== "user";
   };
@@ -1076,6 +1145,7 @@ import "../styles/stories.css";
       if (userInput) userInput.checked = true;
     }
     showKeyField();
+    updateIllustrationField();
     renderPointIndicators();
   };
 
@@ -1258,6 +1328,13 @@ import "../styles/stories.css";
         typeof parsed.pointsSpent === "number"
           ? Math.max(0, Math.round(parsed.pointsSpent))
           : 0,
+      illustrationsEnabled: Boolean(parsed.illustrationsEnabled),
+      illustrations:
+        parsed.illustrations &&
+        typeof parsed.illustrations === "object" &&
+        !Array.isArray(parsed.illustrations)
+          ? parsed.illustrations
+          : {},
       updatedAt: Number(parsed.updatedAt) || Date.now(),
       modeId: String(parsed.modeId || ""),
       templateId: String(parsed.templateId),
@@ -1957,6 +2034,31 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       narrative.className = "story-narrative";
       narrative.textContent = turn.narrative;
       article.append(action, narrative);
+      const illustration = currentSave.illustrations?.[String(index)];
+      if (illustration) {
+        const figure = document.createElement("figure");
+        figure.className = "story-illustration";
+        figure.dataset.state = illustration.status;
+        if (
+          illustration.status === "succeeded" &&
+          illustration.url
+        ) {
+          const image = document.createElement("img");
+          image.src = illustration.url;
+          image.alt = `第 ${index + 1} 章插画`;
+          image.loading = "lazy";
+          image.decoding = "async";
+          const caption = document.createElement("figcaption");
+          caption.textContent = `${illustration.providerName ?? "AI"} · ${illustration.model ?? ""}`;
+          figure.append(image, caption);
+        } else if (illustration.status === "processing") {
+          figure.textContent = "正在生成本章插画…";
+        } else {
+          figure.textContent =
+            illustration.error || "本章插画生成失败，积分已退回。";
+        }
+        article.append(figure);
+      }
       transcript.append(article);
     }
   };
@@ -2000,6 +2102,9 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         currentSave.customDifficulty,
       );
       storySubtitle.textContent += ` · ${difficulty.title}难度`;
+      if (currentSave.illustrationsEnabled) {
+        storySubtitle.textContent += " · 章节生图";
+      }
     }
     if (castSummary) {
       const protagonist =
@@ -2118,8 +2223,17 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
   keyModeInputs.forEach((input) => {
     input.addEventListener("change", () => {
       showKeyField();
+      updateIllustrationField();
       renderPointIndicators();
     });
+  });
+
+  illustrationsEnabledInput?.addEventListener("change", () => {
+    updateIllustrationField();
+    renderPointIndicators();
+    if (!currentSave || currentSave.keyMode !== "site") return;
+    currentSave.illustrationsEnabled = illustrationsEnabledInput.checked;
+    saveProgress();
   });
 
   settingsToggle?.addEventListener("click", () => toggleSetup());
@@ -2141,9 +2255,16 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     if (
       currentSave.keyMode === "site" &&
       balance !== null &&
-      balance < pointsPerTurn
+      balance <
+        pointsPerTurn +
+          (currentSave.illustrationsEnabled ? imageStandardPoints : 0)
     ) {
-      setReaderStatus("积分不足。可以签到获得积分，或改用你自己的 Key。", "error");
+      setReaderStatus(
+        currentSave.illustrationsEnabled
+          ? `积分不足。本回合文本和章节生图共需要 ${pointsPerTurn + imageStandardPoints} 积分。`
+          : "积分不足。可以签到获得积分，或改用你自己的 Key。",
+        "error",
+      );
       return;
     }
 
@@ -2263,6 +2384,12 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         currentSave.pointsSpent =
           (currentSave.pointsSpent ?? 0) + result.cost;
       }
+      const shouldGenerateIllustration =
+        currentSave.illustrationsEnabled &&
+        currentSave.keyMode === "site" &&
+        imageGenerationEnabled &&
+        imageStandardPoints > 0;
+      const illustrationChapterIndex = currentSave.turnIndex - 1;
       if (currentSave.keyMode === "trial") {
         currentSave.trialRemaining =
           typeof result.trialRemaining === "number"
@@ -2298,6 +2425,13 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       );
       applySiteKeyAvailability();
       liveArticle.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      if (shouldGenerateIllustration) {
+        void generateChapterIllustration(
+          illustrationChapterIndex,
+          result.narrative,
+          result.summary,
+        );
+      }
     } catch (error) {
       liveArticle.remove();
       setReaderStatus(
@@ -2309,6 +2443,115 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       if (balanceLabel) balanceLabel.textContent = `积分 ${balance ?? "—"}`;
       renderPointIndicators();
       renderChoices();
+    }
+  };
+
+  const generateChapterIllustration = async (
+    chapterIndex: number,
+    narrative: string,
+    summary: string,
+  ) => {
+    const story = currentSave;
+    if (!story || story.keyMode !== "site") return;
+    const key = String(chapterIndex);
+    const existing = story.illustrations?.[key];
+    if (
+      existing?.status === "processing" ||
+      existing?.status === "succeeded"
+    ) {
+      return;
+    }
+    story.illustrations ??= {};
+    story.illustrations[key] = {
+      status: "processing",
+      createdAt: Date.now(),
+    };
+    saveProgress();
+    renderGame();
+    setReaderStatus("章节插画正在生成，文字剧情可以继续阅读。");
+    try {
+      const response = await fetch("/api/story/illustration", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          requestId: crypto.randomUUID(),
+          sessionId: story.sessionId,
+          turnIndex: chapterIndex,
+          templateId: story.templateId,
+          style: story.style,
+          narrative,
+          summary,
+          characters: story.characters ?? emptyStoryCharacters(),
+          quality: "standard",
+        }),
+      });
+      const payload = (await response.json()) as {
+        illustration?: {
+          id: string;
+          providerName?: string;
+          model?: string;
+          url?: string;
+          pointsCost?: number;
+          balance?: number;
+        };
+        error?: string;
+        balance?: number;
+      };
+      if (typeof payload.balance === "number") {
+        balance = payload.balance;
+      }
+      if (!response.ok || !payload.illustration) {
+        throw new Error(payload.error || "章节插画生成失败。");
+      }
+      if (currentSave?.sessionId !== story.sessionId) return;
+      const pointsCost = Number(payload.illustration.pointsCost ?? 0);
+      if (pointsCost > 0) {
+        currentSave.pointsSpent =
+          (currentSave.pointsSpent ?? 0) + pointsCost;
+      }
+      if (typeof payload.illustration.balance === "number") {
+        balance = payload.illustration.balance;
+      } else if (typeof payload.balance === "number") {
+        balance = payload.balance;
+      }
+      currentSave.illustrations ??= {};
+      currentSave.illustrations[key] = {
+        status: "succeeded",
+        jobId: payload.illustration.id,
+        url: payload.illustration.url,
+        providerName: payload.illustration.providerName,
+        model: payload.illustration.model,
+        pointsCost,
+        createdAt: Date.now(),
+      };
+      saveProgress();
+      renderGame();
+      renderPointIndicators();
+      setReaderStatus(
+        `第 ${chapterIndex + 1} 章插画已生成，扣除 ${pointsCost} 积分。`,
+        "success",
+      );
+    } catch (error) {
+      if (currentSave?.sessionId !== story.sessionId) return;
+      currentSave.illustrations ??= {};
+      currentSave.illustrations[key] = {
+        status: "failed",
+        error:
+          error instanceof Error ? error.message : "章节插画生成失败。",
+        createdAt: Date.now(),
+      };
+      saveProgress();
+      renderGame();
+      renderPointIndicators();
+      setReaderStatus(
+        currentSave.illustrations[key]?.error ||
+          "章节插画生成失败，积分已退回。",
+        "error",
+      );
     }
   };
 
@@ -2353,6 +2596,10 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       customDifficultyInput?.focus();
       return;
     }
+    const useIllustrations =
+      keyMode === "site" &&
+      imageGenerationEnabled &&
+      Boolean(illustrationsEnabledInput?.checked);
 
     currentSave = {
       sessionId: crypto.randomUUID(),
@@ -2375,6 +2622,8 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       memory: createInitialStoryMemory(),
       trialRemaining: keyMode === "trial" ? trialTurnsRemaining : undefined,
       pointsSpent: 0,
+      illustrationsEnabled: useIllustrations,
+      illustrations: {},
       updatedAt: Date.now(),
     };
     currentSave.state = applyDifficultyToInitialState(
@@ -2409,7 +2658,11 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     keyModeInputs.forEach((input) => {
       input.checked = input.value === saved.keyMode;
     });
+    if (illustrationsEnabledInput) {
+      illustrationsEnabledInput.checked = Boolean(saved.illustrationsEnabled);
+    }
     showKeyField();
+    updateIllustrationField();
     const template = config.templates.find(
       (item) => item.id === saved.templateId,
     );
@@ -2528,12 +2781,21 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
           pointsPerTurn?: number;
           contextTurns?: number;
           trialEnabled?: boolean;
+          imageGenerationEnabled?: boolean;
+          imageStandardPoints?: number;
           trial?: StoryTrial | null;
         } | null,
       ) => {
       siteKeyConfigured = payload?.siteKeyConfigured !== false;
       siteKeyEnabled = payload?.siteKeyEnabled !== false;
       trialEnabled = payload?.trialEnabled !== false;
+      imageGenerationEnabled = payload?.imageGenerationEnabled === true;
+      if (
+        typeof payload?.imageStandardPoints === "number" &&
+        payload.imageStandardPoints > 0
+      ) {
+        imageStandardPoints = payload.imageStandardPoints;
+      }
       if (payload?.trial) {
         trialAvailable = payload.trial.available;
         trialProvider = payload.trial.provider;
@@ -2554,6 +2816,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         contextTurns = payload.contextTurns;
       }
       if (priceLabel) priceLabel.textContent = String(pointsPerTurn);
+      updateIllustrationField();
       renderPointIndicators();
       const trialInput = keyModeInputs.find(
         (input) => input.value === "trial",

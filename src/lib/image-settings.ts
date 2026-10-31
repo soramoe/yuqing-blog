@@ -1,6 +1,6 @@
 export const IMAGE_POINT_VALUE_CENTS = 1;
-export const IMAGE_STANDARD_POINTS = 24;
-export const IMAGE_HD_POINTS = 36;
+export const IMAGE_STANDARD_POINTS = 20;
+export const IMAGE_HD_POINTS = 32;
 
 export type ImageQuality = "standard" | "hd";
 export type ImageFeature = "story_chapter" | "image_studio" | "admin_test";

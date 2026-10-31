@@ -127,6 +127,13 @@
       "when": 1793424234574,
       "tag": "0017_qwen_image_turbo",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1793425500760,
+      "tag": "0018_story_image_cost",
+      "breakpoints": true
     }
   ]
 }

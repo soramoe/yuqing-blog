@@ -5,12 +5,14 @@ import {
 } from "../../../src/lib/story-templates";
 import { getStorySettings } from "../../../src/lib/story-settings";
 import { getStoryTrialStatus } from "../../../src/lib/story-trial";
+import { getImageSettings } from "../../../src/lib/image-settings";
 
 export const onRequestGet: PagesFunction<Env> = async ({
   request,
   env,
 }) => {
   const settings = await getStorySettings(env.DB);
+  const imageSettings = await getImageSettings(env.DB);
   const sessionCookie = request.headers.get("cookie") ?? "";
   const session =
     /(?:better-auth|session_token)/i.test(sessionCookie)
@@ -43,6 +45,9 @@ export const onRequestGet: PagesFunction<Env> = async ({
       trialDailyBudgetYuan: settings.trialDailyBudgetYuan,
       trialIpDailyLimit: settings.trialIpDailyLimit,
       trial,
+      imageGenerationEnabled: imageSettings.enabled,
+      imageStandardPoints: imageSettings.standardPoints,
+      imageHdPoints: imageSettings.hdPoints,
       stateEngineReady,
       turnTransport: "json-v1",
     }),
