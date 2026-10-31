@@ -1010,6 +1010,32 @@ import "../styles/stories.css";
   const isMobileStoryLayout = () =>
     window.matchMedia("(max-width: 980px)").matches;
 
+  const syncSetupControls = () => {
+    if (!settingsToggle) return;
+    const collapsed = document.body.classList.contains(
+      "story-setup-collapsed",
+    );
+    settingsToggle.textContent = isMobileStoryLayout()
+      ? "故事设置"
+      : collapsed
+        ? "展开设置"
+        : "收起设置";
+    settingsToggle.setAttribute("aria-expanded", String(!collapsed));
+  };
+
+  const setDesktopSetupCollapsed = (collapsed: boolean) => {
+    document.body.classList.toggle(
+      "story-setup-collapsed",
+      collapsed && !isMobileStoryLayout(),
+    );
+    if (setupPanel) {
+      const panel = setupPanel as HTMLElement & { inert: boolean };
+      panel.inert = collapsed && !isMobileStoryLayout();
+      panel.setAttribute("aria-hidden", String(panel.inert));
+    }
+    syncSetupControls();
+  };
+
   const renderStoryView = (next: "create" | "library", updateUrl = true) => {
     storyView = next;
     document.body.classList.toggle("story-library-mode", next === "library");
@@ -1041,17 +1067,51 @@ import "../styles/stories.css";
     renderStoryView("create");
     document.body.classList.add("story-active");
     document.body.classList.remove("story-setup-open");
+    setDesktopSetupCollapsed(true);
+    storyReader?.focus({ preventScroll: true });
     if (closeSetupButton) closeSetupButton.hidden = false;
   };
 
   const leaveStoryView = () => {
-    document.body.classList.remove("story-active", "story-setup-open");
+    document.body.classList.remove(
+      "story-active",
+      "story-setup-open",
+      "story-setup-collapsed",
+    );
+    if (setupPanel) {
+      const panel = setupPanel as HTMLElement & { inert: boolean };
+      panel.inert = false;
+      panel.setAttribute("aria-hidden", "false");
+    }
+    syncSetupControls();
     if (closeSetupButton) closeSetupButton.hidden = true;
   };
 
   const toggleSetup = (open?: boolean) => {
+    if (!isMobileStoryLayout()) {
+      const shouldOpen =
+        open ??
+        document.body.classList.contains("story-setup-collapsed");
+      setDesktopSetupCollapsed(!shouldOpen);
+      window.setTimeout(() => {
+        if (shouldOpen) {
+          setupPanel?.querySelector<HTMLElement>("button, input, select")?.focus();
+        } else {
+          storyReader?.focus();
+        }
+      }, shouldOpen ? 120 : 320);
+      return;
+    }
+
     const shouldOpen =
       open ?? !document.body.classList.contains("story-setup-open");
+    document.body.classList.remove("story-setup-collapsed");
+    if (setupPanel) {
+      const panel = setupPanel as HTMLElement & { inert: boolean };
+      panel.inert = false;
+      panel.setAttribute("aria-hidden", "false");
+    }
+    syncSetupControls();
     document.body.classList.toggle("story-setup-open", shouldOpen);
     window.setTimeout(() => {
       if (shouldOpen) {
@@ -2327,10 +2387,25 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       : "create";
   renderStoryView(initialView, false);
   renderModes();
+  syncSetupControls();
   showKeyField();
   updateCharacterSummary();
   renderCloudSaves();
   if (priceLabel) priceLabel.textContent = String(pointsPerTurn);
+
+  let wasMobileSetupLayout = isMobileStoryLayout();
+  window.addEventListener("resize", () => {
+    const isMobile = isMobileStoryLayout();
+    if (isMobile === wasMobileSetupLayout) return;
+    wasMobileSetupLayout = isMobile;
+    document.body.classList.remove("story-setup-open");
+    if (isMobile) {
+      setDesktopSetupCollapsed(false);
+    } else if (currentSave) {
+      setDesktopSetupCollapsed(true);
+    }
+    syncSetupControls();
+  });
 
   void fetch("/api/story/status", {
     credentials: "same-origin",
