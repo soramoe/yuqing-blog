@@ -23,6 +23,15 @@
         </button>
       </div>
       <button
+        class="site-announcement-expand"
+        type="button"
+        data-announcement-expand
+        aria-expanded="false"
+        aria-label="展开公告内容"
+      >
+        ⌄
+      </button>
+      <button
         class="site-announcement-close"
         type="button"
         data-announcement-close
@@ -49,6 +58,9 @@
   );
   const next = document.querySelector<HTMLButtonElement>(
     "[data-announcement-next]",
+  );
+  const expand = document.querySelector<HTMLButtonElement>(
+    "[data-announcement-expand]",
   );
   const pager = document.querySelector<HTMLElement>(
     "[data-announcement-pager]",
@@ -84,6 +96,11 @@
         return;
       }
       document.body.classList.add("has-announcement");
+      banner.classList.remove("is-expanded");
+      if (expand) {
+        expand.setAttribute("aria-expanded", "false");
+        expand.setAttribute("aria-label", "展开公告内容");
+      }
       banner.dataset.type = announcement.type;
       if (label) label.textContent = labels[announcement.type] ?? "公告";
       if (title) title.textContent = announcement.title;
@@ -115,6 +132,14 @@
 
     previous?.addEventListener("click", () => switchAnnouncement(-1));
     next?.addEventListener("click", () => switchAnnouncement(1));
+    expand?.addEventListener("click", () => {
+      const expanded = banner.classList.toggle("is-expanded");
+      expand.setAttribute("aria-expanded", String(expanded));
+      expand.setAttribute(
+        "aria-label",
+        expanded ? "收起公告内容" : "展开公告内容",
+      );
+    });
     close?.addEventListener("click", () => {
       const announcement = announcements[activeIndex];
       if (announcement) {
@@ -271,6 +296,10 @@
     display: none;
   }
 
+  .site-announcement-expand {
+    display: none !important;
+  }
+
   .site-announcement-close {
     font-size: 1.25rem !important;
   }
@@ -285,35 +314,87 @@
     }
 
     .site-announcement-inner {
-      grid-template-columns: auto minmax(0, 1fr);
-      gap: 0.5rem;
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 0.4rem;
+      min-height: 2.45rem;
+      padding-block: 0.3rem;
     }
 
     .site-announcement-copy {
       display: grid;
-      gap: 0.1rem;
+      gap: 0;
       font-size: 0.76rem;
+      line-height: 1.35;
+    }
+
+    .site-announcement-copy strong,
+    .site-announcement-copy span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .site-announcement-copy a {
+      display: none;
     }
 
     .site-announcement-copy span {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
+      font-size: 0.68rem;
     }
 
     .site-announcement-tools {
-      grid-column: 1 / -1;
-      justify-self: end;
+      grid-column: auto;
+      gap: 0;
     }
 
     .site-announcement-pager {
       gap: 0;
+      padding-inline: 0;
+      border-inline: 0;
     }
 
     .site-announcement-pager > span {
-      min-width: 2.1rem;
+      min-width: 1.8rem;
       font-size: 0.54rem;
+    }
+
+    .site-announcement-tools button {
+      width: 1.55rem;
+      height: 1.55rem;
+      font-size: 0.95rem;
+    }
+
+    .site-announcement-all {
+      padding-inline: 0.15rem;
+      font-size: 0.58rem;
+    }
+
+    .site-announcement-expand {
+      display: grid !important;
+      font-size: 0.82rem !important;
+      transition: transform 160ms ease;
+    }
+
+    .site-announcement.is-expanded .site-announcement-expand {
+      transform: rotate(180deg);
+    }
+
+    .site-announcement.is-expanded .site-announcement-inner {
+      align-items: start;
+    }
+
+    .site-announcement.is-expanded .site-announcement-copy span {
+      display: -webkit-box;
+      overflow: hidden;
+      white-space: normal;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+
+    .site-announcement.is-expanded .site-announcement-copy a {
+      display: inline;
+      margin-top: 0.15rem;
     }
   }
 </style>
