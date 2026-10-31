@@ -318,7 +318,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
   const userApiKey = safeString(body.userApiKey, 256);
   if ((keyMode === "site" || keyMode === "trial") && !settings.siteKeyEnabled) {
     return json(
-      { error: "站长 Key 模式当前已暂时关闭，请使用自己的 Key。" },
+      { error: "积分模式当前已暂时关闭，请使用自己的 Key。" },
       503,
     );
   }
@@ -363,7 +363,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
       if (Number(turnsToday?.total ?? 0) >= settings.dailyTurnLimit) {
         return json(
           {
-            error: `今天的站长 Key 剧情回合已达到 ${settings.dailyTurnLimit} 次上限，请明天再试或使用自己的 Key。`,
+            error: `今天的积分剧情回合已达到 ${settings.dailyTurnLimit} 次上限，请明天再试或使用自己的 Key。`,
           },
           429,
         );

@@ -227,7 +227,7 @@ import "../styles/stories.css";
           <label>
             <input type="radio" name="story-key-mode" value="site" />
             <span>
-              <strong>站长 Key</strong>
+              <strong>消耗积分</strong>
               <small>每回合消耗 <span data-story-price-label>{STORY_POINTS_PER_TURN}</span> 积分</small>
             </span>
           </label>
@@ -1990,7 +1990,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     if (storySubtitle) {
       const keyText =
         currentSave.keyMode === "site"
-          ? `站长 Key · ${pointsPerTurn} 积分/回合`
+          ? `消耗积分 · ${pointsPerTurn} 积分/回合`
           : currentSave.keyMode === "trial"
             ? `免费试玩 · 剩余 ${currentSave.trialRemaining ?? trialTurnsRemaining} 回合`
             : "自己的 Key · 不消耗积分";
@@ -2292,7 +2292,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
           : currentSave.ending
           ? "故事已经抵达结局。"
           : trialJustFinished
-            ? `免费试玩已结束；下一回合将使用站长 Key，每回合 ${pointsPerTurn} 积分。`
+            ? `免费试玩已结束；下一回合将改为消耗积分，每回合 ${pointsPerTurn} 积分。`
             : "剧情已保存。",
         "success",
       );
@@ -2569,7 +2569,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         );
       } else if (!siteKeyEnabled) {
         setSetupStatus(
-          "站长 Key 模式当前已关闭。可以使用自己的 DeepSeek Key。",
+          "积分模式当前已关闭。可以使用自己的 DeepSeek Key。",
           "error",
         );
       } else if (trialAvailable) {
