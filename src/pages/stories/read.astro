@@ -6,7 +6,7 @@ import "../../styles/stories.css";
 
 <BaseLayout
   title="阅读互动故事"
-  description="阅读渔情公共书库中的互动故事。"
+  description="逐章阅读渔情公共书库中的互动故事，参与作品与章节评论。"
   bodyClass="page-public-story"
   noindex
 >
@@ -15,17 +15,59 @@ import "../../styles/stories.css";
 
     <div data-public-story-content hidden>
       <header class="public-story-header">
-        <p class="eyebrow" data-public-story-meta></p>
-        <h1 data-public-story-title></h1>
-        <p data-public-story-summary></p>
-        <div class="public-story-stats">
-          <span data-public-story-author></span>
-          <span data-public-story-reads></span>
-          <span data-public-story-tips></span>
+        <div class="public-story-cover" data-public-story-cover hidden>
+          <img alt="" data-public-story-cover-image />
+        </div>
+        <div class="public-story-heading">
+          <p class="eyebrow" data-public-story-meta></p>
+          <h1 data-public-story-title></h1>
+          <p data-public-story-summary></p>
+          <div class="public-story-stats">
+            <span data-public-story-author></span>
+            <span data-public-story-reads></span>
+            <span data-public-story-chapters></span>
+            <span data-public-story-comments></span>
+            <span data-public-story-tips></span>
+          </div>
         </div>
       </header>
 
-      <div class="public-story-transcript" data-public-story-transcript></div>
+      <div class="public-story-book">
+        <aside class="public-story-toc">
+          <p class="eyebrow">CONTENTS</p>
+          <h2>章节目录</h2>
+          <ol data-public-story-toc></ol>
+        </aside>
+        <article class="public-story-chapter">
+          <header>
+            <p class="eyebrow" data-public-chapter-label></p>
+            <h2 data-public-chapter-title></h2>
+            <p class="story-player-action" data-public-chapter-action></p>
+          </header>
+          <div class="story-narrative" data-public-story-transcript></div>
+          <nav class="public-story-page-nav" aria-label="章节翻页">
+            <button type="button" data-public-prev>上一章</button>
+            <a href="/stories/?view=library">返回书库</a>
+            <button type="button" data-public-next>下一章</button>
+          </nav>
+        </article>
+      </div>
+
+      <section class="public-story-discussion">
+        <div class="public-story-discussion-heading">
+          <div>
+            <p class="eyebrow">DISCUSSION</p>
+            <h2 data-public-comment-title>章节评论</h2>
+          </div>
+          <div class="public-story-comment-tabs" role="tablist">
+            <button type="button" class="is-active" data-comment-mode="chapter">
+              本章评论
+            </button>
+            <button type="button" data-comment-mode="book">作品评论</button>
+          </div>
+        </div>
+        <Comments postSlug="story-waiting" />
+      </section>
 
       <form class="public-story-tip" data-public-story-tip>
         <div>
@@ -33,12 +75,21 @@ import "../../styles/stories.css";
           <span>从你的积分余额中支持这位作者，单次 1～50 积分。</span>
         </div>
         <input type="number" min="1" max="50" value="1" data-tip-amount />
+        <textarea
+          maxlength="200"
+          rows="2"
+          placeholder="可以附上一句支持的话（可选）"
+          data-tip-message
+        ></textarea>
         <button type="submit" data-tip-submit>投喂</button>
         <a href="/login/" data-tip-login hidden>登录后投喂</a>
         <p data-tip-status aria-live="polite"></p>
       </form>
 
-      <Comments postSlug="story-waiting" />
+      <section class="public-story-tip-messages" data-tip-messages hidden>
+        <h2>读者留言</h2>
+        <div data-tip-message-list></div>
+      </section>
     </div>
   </div>
 </BaseLayout>
@@ -55,16 +106,28 @@ import "../../styles/stories.css";
     difficultyId: string;
     style: string;
     status: string;
+    coverUrl: string | null;
     authorName: string;
     readCount: number;
     tipTotal: number;
+    commentCount: number;
+    tipMessages: Array<{
+      amount: number;
+      message: string;
+      createdAt: number;
+      userName: string;
+    }>;
     content: {
       history?: Array<{ action?: string; narrative?: string }>;
       turnIndex?: number;
     };
   }
 
-  const root = document.querySelector<HTMLElement>("[data-public-story]");
+  interface CurrentUser {
+    name: string;
+    image?: string | null;
+  }
+
   const status = document.querySelector<HTMLElement>(
     "[data-public-story-status]",
   );
@@ -80,93 +143,297 @@ import "../../styles/stories.css";
     "[data-public-story-author]",
   );
   const reads = document.querySelector<HTMLElement>("[data-public-story-reads]");
+  const chaptersLabel = document.querySelector<HTMLElement>(
+    "[data-public-story-chapters]",
+  );
+  const commentsLabel = document.querySelector<HTMLElement>(
+    "[data-public-story-comments]",
+  );
   const tips = document.querySelector<HTMLElement>("[data-public-story-tips]");
+  const cover = document.querySelector<HTMLElement>("[data-public-story-cover]");
+  const coverImage = document.querySelector<HTMLImageElement>(
+    "[data-public-story-cover-image]",
+  );
+  const toc = document.querySelector<HTMLOListElement>("[data-public-story-toc]");
+  const chapterLabel = document.querySelector<HTMLElement>(
+    "[data-public-chapter-label]",
+  );
+  const chapterTitle = document.querySelector<HTMLElement>(
+    "[data-public-chapter-title]",
+  );
+  const chapterAction = document.querySelector<HTMLElement>(
+    "[data-public-chapter-action]",
+  );
   const transcript = document.querySelector<HTMLElement>(
     "[data-public-story-transcript]",
+  );
+  const previousButton = document.querySelector<HTMLButtonElement>(
+    "[data-public-prev]",
+  );
+  const nextButton = document.querySelector<HTMLButtonElement>(
+    "[data-public-next]",
+  );
+  const commentTitle = document.querySelector<HTMLElement>(
+    "[data-public-comment-title]",
+  );
+  const commentModeButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-comment-mode]"),
   );
   const tipForm = document.querySelector<HTMLFormElement>(
     "[data-public-story-tip]",
   );
   const tipAmount = document.querySelector<HTMLInputElement>("[data-tip-amount]");
+  const tipMessage = document.querySelector<HTMLTextAreaElement>(
+    "[data-tip-message]",
+  );
   const tipSubmit = document.querySelector<HTMLButtonElement>("[data-tip-submit]");
   const tipLogin = document.querySelector<HTMLAnchorElement>("[data-tip-login]");
   const tipStatus = document.querySelector<HTMLElement>("[data-tip-status]");
+  const tipMessagesSection = document.querySelector<HTMLElement>(
+    "[data-tip-messages]",
+  );
+  const tipMessageList = document.querySelector<HTMLElement>(
+    "[data-tip-message-list]",
+  );
   const slug = new URLSearchParams(location.search).get("slug");
+
   let story: PublicStory | null = null;
+  let currentChapter = 0;
+  let commentMode: "chapter" | "book" = "chapter";
+  let currentUser: CurrentUser | null = null;
 
-  if (!slug) {
-    if (status) status.textContent = "缺少故事标识。";
-  } else {
-    void fetch(`/api/story/publication/${encodeURIComponent(slug)}`, {
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    })
-      .then(async (response) => {
-        const payload = (await response.json()) as {
-          story?: PublicStory;
-          error?: string;
-        };
-        if (!response.ok || !payload.story) {
-          throw new Error(payload.error || "故事读取失败。");
-        }
-        return payload.story;
-      })
-      .then((loaded) => {
-        story = loaded;
-        if (status) status.hidden = true;
-        content?.removeAttribute("hidden");
-        if (title) title.textContent = loaded.title;
-        if (summary) summary.textContent = loaded.summary;
-        if (meta) {
-          const difficulty = getStoryDifficulty(loaded.difficultyId);
-          meta.textContent = `INTERACTIVE STORY · ${difficulty.title} · ${loaded.style}`;
-        }
-        if (author) author.textContent = `作者：${loaded.authorName}`;
-        if (reads) reads.textContent = `${loaded.readCount} 阅读`;
-        if (tips) tips.textContent = `${loaded.tipTotal} 积分支持`;
-        if (transcript) {
-          transcript.replaceChildren();
-          for (const [index, turn] of (loaded.content.history ?? []).entries()) {
-            const article = document.createElement("article");
-            const choice = document.createElement("p");
-            choice.className = "story-player-action";
-            choice.textContent =
-              index === 0 && turn.action === "开始故事"
-                ? "故事开始"
-                : `选择：${turn.action ?? ""}`;
-            const narrative = document.createElement("div");
-            narrative.className = "story-narrative";
-            narrative.textContent = turn.narrative ?? "";
-            article.append(choice, narrative);
-            transcript.append(article);
-          }
-        }
-        const commentsRoot = document.querySelector<HTMLElement>("[data-comments]");
-        if (commentsRoot) {
-          commentsRoot.dataset.postSlug = `story-${loaded.id}`;
-          window.dispatchEvent(new CustomEvent("comments-target-change"));
-        }
-      })
-      .catch((error) => {
-        if (status) {
-          status.textContent =
-            error instanceof Error ? error.message : "故事读取失败。";
-        }
-      });
-  }
-
-  void authClient.getSession().then(({ data }) => {
-    if (!data?.user) {
-      if (tipForm) tipForm.classList.add("is-guest");
-      if (tipSubmit) tipSubmit.hidden = true;
-      if (tipLogin) tipLogin.hidden = false;
+  const safeImageSource = (value: string | null | undefined) => {
+    if (!value) return "";
+    try {
+      const url = new URL(value, window.location.origin);
+      const sameOrigin = url.origin === window.location.origin;
+      if (url.protocol !== "https:" && !(sameOrigin && url.protocol === "http:")) {
+        return "";
+      }
+      return url.href;
+    } catch {
+      return "";
     }
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(
+      new Date(timestamp),
+    );
+
+  const chapters = () => story?.content.history ?? [];
+
+  const updateUrl = (replace = false) => {
+    if (!story) return;
+    const url = new URL(location.href);
+    url.searchParams.set("chapter", String(currentChapter + 1));
+    if (commentMode === "book") url.searchParams.set("comments", "book");
+    else url.searchParams.delete("comments");
+    history[replace ? "replaceState" : "pushState"](null, "", url);
+  };
+
+  const syncCommentTarget = () => {
+    if (!story) return;
+    const commentsRoot = document.querySelector<HTMLElement>("[data-comments]");
+    if (!commentsRoot) return;
+    commentsRoot.dataset.postSlug =
+      commentMode === "book"
+        ? `story-${story.id}`
+        : `story-${story.id}-chapter-${currentChapter + 1}`;
+    window.dispatchEvent(new CustomEvent("comments-target-change"));
+  };
+
+  const renderCommentMode = () => {
+    commentModeButtons.forEach((button) => {
+      const active = button.dataset.commentMode === commentMode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+    if (commentTitle) {
+      commentTitle.textContent =
+        commentMode === "book"
+          ? "作品评论"
+          : `第 ${currentChapter + 1} 章评论`;
+    }
+    syncCommentTarget();
+  };
+
+  const renderToc = () => {
+    if (!toc) return;
+    toc.replaceChildren();
+    chapters().forEach((turn, index) => {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = `第 ${index + 1} 章`;
+      button.title =
+        index === 0 && turn.action === "开始故事"
+          ? "故事开始"
+          : (turn.action ?? `第 ${index + 1} 回合`);
+      button.classList.toggle("is-active", index === currentChapter);
+      button.setAttribute(
+        "aria-current",
+        index === currentChapter ? "page" : "false",
+      );
+      button.addEventListener("click", () => goToChapter(index));
+      item.append(button);
+      toc.append(item);
+    });
+  };
+
+  const renderTipMessages = () => {
+    if (!story || !tipMessagesSection || !tipMessageList) return;
+    tipMessageList.replaceChildren();
+    if (story.tipMessages.length === 0) {
+      tipMessagesSection.hidden = true;
+      return;
+    }
+    tipMessagesSection.hidden = false;
+    story.tipMessages.forEach((item) => {
+      const article = document.createElement("article");
+      const heading = document.createElement("header");
+      const name = document.createElement("strong");
+      name.textContent = item.userName;
+      const amount = document.createElement("span");
+      amount.textContent = `投喂 ${item.amount} 积分 · ${formatDate(item.createdAt)}`;
+      heading.append(name, amount);
+      const body = document.createElement("p");
+      body.textContent = item.message;
+      article.append(heading, body);
+      tipMessageList.append(article);
+    });
+  };
+
+  const renderChapter = (
+    updateHistory = false,
+    scrollToChapter = updateHistory,
+  ) => {
+    if (!story) return;
+    const list = chapters();
+    if (list.length === 0) {
+      if (status) status.textContent = "这篇故事还没有正文。";
+      return;
+    }
+    currentChapter = Math.max(0, Math.min(currentChapter, list.length - 1));
+    const turn = list[currentChapter]!;
+    if (chapterLabel) chapterLabel.textContent = `CHAPTER ${String(currentChapter + 1).padStart(2, "0")} / ${String(list.length).padStart(2, "0")}`;
+    if (chapterTitle) chapterTitle.textContent = `第 ${currentChapter + 1} 章`;
+    if (chapterAction) {
+      chapterAction.textContent =
+        currentChapter === 0 && turn.action === "开始故事"
+          ? "故事开始"
+          : `选择：${turn.action ?? "继续前行"}`;
+    }
+    if (transcript) transcript.textContent = turn.narrative ?? "";
+    if (previousButton) previousButton.disabled = currentChapter === 0;
+    if (nextButton) nextButton.disabled = currentChapter >= list.length - 1;
+    renderToc();
+    renderCommentMode();
+    if (updateHistory) updateUrl();
+    if (scrollToChapter) {
+      chapterTitle?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const goToChapter = (index: number, replace = false) => {
+    currentChapter = index;
+    renderChapter(!replace, true);
+  };
+
+  const loadStory = async () => {
+    if (!slug) {
+      if (status) status.textContent = "缺少故事标识。";
+      return;
+    }
+    try {
+      const response = await fetch(`/api/story/publication/${encodeURIComponent(slug)}`, {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json()) as {
+        story?: PublicStory;
+        error?: string;
+      };
+      if (!response.ok || !payload.story) {
+        throw new Error(payload.error || "故事读取失败。");
+      }
+      story = payload.story;
+      if (status) status.hidden = true;
+      content?.removeAttribute("hidden");
+      if (title) title.textContent = story.title;
+      if (summary) summary.textContent = story.summary;
+      if (meta) {
+        const difficulty = getStoryDifficulty(story.difficultyId);
+        meta.textContent = `INTERACTIVE STORY · ${difficulty.title} · ${story.style}`;
+      }
+      if (author) author.textContent = `作者：${story.authorName}`;
+      if (reads) reads.textContent = `${story.readCount} 阅读`;
+      if (chaptersLabel) chaptersLabel.textContent = `${chapters().length} 章`;
+      if (commentsLabel) commentsLabel.textContent = `${story.commentCount} 评论`;
+      if (tips) tips.textContent = `${story.tipTotal} 积分支持`;
+      const coverUrl = safeImageSource(story.coverUrl);
+      if (coverUrl && cover && coverImage) {
+        coverImage.src = coverUrl;
+        coverImage.alt = `《${story.title}》封面`;
+        cover.hidden = false;
+      }
+      const params = new URLSearchParams(location.search);
+      const requestedChapter = Number(params.get("chapter") ?? "1");
+      currentChapter = Number.isInteger(requestedChapter)
+        ? Math.max(0, Math.min(chapters().length - 1, requestedChapter - 1))
+        : 0;
+      commentMode = params.get("comments") === "book" ? "book" : "chapter";
+      renderTipMessages();
+      renderChapter(false);
+    } catch (error) {
+      if (status) {
+        status.textContent =
+          error instanceof Error ? error.message : "故事读取失败。";
+      }
+    }
+  };
+
+  previousButton?.addEventListener("click", () => {
+    if (currentChapter > 0) goToChapter(currentChapter - 1);
   });
+  nextButton?.addEventListener("click", () => {
+    if (currentChapter < chapters().length - 1) goToChapter(currentChapter + 1);
+  });
+
+  commentModeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      commentMode = button.dataset.commentMode === "book" ? "book" : "chapter";
+      updateUrl();
+      renderCommentMode();
+    });
+  });
+
+  window.addEventListener("popstate", () => {
+    const params = new URLSearchParams(location.search);
+    currentChapter = Math.max(0, Number(params.get("chapter") ?? "1") - 1);
+    commentMode = params.get("comments") === "book" ? "book" : "chapter";
+    renderChapter(false);
+  });
+
+  void authClient
+    .getSession()
+    .then(({ data }) => {
+      currentUser = data?.user
+        ? { name: data.user.name, image: data.user.image }
+        : null;
+      if (!currentUser) {
+        if (tipForm) tipForm.classList.add("is-guest");
+        if (tipSubmit) tipSubmit.hidden = true;
+        if (tipLogin) tipLogin.hidden = false;
+      }
+    })
+    .catch(() => undefined);
 
   tipForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!story || !tipAmount || !tipSubmit) return;
     const amount = Number(tipAmount.value);
+    const message = tipMessage?.value.trim() ?? "";
     tipSubmit.disabled = true;
     if (tipStatus) tipStatus.textContent = "正在投喂…";
     try {
@@ -180,6 +447,7 @@ import "../../styles/stories.css";
         body: JSON.stringify({
           publicationId: story.id,
           amount,
+          message,
           requestId: crypto.randomUUID(),
         }),
       });
@@ -189,7 +457,18 @@ import "../../styles/stories.css";
       };
       if (!response.ok) throw new Error(payload.error || "投喂失败。");
       if (tips && typeof payload.tipTotal === "number") {
+        story.tipTotal = payload.tipTotal;
         tips.textContent = `${payload.tipTotal} 积分支持`;
+      }
+      if (message) {
+        story.tipMessages.unshift({
+          amount,
+          message,
+          createdAt: Date.now(),
+          userName: currentUser?.name ?? "读者",
+        });
+        renderTipMessages();
+        if (tipMessage) tipMessage.value = "";
       }
       if (tipStatus) tipStatus.textContent = `已投喂 ${amount} 积分。`;
     } catch (error) {
@@ -201,4 +480,6 @@ import "../../styles/stories.css";
       tipSubmit.disabled = false;
     }
   });
+
+  void loadStory();
 </script>

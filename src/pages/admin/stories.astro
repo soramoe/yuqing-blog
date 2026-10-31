@@ -97,6 +97,73 @@ import "../../styles/admin-story.css";
             <small>每个账号每天最多发起的付费剧情回合数。</small>
           </label>
           <label class="admin-story-toggle">
+            <input type="checkbox" data-setting-trial-enabled />
+            <span>
+              <strong>开放免费试玩</strong>
+              <small>每个账号一次，免费额度会绑定首次开始的故事。</small>
+            </span>
+          </label>
+          <label>
+            <span>GitHub 账号试玩回合</span>
+            <input
+              type="number"
+              min="0"
+              max="10"
+              step="1"
+              data-setting-trial-github
+              required
+            />
+            <small>推荐 2 回合，包含故事开场。</small>
+          </label>
+          <label>
+            <span>邮箱账号试玩回合</span>
+            <input
+              type="number"
+              min="0"
+              max="10"
+              step="1"
+              data-setting-trial-email
+              required
+            />
+            <small>推荐 1 回合，降低匿名刷额度成本。</small>
+          </label>
+          <label>
+            <span>试玩单回合输出上限</span>
+            <input
+              type="number"
+              min="300"
+              max="1200"
+              step="50"
+              data-setting-trial-output
+              required
+            />
+            <small>免费回合单独限流，推荐 500～700 Token。</small>
+          </label>
+          <label>
+            <span>每日试玩预算（元）</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              data-setting-trial-budget
+              required
+            />
+            <small>按保守成本预留，预算耗尽后自动停止试玩。</small>
+          </label>
+          <label>
+            <span>同一网络每日试玩账号数</span>
+            <input
+              type="number"
+              min="1"
+              max="10"
+              step="1"
+              data-setting-trial-ip
+              required
+            />
+            <small>用于限制批量注册；同一网络建议 1～2 个账号。</small>
+          </label>
+          <label class="admin-story-toggle">
             <input type="checkbox" data-setting-site-enabled />
             <span>
               <strong>开放站长 Key</strong>
@@ -184,6 +251,24 @@ import "../../styles/admin-story.css";
   const dailyInput = document.querySelector<HTMLInputElement>(
     "[data-setting-daily]",
   );
+  const trialEnabledInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-enabled]",
+  );
+  const trialGithubInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-github]",
+  );
+  const trialEmailInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-email]",
+  );
+  const trialOutputInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-output]",
+  );
+  const trialBudgetInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-budget]",
+  );
+  const trialIpInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-ip]",
+  );
   const siteEnabledInput = document.querySelector<HTMLInputElement>(
     "[data-setting-site-enabled]",
   );
@@ -224,6 +309,22 @@ import "../../styles/admin-story.css";
     if (outputInput) outputInput.value = String(settings.maxOutputTokens);
     if (contextInput) contextInput.value = String(settings.contextTurns);
     if (dailyInput) dailyInput.value = String(settings.dailyTurnLimit);
+    if (trialEnabledInput) trialEnabledInput.checked = settings.trialEnabled;
+    if (trialGithubInput) {
+      trialGithubInput.value = String(settings.trialGithubTurns);
+    }
+    if (trialEmailInput) {
+      trialEmailInput.value = String(settings.trialEmailTurns);
+    }
+    if (trialOutputInput) {
+      trialOutputInput.value = String(settings.trialMaxOutputTokens);
+    }
+    if (trialBudgetInput) {
+      trialBudgetInput.value = String(settings.trialDailyBudgetYuan);
+    }
+    if (trialIpInput) {
+      trialIpInput.value = String(settings.trialIpDailyLimit);
+    }
     if (siteEnabledInput) {
       siteEnabledInput.checked = settings.siteKeyEnabled;
     }
@@ -257,7 +358,7 @@ import "../../styles/admin-story.css";
       const heading = document.createElement("strong");
       heading.textContent = `${before.pointsPerTurn} → ${after.pointsPerTurn} 积分/回合`;
       const summary = document.createElement("span");
-      summary.textContent = `输出 ${after.maxOutputTokens} · 上下文 ${after.contextTurns} 回合 · 每日 ${after.dailyTurnLimit} 次 · 站长 Key ${after.siteKeyEnabled ? "开启" : "关闭"}`;
+      summary.textContent = `输出 ${after.maxOutputTokens} · 上下文 ${after.contextTurns} 回合 · 每日 ${after.dailyTurnLimit} 次 · 试玩 ${after.trialEnabled ? `${after.trialGithubTurns}/${after.trialEmailTurns} 回合` : "关闭"} · 站长 Key ${after.siteKeyEnabled ? "开启" : "关闭"}`;
       const meta = document.createElement("small");
       meta.textContent = `${item.operatorName ?? "已删除管理员"} / ${formatDate(item.createdAt)}`;
       row.append(heading, summary, meta);
@@ -373,6 +474,12 @@ import "../../styles/admin-story.css";
       maxOutputTokens: outputInput?.value,
       contextTurns: contextInput?.value,
       dailyTurnLimit: dailyInput?.value,
+      trialEnabled: trialEnabledInput?.checked,
+      trialGithubTurns: trialGithubInput?.value,
+      trialEmailTurns: trialEmailInput?.value,
+      trialMaxOutputTokens: trialOutputInput?.value,
+      trialDailyBudgetYuan: trialBudgetInput?.value,
+      trialIpDailyLimit: trialIpInput?.value,
       siteKeyEnabled: siteEnabledInput?.checked,
     });
     try {

@@ -1,98 +1,14 @@
 ---
-import ArrowUpRight from "../../components/ArrowUpRight.astro";
 import BaseLayout from "../../layouts/BaseLayout.astro";
-import "../../styles/stories.css";
 ---
 
-<BaseLayout
-  title="互动故事书库"
-  description="阅读由渔情用户创作并审核通过的 AI 互动故事。"
-  bodyClass="page-story-community"
->
-  <section class="container community-hero">
-    <div>
-      <p class="eyebrow">COMMUNITY STORY ARCHIVE</p>
-      <h1>别人走过的<br />另一条路。</h1>
-      <p>这里收录用户发布并审核通过的互动故事快照。可以阅读、评论，也可以投喂积分支持作者。</p>
-    </div>
-    <a href="/stories/">自己创建一个故事 <ArrowUpRight /></a>
+<BaseLayout title="互动小说书库" noindex>
+  <meta http-equiv="refresh" content="0;url=/stories/?view=library" />
+  <section class="container" style="padding-block: 80px;">
+    <p>小说书库已经并入互动小说页面。</p>
+    <p><a href="/stories/?view=library">进入小说书库 →</a></p>
   </section>
-
-  <section class="container community-story-list" data-community-list>
-    <p class="community-empty">正在读取故事…</p>
-  </section>
+  <script is:inline>
+    location.replace("/stories/?view=library");
+  </script>
 </BaseLayout>
-
-<script>
-  import { getStoryDifficulty } from "../../lib/story-templates";
-
-  interface PublicStoryItem {
-    id: string;
-    slug: string;
-    title: string;
-    summary: string;
-    templateId: string;
-    modeId: string;
-    difficultyId: string;
-    style: string;
-    readCount: number;
-    tipTotal: number;
-    publishedAt: number;
-    authorName: string;
-    authorImage: string | null;
-  }
-
-  const list = document.querySelector<HTMLElement>("[data-community-list]");
-
-  void fetch("/api/story/publications", {
-    credentials: "same-origin",
-    headers: { Accept: "application/json" },
-  })
-    .then(async (response) => {
-      const payload = (await response.json()) as {
-        stories?: PublicStoryItem[];
-        error?: string;
-      };
-      if (!response.ok) throw new Error(payload.error || "故事读取失败。");
-      return payload.stories ?? [];
-    })
-    .then((stories) => {
-      if (!list) return;
-      list.replaceChildren();
-      if (stories.length === 0) {
-        const empty = document.createElement("p");
-        empty.className = "community-empty";
-        empty.textContent = "公共书库还没有故事。";
-        list.append(empty);
-        return;
-      }
-      for (const story of stories) {
-        const card = document.createElement("article");
-        card.className = "community-story-card";
-        const meta = document.createElement("div");
-        meta.className = "community-story-meta";
-        const difficulty = getStoryDifficulty(story.difficultyId);
-        meta.textContent = `${story.authorName} · ${difficulty.title} · ${story.style}`;
-        const heading = document.createElement("h2");
-        const link = document.createElement("a");
-        link.href = `/stories/read/?slug=${encodeURIComponent(story.slug)}`;
-        link.textContent = story.title;
-        heading.append(link);
-        const summary = document.createElement("p");
-        summary.textContent = story.summary;
-        const stats = document.createElement("footer");
-        stats.textContent = `${story.readCount} 阅读 · ${story.tipTotal} 积分支持 · ${new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(new Date(story.publishedAt))}`;
-        card.append(meta, heading, summary, stats);
-        list.append(card);
-      }
-    })
-    .catch((error) => {
-      if (!list) return;
-      list.replaceChildren();
-      const empty = document.createElement("p");
-      empty.className = "community-empty";
-      empty.textContent =
-        error instanceof Error ? error.message : "故事读取失败。";
-      list.append(empty);
-    });
-</script>

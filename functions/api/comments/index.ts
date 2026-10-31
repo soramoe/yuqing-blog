@@ -64,8 +64,13 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     return json({ error: "分页参数无效。" }, 400);
   }
 
-  const auth = createAuth(env, url);
-  const session = await auth.api.getSession({ headers: request.headers });
+  const sessionCookie = request.headers.get("cookie") ?? "";
+  const session =
+    /(?:better-auth|session_token)/i.test(sessionCookie)
+      ? await createAuth(env, url).api.getSession({
+          headers: request.headers,
+        })
+      : null;
   const userId = session?.user.id ?? null;
 
   const cursorClause = cursor

@@ -49,6 +49,7 @@ export const storyPublication = sqliteTable(
     modeId: text("mode_id").notNull(),
     difficultyId: text("difficulty_id").notNull(),
     style: text("style").notNull(),
+    coverUrl: text("cover_url"),
     contentJson: text("content_json").notNull(),
     status: text("status").default("pending").notNull(),
     readCount: integer("read_count").default(0).notNull(),
@@ -91,6 +92,7 @@ export const storyTip = sqliteTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     amount: integer("amount").notNull(),
+    message: text("message"),
     transactionRef: text("transaction_ref").notNull().unique(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
@@ -105,3 +107,35 @@ export const storyTip = sqliteTable(
     ),
   ],
 );
+
+export const storyTrialClaim = sqliteTable("story_trial_claim", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  sessionId: text("session_id").notNull(),
+  provider: text("provider").notNull(),
+  freeTurnsTotal: integer("free_turns_total").notNull(),
+  freeTurnsUsed: integer("free_turns_used").default(0).notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});
+
+export const storyTrialIpDay = sqliteTable(
+  "story_trial_ip_day",
+  {
+    day: text("day").notNull(),
+    ipHash: text("ip_hash").notNull(),
+    claims: integer("claims").default(0).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("story_trial_ip_day_unique").on(table.day, table.ipHash),
+  ],
+);
+
+export const storyTrialBudget = sqliteTable("story_trial_budget", {
+  day: text("day").primaryKey(),
+  reservedCents: integer("reserved_cents").default(0).notNull(),
+  spentCents: integer("spent_cents").default(0).notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+});

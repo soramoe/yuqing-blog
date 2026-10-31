@@ -88,6 +88,12 @@ export const onRequestPatch: PagesFunction<Env> = async ({
     maxOutputTokens: next.maxOutputTokens,
     contextTurns: next.contextTurns,
     dailyTurnLimit: next.dailyTurnLimit,
+    trialEnabled: next.trialEnabled,
+    trialGithubTurns: next.trialGithubTurns,
+    trialEmailTurns: next.trialEmailTurns,
+    trialMaxOutputTokens: next.trialMaxOutputTokens,
+    trialDailyBudgetYuan: next.trialDailyBudgetYuan,
+    trialIpDailyLimit: next.trialIpDailyLimit,
     siteKeyEnabled: next.siteKeyEnabled,
     updatedAt: now,
     updatedBy: authorized.session.user.id,
@@ -98,13 +104,22 @@ export const onRequestPatch: PagesFunction<Env> = async ({
       env.DB.prepare(
         `INSERT INTO story_setting
           (id, points_per_turn, max_output_tokens, context_turns,
-           daily_turn_limit, site_key_enabled, updated_by, updated_at)
-         VALUES ('global', ?, ?, ?, ?, ?, ?, ?)
+           daily_turn_limit, trial_enabled, trial_github_turns,
+           trial_email_turns, trial_max_output_tokens,
+           trial_daily_budget_yuan, trial_ip_daily_limit,
+           site_key_enabled, updated_by, updated_at)
+         VALUES ('global', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            points_per_turn = excluded.points_per_turn,
            max_output_tokens = excluded.max_output_tokens,
            context_turns = excluded.context_turns,
            daily_turn_limit = excluded.daily_turn_limit,
+           trial_enabled = excluded.trial_enabled,
+           trial_github_turns = excluded.trial_github_turns,
+           trial_email_turns = excluded.trial_email_turns,
+           trial_max_output_tokens = excluded.trial_max_output_tokens,
+           trial_daily_budget_yuan = excluded.trial_daily_budget_yuan,
+           trial_ip_daily_limit = excluded.trial_ip_daily_limit,
            site_key_enabled = excluded.site_key_enabled,
            updated_by = excluded.updated_by,
            updated_at = excluded.updated_at`,
@@ -113,6 +128,12 @@ export const onRequestPatch: PagesFunction<Env> = async ({
         after.maxOutputTokens,
         after.contextTurns,
         after.dailyTurnLimit,
+        after.trialEnabled ? 1 : 0,
+        after.trialGithubTurns,
+        after.trialEmailTurns,
+        after.trialMaxOutputTokens,
+        after.trialDailyBudgetYuan,
+        after.trialIpDailyLimit,
         after.siteKeyEnabled ? 1 : 0,
         after.updatedBy,
         now,

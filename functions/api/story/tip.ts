@@ -33,12 +33,17 @@ export const onRequestPost: PagesFunction<Env> = async ({
     publicationId?: unknown;
     amount?: unknown;
     requestId?: unknown;
+    message?: unknown;
   };
   const publicationId =
     typeof input.publicationId === "string" ? input.publicationId : "";
   const amount = Number(input.amount);
   const requestId =
     typeof input.requestId === "string" ? input.requestId : "";
+  const message =
+    typeof input.message === "string"
+      ? input.message.trim().slice(0, 200)
+      : "";
   if (
     !/^[a-zA-Z0-9-]{8,80}$/.test(publicationId) ||
     !/^[a-zA-Z0-9-]{8,80}$/.test(requestId) ||
@@ -138,14 +143,15 @@ export const onRequestPost: PagesFunction<Env> = async ({
       env.DB.prepare(
         `INSERT INTO story_tip
           (id, publication_id, from_user_id, to_user_id, amount,
-           transaction_ref, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+           message, transaction_ref, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
         tipId,
         publication.id,
         session.user.id,
         publication.authorUserId,
         amount,
+        message || null,
         reference,
         now,
       ),

@@ -2226,7 +2226,14 @@ body.gallery-lightbox-open {
 
   .site-nav {
     flex-direction: row;
+    min-width: 0;
+    overflow-x: auto;
     margin: 0;
+    scrollbar-width: none;
+  }
+
+  .site-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .site-nav a {

@@ -30,6 +30,7 @@ export const onRequestGet: PagesFunction<
       p.mode_id AS modeId,
       p.difficulty_id AS difficultyId,
       p.style,
+      p.cover_url AS coverUrl,
       p.content_json AS contentJson,
       p.status,
       p.read_count AS readCount,
@@ -46,14 +47,16 @@ export const onRequestGet: PagesFunction<
     .first<Record<string, unknown>>();
   if (!row) return json({ error: "故事不存在。" }, 404);
 
-  const auth = createAuth(env, new URL(request.url));
-  const session = await auth.api.getSession({ headers: request.headers });
-  const isAdmin = session?.user
-    ? isCommentAdmin(env.COMMENT_ADMIN_USER_IDS, session.user.id)
-    : false;
-  const isAuthor = session?.user?.id === row.authorUserId;
-  if (row.status !== "approved" && !isAdmin && !isAuthor) {
-    return json({ error: "故事正在等待审核。" }, 403);
+  if (row.status !== "approved") {
+    const auth = createAuth(env, new URL(request.url));
+    const session = await auth.api.getSession({ headers: request.headers });
+    const isAdmin = session?.user
+      ? isCommentAdmin(env.COMMENT_ADMIN_USER_IDS, session.user.id)
+      : false;
+    const isAuthor = session?.user?.id === row.authorUserId;
+    if (!isAdmin && !isAuthor) {
+      return json({ error: "故事正在等待审核。" }, 403);
+    }
   }
 
   let content: unknown = null;
@@ -69,6 +72,36 @@ export const onRequestGet: PagesFunction<
       .bind(row.id)
       .run();
   }
+  const [commentCount, tipMessages] = await Promise.all([
+    env.DB.prepare(
+      `SELECT COUNT(*) AS total
+       FROM comment
+       WHERE status = 'visible'
+         AND (post_slug = ? OR post_slug LIKE ?)`,
+    )
+      .bind(`story-${row.id}`, `story-${row.id}-chapter-%`)
+      .first<{ total: number }>(),
+    env.DB.prepare(
+      `SELECT
+        t.amount,
+        t.message,
+        t.created_at AS createdAt,
+        u.name AS userName
+       FROM story_tip t
+       INNER JOIN user u ON u.id = t.from_user_id
+       WHERE t.publication_id = ? AND t.message IS NOT NULL
+         AND TRIM(t.message) != ''
+       ORDER BY t.created_at DESC
+       LIMIT 10`,
+    )
+      .bind(row.id)
+      .all<{
+        amount: number;
+        message: string;
+        createdAt: number;
+        userName: string;
+      }>(),
+  ]);
   return json({
     story: {
       ...row,
@@ -77,6 +110,12 @@ export const onRequestGet: PagesFunction<
       readCount: Number(row.readCount) + (row.status === "approved" ? 1 : 0),
       tipTotal: Number(row.tipTotal),
       publishedAt: row.publishedAt ? Number(row.publishedAt) : null,
+      commentCount: Number(commentCount?.total ?? 0),
+      tipMessages: tipMessages.results.map((tip) => ({
+        ...tip,
+        amount: Number(tip.amount),
+        createdAt: Number(tip.createdAt),
+      })),
     },
   });
 };

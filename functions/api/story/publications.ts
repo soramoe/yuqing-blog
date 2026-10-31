@@ -20,6 +20,19 @@ const sameOrigin = (request: Request) => {
   return !origin || origin === new URL(request.url).origin;
 };
 
+const normalizeCoverUrl = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const url = value.trim();
+  if (!url || url.length > 500) return null;
+  if (url.startsWith("/media/") || url.startsWith("/images/")) return url;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+};
+
 const listPublic = async (db: D1Database) => {
   const result = await db
     .prepare(
@@ -32,6 +45,7 @@ const listPublic = async (db: D1Database) => {
         p.mode_id AS modeId,
         p.difficulty_id AS difficultyId,
         p.style,
+        p.cover_url AS coverUrl,
         p.read_count AS readCount,
         p.tip_total AS tipTotal,
         p.published_at AS publishedAt,
@@ -61,6 +75,7 @@ const listMine = async (db: D1Database, userId: string) => {
         title,
         summary,
         status,
+        cover_url AS coverUrl,
         tip_total AS tipTotal,
         read_count AS readCount,
         created_at AS createdAt,
@@ -112,6 +127,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
   const input = payload as {
     title?: unknown;
     summary?: unknown;
+    coverUrl?: unknown;
     data?: unknown;
   };
   const title =
@@ -120,6 +136,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
     typeof input.summary === "string"
       ? input.summary.trim().slice(0, 300)
       : "";
+  const coverUrl = normalizeCoverUrl(input.coverUrl);
   if (title.length < 2 || summary.length < 6) {
     return json({ error: "请填写至少 2 字标题和 6 字简介。" }, 400);
   }
@@ -169,14 +186,16 @@ export const onRequestPost: PagesFunction<Env> = async ({
   await env.DB.prepare(
     `INSERT INTO story_publication
       (id, slug, source_session_id, author_user_id, title, summary,
-       template_id, mode_id, difficulty_id, style, content_json, status,
+       template_id, mode_id, difficulty_id, style, cover_url,
+       content_json, status,
        read_count, tip_total, created_at, updated_at, published_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ?, NULL)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 0, 0, ?, ?, NULL)
      ON CONFLICT(author_user_id, source_session_id) DO UPDATE SET
        title = excluded.title,
        summary = excluded.summary,
        difficulty_id = excluded.difficulty_id,
        style = excluded.style,
+       cover_url = excluded.cover_url,
        content_json = excluded.content_json,
        status = 'pending',
        reviewed_by = NULL,
@@ -195,6 +214,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
       modeId,
       difficulty.id,
       style,
+      coverUrl,
       contentJson,
       now,
       now,

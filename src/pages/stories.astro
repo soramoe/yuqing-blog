@@ -23,7 +23,9 @@ import "../styles/stories.css";
         AI 会根据当前状态实时续写，并记住已经发生的关键剧情。
       </p>
       <div class="stories-hero-links">
-        <a href="/stories/community/">浏览公共故事</a>
+        <button type="button" data-story-view-jump="library">
+          进入小说书库
+        </button>
       </div>
     </div>
     <div class="stories-hero-mark" aria-hidden="true">
@@ -33,7 +35,48 @@ import "../styles/stories.css";
     </div>
   </section>
 
-  <div class="container stories-layout" data-story-app>
+  <nav class="container story-view-tabs" aria-label="互动小说模式">
+    <button type="button" class="is-active" data-story-view-tab="create">
+      <span>01</span>
+      <strong>开始创作</strong>
+      <small>创建并游玩互动小说</small>
+    </button>
+    <button type="button" data-story-view-tab="library">
+      <span>02</span>
+      <strong>小说书库</strong>
+      <small>阅读已发布作品</small>
+    </button>
+  </nav>
+
+  <section class="container story-library-view" data-story-library hidden>
+    <header class="story-library-header">
+      <div>
+        <p class="eyebrow">PUBLIC STORY LIBRARY</p>
+        <h2>读过一条路，<br />再写下另一条。</h2>
+        <p>公共书库展示审核通过的作品。每回合是一章，可逐章阅读、切换作品评论与章节评论，也可以投喂积分支持作者。</p>
+      </div>
+      <form class="story-library-filter" data-story-library-filter>
+        <label>
+          <span>搜索书库</span>
+          <input type="search" placeholder="标题、作者或类型" data-story-library-search />
+        </label>
+        <label>
+          <span>内容范围</span>
+          <select data-story-library-scope>
+            <option value="public">全部已发布</option>
+            <option value="mine">我的投稿</option>
+          </select>
+        </label>
+      </form>
+    </header>
+    <div class="story-library-summary">
+      <span data-story-library-count>正在读取书库…</span>
+      <button type="button" data-story-view-jump="create">自己写一篇 →</button>
+    </div>
+    <div class="story-library-grid" data-story-library-grid></div>
+  </section>
+
+  <div class="container stories-layout" data-story-app data-story-create-view>
     <aside class="story-setup" aria-labelledby="story-setup-title" data-story-setup-panel>
       <div class="story-panel-heading">
         <div>
@@ -174,8 +217,15 @@ import "../styles/stories.css";
       <section class="story-setup-section">
         <span class="story-field-label">06 / 模型 Key</span>
         <fieldset class="story-key-options">
+          <label data-story-trial-option>
+            <input type="radio" name="story-key-mode" value="trial" checked />
+            <span>
+              <strong>免费试玩</strong>
+              <small data-story-trial-copy>登录后读取试玩资格</small>
+            </span>
+          </label>
           <label>
-            <input type="radio" name="story-key-mode" value="site" checked />
+            <input type="radio" name="story-key-mode" value="site" />
             <span>
               <strong>站长 Key</strong>
               <small>每回合消耗 <span data-story-price-label>{STORY_POINTS_PER_TURN}</span> 积分</small>
@@ -299,6 +349,15 @@ import "../styles/stories.css";
               <span>公开简介</span>
               <textarea maxlength="300" data-publish-summary required></textarea>
             </label>
+            <label>
+              <span>封面图链接（可选）</span>
+              <input
+                type="url"
+                maxlength="500"
+                placeholder="https://...，也可以填写图库公开原图地址"
+                data-publish-cover
+              />
+            </label>
             <button type="submit" data-story-publish-submit>提交站长审核</button>
           </form>
           <p data-story-publish-status aria-live="polite"></p>
@@ -350,7 +409,7 @@ import "../styles/stories.css";
     templateId: string;
     modeId: string;
     style: string;
-    keyMode: "site" | "user";
+    keyMode: "trial" | "site" | "user";
     turnIndex: number;
     state: StoryState;
     summary: string;
@@ -364,6 +423,7 @@ import "../styles/stories.css";
     undoRemaining?: number;
     undoStack?: StorySnapshot[];
     memory?: StoryMemory;
+    trialRemaining?: number;
     updatedAt: number;
   }
 
@@ -375,6 +435,7 @@ import "../styles/stories.css";
   interface StreamResult extends StoryModelResult {
     balance?: number | null;
     cost?: number;
+    trialRemaining?: number | null;
   }
 
   interface CloudSave {
@@ -383,6 +444,35 @@ import "../styles/stories.css";
     turnIndex: number;
     updatedAt: number;
     data: StorySave | null;
+  }
+
+  interface StoryLibraryItem {
+    id: string;
+    slug: string;
+    title: string;
+    summary: string;
+    templateId: string;
+    modeId: string;
+    difficultyId: string;
+    style: string;
+    coverUrl: string | null;
+    status?: string;
+    readCount: number;
+    tipTotal: number;
+    publishedAt?: number;
+    updatedAt?: number;
+    authorName: string;
+    authorImage: string | null;
+  }
+
+  interface StoryTrial {
+    enabled: boolean;
+    available: boolean;
+    provider: "github" | "email";
+    freeTurnsTotal: number;
+    freeTurnsUsed: number;
+    freeTurnsRemaining: number;
+    boundSessionId: string | null;
   }
 
   const SAVE_KEY = "yuqing-interactive-story-v1";
@@ -555,11 +645,41 @@ import "../styles/stories.css";
   const publishSummary = document.querySelector<HTMLTextAreaElement>(
     "[data-publish-summary]",
   );
+  const publishCover = document.querySelector<HTMLInputElement>(
+    "[data-publish-cover]",
+  );
   const publishSubmit = document.querySelector<HTMLButtonElement>(
     "[data-story-publish-submit]",
   );
   const publishStatus = document.querySelector<HTMLElement>(
     "[data-story-publish-status]",
+  );
+  const createView = document.querySelector<HTMLElement>(
+    "[data-story-create-view]",
+  );
+  const libraryView = document.querySelector<HTMLElement>(
+    "[data-story-library]",
+  );
+  const viewTabs = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-story-view-tab]"),
+  );
+  const libraryGrid = document.querySelector<HTMLElement>(
+    "[data-story-library-grid]",
+  );
+  const libraryCount = document.querySelector<HTMLElement>(
+    "[data-story-library-count]",
+  );
+  const librarySearch = document.querySelector<HTMLInputElement>(
+    "[data-story-library-search]",
+  );
+  const libraryScope = document.querySelector<HTMLSelectElement>(
+    "[data-story-library-scope]",
+  );
+  const trialOption = document.querySelector<HTMLElement>(
+    "[data-story-trial-option]",
+  );
+  const trialCopy = document.querySelector<HTMLElement>(
+    "[data-story-trial-copy]",
   );
 
   let selectedTemplate =
@@ -574,9 +694,18 @@ import "../styles/stories.css";
   let balance: number | null = null;
   let siteKeyConfigured = true;
   let siteKeyEnabled = true;
+  let trialEnabled = true;
+  let trialAvailable = false;
+  let trialProvider: "github" | "email" = "email";
+  let trialTurnsTotal = 1;
+  let trialTurnsRemaining = 0;
+  let trialBoundSessionId: string | null = null;
   let pointsPerTurn = config.pointsPerTurn;
   let undoConfirmArmed = false;
   let undoConfirmTimer = 0;
+  let storyView: "create" | "library" = "create";
+  let libraryItems: StoryLibraryItem[] = [];
+  let libraryLoaded = false;
 
   const setSetupStatus = (
     message = "",
@@ -838,6 +967,7 @@ import "../styles/stories.css";
 
   const selectedKeyMode = () =>
     (keyModeInputs.find((input) => input.checked)?.value ?? "site") as
+      | "trial"
       | "site"
       | "user";
 
@@ -848,17 +978,67 @@ import "../styles/stories.css";
   const applySiteKeyAvailability = () => {
     const siteInput = keyModeInputs.find((input) => input.value === "site");
     if (siteInput) siteInput.disabled = !siteKeyConfigured || !siteKeyEnabled;
+    const trialInput = keyModeInputs.find((input) => input.value === "trial");
+    if (trialInput) {
+      trialInput.disabled =
+        !siteKeyConfigured || !siteKeyEnabled || !trialEnabled || !trialAvailable;
+    }
+    if (trialOption) trialOption.hidden = !trialEnabled;
+    if (trialCopy) {
+      if (!trialEnabled) {
+        trialCopy.textContent = "免费试玩当前未开放";
+      } else if (!loggedIn) {
+        trialCopy.textContent = "登录后读取试玩资格";
+      } else if (trialAvailable) {
+        const providerLabel =
+          trialProvider === "github" ? "GitHub 账号" : "邮箱账号";
+        trialCopy.textContent = `${providerLabel}可试玩 ${trialTurnsRemaining} 回合`;
+      } else {
+        trialCopy.textContent = "本账号的免费试玩已用完";
+      }
+    }
+    if (trialInput?.disabled && trialInput.checked && siteInput) {
+      siteInput.checked = true;
+    }
     if (!siteKeyConfigured || !siteKeyEnabled) {
       const userInput = keyModeInputs.find((input) => input.value === "user");
       if (userInput) userInput.checked = true;
-      showKeyField();
     }
+    showKeyField();
   };
 
   const isMobileStoryLayout = () =>
     window.matchMedia("(max-width: 980px)").matches;
 
+  const renderStoryView = (next: "create" | "library", updateUrl = true) => {
+    storyView = next;
+    document.body.classList.toggle("story-library-mode", next === "library");
+    if (createView) createView.hidden = next !== "create";
+    if (libraryView) libraryView.hidden = next !== "library";
+    viewTabs.forEach((tab) => {
+      const active = tab.dataset.storyViewTab === next;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+    });
+    if (next === "library") {
+      document.body.classList.remove("story-active", "story-setup-open");
+      if (closeSetupButton) closeSetupButton.hidden = true;
+      if (!libraryLoaded) void loadLibrary();
+    } else if (currentSave) {
+      document.body.classList.add("story-active");
+      document.body.classList.remove("story-setup-open");
+      if (closeSetupButton) closeSetupButton.hidden = false;
+    }
+    if (updateUrl) {
+      const url = new URL(window.location.href);
+      if (next === "library") url.searchParams.set("view", "library");
+      else url.searchParams.delete("view");
+      history.replaceState(null, "", url);
+    }
+  };
+
   const enterStoryView = () => {
+    renderStoryView("create");
     document.body.classList.add("story-active");
     document.body.classList.remove("story-setup-open");
     if (closeSetupButton) closeSetupButton.hidden = false;
@@ -923,7 +1103,16 @@ import "../styles/stories.css";
       ending: Boolean(parsed.ending),
       turnIndex: Number(parsed.turnIndex) || 0,
       style: typeof parsed.style === "string" ? parsed.style : "热血成长",
-      keyMode: parsed.keyMode === "user" ? "user" : "site",
+      keyMode:
+        parsed.keyMode === "user"
+          ? "user"
+          : parsed.keyMode === "trial"
+            ? "trial"
+            : "site",
+      trialRemaining:
+        typeof parsed.trialRemaining === "number"
+          ? parsed.trialRemaining
+          : undefined,
       updatedAt: Number(parsed.updatedAt) || Date.now(),
       modeId: String(parsed.modeId || ""),
       templateId: String(parsed.templateId),
@@ -1092,6 +1281,147 @@ import "../styles/stories.css";
       );
     }
   };
+
+  const safeImageSource = (value: string | null | undefined) => {
+    if (!value) return "";
+    try {
+      const url = new URL(value, window.location.origin);
+      if (url.protocol !== "https:" && url.protocol !== "http:") return "";
+      if (
+        url.origin !== window.location.origin &&
+        url.protocol !== "https:"
+      ) {
+        return "";
+      }
+      return url.href;
+    } catch {
+      return "";
+    }
+  };
+
+  const renderLibrary = () => {
+    if (!libraryGrid) return;
+    const query = librarySearch?.value.trim().toLocaleLowerCase("zh-CN") ?? "";
+    const items = libraryItems.filter((story) => {
+      if (!query) return true;
+      const difficulty = getStoryDifficulty(story.difficultyId);
+      return [
+        story.title,
+        story.authorName,
+        story.style,
+        difficulty.title,
+        story.summary,
+      ].some((value) =>
+        value.toLocaleLowerCase("zh-CN").includes(query),
+      );
+    });
+    libraryGrid.replaceChildren();
+    if (libraryCount) {
+      libraryCount.textContent = `共 ${items.length} 部作品`;
+    }
+    if (items.length === 0) {
+      const empty = document.createElement("article");
+      empty.className = "story-library-empty";
+      const title = document.createElement("strong");
+      title.textContent =
+        libraryScope?.value === "mine" ? "还没有投稿作品" : "书库暂时没有匹配作品";
+      const copy = document.createElement("p");
+      copy.textContent =
+        libraryScope?.value === "mine"
+          ? "完成一篇互动故事后，可以在故事页面提交站长审核。"
+          : "换个关键词，或者先写下一篇故事。";
+      empty.append(title, copy);
+      libraryGrid.append(empty);
+      return;
+    }
+    for (const story of items) {
+      const card = document.createElement("article");
+      card.className = "story-library-card";
+      const coverLink = document.createElement("a");
+      coverLink.className = "story-library-cover";
+      coverLink.href = `/stories/read/?slug=${encodeURIComponent(story.slug)}`;
+      coverLink.setAttribute("aria-label", `阅读《${story.title}》`);
+      const coverUrl = safeImageSource(story.coverUrl);
+      if (coverUrl) {
+        const image = document.createElement("img");
+        image.src = coverUrl;
+        image.alt = "";
+        image.loading = "lazy";
+        image.decoding = "async";
+        coverLink.append(image);
+      } else {
+        const fallback = document.createElement("span");
+        const template = config.templates.find(
+          (item) => item.id === story.templateId,
+        );
+        fallback.textContent = template?.title.slice(0, 2) ?? "故事";
+        coverLink.append(fallback);
+      }
+      const body = document.createElement("div");
+      body.className = "story-library-card-body";
+      const difficulty = getStoryDifficulty(story.difficultyId);
+      const meta = document.createElement("p");
+      meta.className = "story-library-card-meta";
+      meta.textContent = `${story.authorName} · ${difficulty.title} · ${story.style}`;
+      const heading = document.createElement("h3");
+      const titleLink = document.createElement("a");
+      titleLink.href = coverLink.href;
+      titleLink.textContent = story.title;
+      heading.append(titleLink);
+      const summary = document.createElement("p");
+      summary.textContent = story.summary;
+      const footer = document.createElement("footer");
+      if (story.status) {
+        footer.textContent =
+          {
+            pending: "待审核",
+            approved: "已发布",
+            rejected: "已拒绝",
+          }[story.status] ?? story.status;
+      } else {
+        footer.textContent = `${story.readCount} 阅读 · ${story.tipTotal} 积分支持`;
+      }
+      body.append(meta, heading, summary, footer);
+      card.append(coverLink, body);
+      libraryGrid.append(card);
+    }
+  };
+
+  async function loadLibrary() {
+    if (!libraryGrid) return;
+    const scope = libraryScope?.value === "mine" ? "mine" : "public";
+    libraryGrid.replaceChildren();
+    const loading = document.createElement("p");
+    loading.className = "story-library-empty";
+    loading.textContent = "正在读取书库…";
+    libraryGrid.append(loading);
+    if (libraryCount) libraryCount.textContent = "正在读取书库…";
+    try {
+      const response = await fetch(
+        `/api/story/publications${scope === "mine" ? "?scope=mine" : ""}`,
+        {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        },
+      );
+      const payload = (await response.json()) as {
+        stories?: StoryLibraryItem[];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(payload.error || "书库读取失败。");
+      libraryItems = payload.stories ?? [];
+      libraryLoaded = true;
+      renderLibrary();
+    } catch (error) {
+      libraryGrid.replaceChildren();
+      const failure = document.createElement("article");
+      failure.className = "story-library-empty";
+      failure.textContent =
+        error instanceof Error ? error.message : "书库读取失败。";
+      libraryGrid.append(failure);
+      if (libraryCount) libraryCount.textContent = "书库读取失败";
+    }
+  }
 
   const escapeHtml = (value: string) =>
     value
@@ -1313,6 +1643,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     if (!currentSave || !publishSubmit) return;
     const title = publishTitle?.value.trim() ?? "";
     const summary = publishSummary?.value.trim() ?? "";
+    const coverUrl = publishCover?.value.trim() ?? "";
     if (title.length < 2 || summary.length < 6) {
       if (publishStatus) publishStatus.textContent = "请填写完整标题和简介。";
       return;
@@ -1330,6 +1661,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         body: JSON.stringify({
           title,
           summary,
+          coverUrl,
           data: currentSave,
         }),
       });
@@ -1498,7 +1830,9 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       const keyText =
         currentSave.keyMode === "site"
           ? `站长 Key · ${pointsPerTurn} 积分/回合`
-          : "自己的 Key · 不消耗积分";
+          : currentSave.keyMode === "trial"
+            ? `免费试玩 · 剩余 ${currentSave.trialRemaining ?? trialTurnsRemaining} 回合`
+            : "自己的 Key · 不消耗积分";
       storySubtitle.textContent = `${mode?.title ?? ""} · ${currentSave.style} · ${keyText}`;
       const difficulty = getStoryDifficulty(
         currentSave.difficultyId,
@@ -1592,6 +1926,33 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     });
   });
 
+  viewTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const next = tab.dataset.storyViewTab;
+      if (next === "create" || next === "library") {
+        renderStoryView(next);
+      }
+    });
+  });
+
+  document
+    .querySelectorAll<HTMLButtonElement>("[data-story-view-jump]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const next = button.dataset.storyViewJump;
+        if (next === "create" || next === "library") {
+          renderStoryView(next);
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      });
+    });
+
+  librarySearch?.addEventListener("input", renderLibrary);
+  libraryScope?.addEventListener("change", () => {
+    libraryLoaded = false;
+    void loadLibrary();
+  });
+
   keyModeInputs.forEach((input) => {
     input.addEventListener("change", showKeyField);
   });
@@ -1675,13 +2036,24 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
 
       if (!response.ok) {
         const raw = await response.text();
-        let payload: { error?: string; balance?: number } = {};
+        let payload: {
+          error?: string;
+          balance?: number;
+          trialExhausted?: boolean;
+        } = {};
         try {
           payload = JSON.parse(raw) as typeof payload;
         } catch {
           payload = {};
         }
         if (typeof payload.balance === "number") balance = payload.balance;
+        if (payload.trialExhausted && currentSave.keyMode === "trial") {
+          currentSave.keyMode = "site";
+          currentSave.trialRemaining = 0;
+          saveProgress();
+          renderGame();
+          applySiteKeyAvailability();
+        }
         throw new Error(
           payload.error || `剧情服务返回 HTTP ${response.status}，请稍后重试。`,
         );
@@ -1723,6 +2095,20 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       currentSave.choices = result.choices;
       currentSave.ending = result.ending;
       currentSave.memory = sanitizeStoryMemory(result.memory);
+      if (currentSave.keyMode === "trial") {
+        currentSave.trialRemaining =
+          typeof result.trialRemaining === "number"
+            ? result.trialRemaining
+            : Math.max(0, (currentSave.trialRemaining ?? 1) - 1);
+        trialTurnsRemaining = currentSave.trialRemaining;
+        trialAvailable = currentSave.trialRemaining > 0;
+      }
+      const trialJustFinished =
+        currentSave.keyMode === "trial" &&
+        currentSave.trialRemaining === 0;
+      if (trialJustFinished) {
+        currentSave.keyMode = "site";
+      }
       if (!currentSave.undoStack) currentSave.undoStack = [];
       currentSave.undoStack.push(checkpoint);
       const undoLimit = Math.max(1, currentSave.undoLimit ?? 1);
@@ -1733,9 +2119,14 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       saveProgress();
       renderGame();
       setReaderStatus(
-        currentSave.ending ? "故事已经抵达结局。" : "剧情已保存。",
+        currentSave.ending
+          ? "故事已经抵达结局。"
+          : trialJustFinished
+            ? `免费试玩已结束；下一回合将使用站长 Key，每回合 ${pointsPerTurn} 积分。`
+            : "剧情已保存。",
         "success",
       );
+      applySiteKeyAvailability();
       liveArticle.scrollIntoView({ block: "nearest", behavior: "smooth" });
     } catch (error) {
       liveArticle.remove();
@@ -1811,6 +2202,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       undoRemaining: difficulty.undoLimit,
       undoStack: [],
       memory: createInitialStoryMemory(),
+      trialRemaining: keyMode === "trial" ? trialTurnsRemaining : undefined,
       updatedAt: Date.now(),
     };
     currentSave.state = applyDifficultyToInitialState(
@@ -1924,6 +2316,11 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     resumeButton.textContent = `继续《${template?.title ?? "互动小说"}》`;
   }
 
+  const initialView =
+    new URLSearchParams(window.location.search).get("view") === "library"
+      ? "library"
+      : "create";
+  renderStoryView(initialView, false);
   renderModes();
   showKeyField();
   updateCharacterSummary();
@@ -1941,10 +2338,20 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
           siteKeyConfigured?: boolean;
           siteKeyEnabled?: boolean;
           pointsPerTurn?: number;
+          trialEnabled?: boolean;
+          trial?: StoryTrial | null;
         } | null,
       ) => {
       siteKeyConfigured = payload?.siteKeyConfigured !== false;
       siteKeyEnabled = payload?.siteKeyEnabled !== false;
+      trialEnabled = payload?.trialEnabled !== false;
+      if (payload?.trial) {
+        trialAvailable = payload.trial.available;
+        trialProvider = payload.trial.provider;
+        trialTurnsTotal = payload.trial.freeTurnsTotal;
+        trialTurnsRemaining = payload.trial.freeTurnsRemaining;
+        trialBoundSessionId = payload.trial.boundSessionId;
+      }
       if (
         typeof payload?.pointsPerTurn === "number" &&
         payload.pointsPerTurn > 0
@@ -1952,6 +2359,12 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         pointsPerTurn = payload.pointsPerTurn;
       }
       if (priceLabel) priceLabel.textContent = String(pointsPerTurn);
+      const trialInput = keyModeInputs.find(
+        (input) => input.value === "trial",
+      );
+      if (trialAvailable && trialInput) {
+        trialInput.checked = true;
+      }
       applySiteKeyAvailability();
       if (!siteKeyConfigured) {
         setSetupStatus(
@@ -1962,6 +2375,15 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
         setSetupStatus(
           "站长 Key 模式当前已关闭。可以使用自己的 DeepSeek Key。",
           "error",
+        );
+      } else if (trialAvailable) {
+        setSetupStatus(
+          `本账号可免费试玩 ${trialTurnsRemaining} 回合；结束后可改用积分或自己的 Key。`,
+          "success",
+        );
+      } else if (trialBoundSessionId) {
+        setSetupStatus(
+          "免费试玩资格已绑定到首次创建的故事；新故事请改用积分或自己的 Key。",
         );
       }
       },
@@ -1991,6 +2413,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
           : '<a href="/login/?next=%2Fstories%2F">登录后开始互动小说 →</a>';
       }
       if (startButton) startButton.disabled = !loggedIn;
+      applySiteKeyAvailability();
       setBusy(false);
       if (loggedIn) {
         void loadCloudSaves().catch((error) =>

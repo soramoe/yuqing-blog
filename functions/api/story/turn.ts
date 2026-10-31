@@ -23,6 +23,13 @@ import {
 } from "../../../src/lib/story-templates";
 import { getStorySettings } from "../../../src/lib/story-settings";
 import { chinaDateKey } from "../../../src/lib/points";
+import {
+  finalizeStoryTrial,
+  releaseStoryTrial,
+  reserveStoryTrial,
+  StoryTrialError,
+  type TrialReservation,
+} from "../../../src/lib/story-trial";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -296,28 +303,30 @@ const handleStoryTurn: PagesFunction<Env> = async ({
   }
 
   const keyMode = body.keyMode;
-  if (keyMode !== "site" && keyMode !== "user") {
+  if (keyMode !== "site" && keyMode !== "trial" && keyMode !== "user") {
     return json({ error: "请选择模型 Key 来源。" }, 400);
   }
 
   const userApiKey = safeString(body.userApiKey, 256);
-  if (keyMode === "site" && !settings.siteKeyEnabled) {
+  if ((keyMode === "site" || keyMode === "trial") && !settings.siteKeyEnabled) {
     return json(
       { error: "站长 Key 模式当前已暂时关闭，请使用自己的 Key。" },
       503,
     );
   }
   const apiKey =
-    keyMode === "site" ? env.STORY_AI_API_KEY : userApiKey;
+    keyMode === "site" || keyMode === "trial"
+      ? env.STORY_AI_API_KEY
+      : userApiKey;
   if (!apiKey) {
     return json(
       {
         error:
-          keyMode === "site"
+          keyMode === "site" || keyMode === "trial"
             ? "站长 AI Key 尚未配置。请先使用自己的 DeepSeek Key，或联系站长完成配置。"
             : "请输入自己的 DeepSeek API Key。",
       },
-      keyMode === "site" ? 503 : 400,
+      keyMode === "site" || keyMode === "trial" ? 503 : 400,
     );
   }
 
@@ -328,6 +337,8 @@ const handleStoryTurn: PagesFunction<Env> = async ({
     balance: null,
   };
   let chargedSitePoints = false;
+  let trialReservation: TrialReservation | null = null;
+  let trialRemaining: number | null = null;
 
   try {
     if (keyMode === "site") {
@@ -356,6 +367,21 @@ const handleStoryTurn: PagesFunction<Env> = async ({
         settings.pointsPerTurn,
       );
       chargedSitePoints = true;
+    } else if (keyMode === "trial") {
+      const ipAddress =
+        request.headers.get("CF-Connecting-IP")?.trim() ||
+        request.headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ||
+        "unknown";
+      const trial = await reserveStoryTrial(
+        env.DB,
+        session.user.id,
+        payload.sessionId,
+        ipAddress,
+        chinaDateKey(),
+        settings,
+      );
+      trialReservation = trial.reservation;
+      trialRemaining = trial.status.freeTurnsRemaining;
     }
   } catch (error) {
     if (error instanceof StoryPointError) {
@@ -364,7 +390,19 @@ const handleStoryTurn: PagesFunction<Env> = async ({
         error.status,
       );
     }
-    return json({ error: "积分扣费失败，请稍后重试。" }, 500);
+    if (error instanceof StoryTrialError) {
+      return json(
+        {
+          error: error.message,
+          code: error.code,
+          trialExhausted:
+            error.code === "trial-used" ||
+            error.code === "trial-bound",
+        },
+        error.status,
+      );
+    }
+    return json({ error: "剧情额度校验失败，请稍后重试。" }, 500);
   }
 
   const configuredBaseUrl =
@@ -374,6 +412,10 @@ const handleStoryTurn: PagesFunction<Env> = async ({
     : `${configuredBaseUrl.replace(/\/+$/, "")}/chat/completions`;
   const model = env.STORY_AI_MODEL?.trim() || "deepseek-chat";
   const prompt = buildPrompt(payload);
+  const requestOutputTokens =
+    keyMode === "trial"
+      ? settings.trialMaxOutputTokens
+      : settings.maxOutputTokens;
 
   let providerResponse: Response;
   try {
@@ -396,7 +438,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
         ],
         stream: false,
         temperature: 0.9,
-        max_tokens: settings.maxOutputTokens,
+        max_tokens: requestOutputTokens,
       }),
     });
   } catch {
@@ -410,8 +452,22 @@ const handleStoryTurn: PagesFunction<Env> = async ({
           settings.pointsPerTurn,
         ),
       };
+    } else if (trialReservation) {
+      await releaseStoryTrial(
+        env.DB,
+        session.user.id,
+        payload.sessionId,
+        trialReservation,
+      );
     }
-    return json({ error: "AI 服务暂时无法连接，本回合积分已退回。" }, 503);
+    return json(
+      {
+        error: trialReservation
+          ? "AI 服务暂时无法连接，免费试玩次数未扣除。"
+          : "AI 服务暂时无法连接，本回合积分已退回。",
+      },
+      503,
+    );
   }
   if (!providerResponse.ok || !providerResponse.body) {
     if (chargedSitePoints) {
@@ -424,6 +480,13 @@ const handleStoryTurn: PagesFunction<Env> = async ({
           settings.pointsPerTurn,
         ),
       };
+    } else if (trialReservation) {
+      await releaseStoryTrial(
+        env.DB,
+        session.user.id,
+        payload.sessionId,
+        trialReservation,
+      );
     }
     const providerStatus = providerResponse.status;
     const responseStatus =
@@ -439,7 +502,9 @@ const handleStoryTurn: PagesFunction<Env> = async ({
             ? "AI Key 无效或已失效。"
             : providerStatus === 429
               ? "AI 服务请求过多，请稍后再试。"
-              : "AI 服务响应失败，本回合积分已退回。",
+              : trialReservation
+                ? "AI 服务响应失败，免费试玩次数未扣除。"
+                : "AI 服务响应失败，本回合积分已退回。",
         balance: charged.balance,
       },
       responseStatus,
@@ -449,6 +514,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
   try {
     const providerPayload = (await providerResponse.json()) as {
       choices?: Array<{ message?: { content?: string } }>;
+      usage?: { total_tokens?: number };
     };
     const raw = providerPayload.choices?.[0]?.message?.content ?? "";
     const result = parseModelResult(
@@ -463,6 +529,13 @@ const handleStoryTurn: PagesFunction<Env> = async ({
       result.statePatch,
       payload.difficultyId,
     );
+    if (trialReservation) {
+      await finalizeStoryTrial(
+        env.DB,
+        trialReservation,
+        Number(providerPayload.usage?.total_tokens ?? 0),
+      );
+    }
     return json({
       narrative: result.narrative,
       choices: result.choices,
@@ -472,6 +545,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
       ending: result.ending,
       balance: charged.balance,
       cost: charged.cost,
+      trialRemaining,
     });
   } catch {
     const balance = chargedSitePoints
@@ -482,12 +556,23 @@ const handleStoryTurn: PagesFunction<Env> = async ({
           settings.pointsPerTurn,
         )
       : charged.balance;
+    if (trialReservation) {
+      await releaseStoryTrial(
+        env.DB,
+        session.user.id,
+        payload.sessionId,
+        trialReservation,
+      );
+    }
     return json(
       {
         error: chargedSitePoints
           ? "AI 剧情生成失败，本回合积分已退回。"
-          : "AI 剧情生成失败，请重新尝试。",
+          : trialReservation
+            ? "AI 剧情生成失败，免费试玩次数未扣除。"
+            : "AI 剧情生成失败，请重新尝试。",
         balance,
+        trialRemaining: trialReservation ? 0 : undefined,
       },
       503,
     );
