@@ -16,7 +16,7 @@ const staticItems = [
     kind: "gallery" as const,
   })),
   ...posts
-    .filter((post) => Boolean(post.data.cover))
+    .filter((post) => Boolean(post.data.cover) && !post.data.hideCover)
     .map((post) => ({
       key: `cover:${post.id}`,
       title: post.data.title,

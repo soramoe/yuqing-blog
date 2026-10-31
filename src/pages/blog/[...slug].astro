@@ -37,7 +37,7 @@ const titleRest = titleParts.slice(1).join("：");
 const coverWidths = post.data.cover?.startsWith("/gallery/")
   ? [480, 960, 1920]
   : [480, 960, 1440];
-const cover = post.data.cover
+const cover = post.data.cover && !post.data.hideCover
   ? getResponsiveImage(post.data.cover, coverWidths)
   : null;
 const relatedPosts = allPosts
@@ -58,7 +58,7 @@ const relatedPosts = allPosts
 <BaseLayout
   title={post.data.title}
   description={post.data.description}
-  image={cover?.variants.at(-1) ?? post.data.cover}
+  image={cover?.variants.at(-1)}
   type="article"
   publishedTime={publishedAt}
   updatedTime={post.data.updatedDate}

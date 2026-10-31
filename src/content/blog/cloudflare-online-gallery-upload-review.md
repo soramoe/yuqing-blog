@@ -6,6 +6,7 @@ publishedAt: 2026-10-28T19:58:19+08:00
 category: "日常"
 tags: ["Cloudflare", "R2", "D1", "图库", "审核"]
 cover: "/gallery/20261018_044543_3daa263e2b83_1.png"
+hideCover: true
 draft: false
 ---
 

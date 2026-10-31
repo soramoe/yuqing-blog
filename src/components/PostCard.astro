@@ -15,7 +15,8 @@ interface Props {
 
 const { post, index = 0 } = Astro.props;
 const publishedAt = getPostPublishedAt(post);
-const cover = post.data.cover
+const showCover = Boolean(post.data.cover && !post.data.hideCover);
+const cover = showCover && post.data.cover
   ? getResponsiveImage(post.data.cover, [480, 960, 1440])
   : null;
 ---
@@ -31,7 +32,7 @@ const cover = post.data.cover
       aria-label={`阅读《${post.data.title}》`}
     >
       {
-        post.data.cover && cover ? (
+        showCover && cover ? (
           <img
             src={cover.src}
             srcset={cover.srcSet}

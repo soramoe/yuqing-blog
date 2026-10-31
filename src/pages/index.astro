@@ -120,7 +120,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                     <span class="home-post-description">{post.data.description}</span>
                   </span>
                   <span class="home-post-thumb" aria-hidden="true">
-                    {post.data.cover ? (
+                    {post.data.cover && !post.data.hideCover ? (
                       <img
                         src={getResponsiveImage(post.data.cover, [480, 960]).src}
                         srcset={getResponsiveImage(post.data.cover, [480, 960]).srcSet}
