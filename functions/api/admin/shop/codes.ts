@@ -4,6 +4,7 @@ import { isCommentAdmin } from "../../../../src/lib/comment-admin";
 import {
   generateRedemptionCode,
   hashRedemptionCode,
+  isValidRedemptionCode,
   maskRedemptionCode,
 } from "../../../../src/lib/shop";
 
@@ -35,17 +36,34 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   } catch {
     return json({ error: "请求内容格式无效。" }, 400);
   }
-  const input = payload as { amount?: unknown; count?: unknown };
+  const input = payload as {
+    amount?: unknown;
+    count?: unknown;
+    customCode?: unknown;
+  };
   const amount =
     typeof input.amount === "number" ? Math.trunc(input.amount) : NaN;
   const count =
     typeof input.count === "number" ? Math.trunc(input.count) : NaN;
+  const customCode =
+    typeof input.customCode === "string"
+      ? input.customCode.normalize("NFKC").trim()
+      : "";
 
   if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100_000) {
     return json({ error: "积分数量必须是 1 到 100000 的整数。" }, 400);
   }
   if (!Number.isSafeInteger(count) || count < 1 || count > 20) {
     return json({ error: "每次可以生成 1 到 20 个兑换码。" }, 400);
+  }
+  if (customCode && count !== 1) {
+    return json({ error: "自定义兑换码每次只能生成 1 个。" }, 400);
+  }
+  if (customCode && !isValidRedemptionCode(customCode)) {
+    return json(
+      { error: "自定义兑换码需要 6 到 40 个英文字母、数字或中文字符。" },
+      400,
+    );
   }
 
   const now = Date.now();
@@ -58,7 +76,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const statements: D1PreparedStatement[] = [];
 
   for (let index = 0; index < count; index += 1) {
-    const code = generateRedemptionCode();
+    const code = customCode || generateRedemptionCode();
     const codeHash = await hashRedemptionCode(code);
     const id = crypto.randomUUID();
     codes.push({ code, mask: maskRedemptionCode(code), id });
@@ -83,7 +101,14 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
     await env.DB.batch(statements);
   } catch {
-    return json({ error: "兑换码生成失败，请重试。" }, 500);
+    return json(
+      {
+        error: customCode
+          ? "这个自定义兑换码已经存在，请换一个。"
+          : "兑换码生成失败，请重试。",
+      },
+      customCode ? 409 : 500,
+    );
   }
 
   return json(

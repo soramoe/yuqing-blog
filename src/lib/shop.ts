@@ -56,7 +56,15 @@ export interface AdminShopResponse {
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 export function normalizeRedemptionCode(value: string) {
-  return value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  return value
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}]/gu, "")
+    .toLocaleUpperCase("en-US");
+}
+
+export function isValidRedemptionCode(value: string) {
+  const normalized = normalizeRedemptionCode(value);
+  return normalized.length >= 6 && normalized.length <= 40;
 }
 
 export function generateRedemptionCode() {
@@ -68,7 +76,8 @@ export function generateRedemptionCode() {
 
 export function maskRedemptionCode(code: string) {
   const normalized = normalizeRedemptionCode(code);
-  return `${normalized.slice(0, 4)}••••${normalized.slice(-4)}`;
+  const characters = Array.from(normalized);
+  return `${characters.slice(0, 4).join("")}••••${characters.slice(-4).join("")}`;
 }
 
 export async function hashRedemptionCode(code: string) {

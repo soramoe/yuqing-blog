@@ -50,7 +50,7 @@ import "../../styles/admin-shop.css";
             <p class="eyebrow">POINT CODES</p>
             <h2 id="code-generator-title">生成积分兑换码</h2>
           </div>
-          <span>一次最多生成 20 个</span>
+          <span>支持英文、数字和中文混合</span>
         </div>
         <form class="admin-shop-code-form" data-admin-code-form>
           <label>
@@ -75,6 +75,18 @@ import "../../styles/admin-shop.css";
               value="1"
               data-code-count
               required
+            />
+          </label>
+          <label>
+            <span>自定义兑换码（可选）</span>
+            <input
+              type="text"
+              minlength="6"
+              maxlength="40"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="例如：Moon渔渔2026"
+              data-code-custom
             />
           </label>
           <button type="submit">生成兑换码</button>
@@ -228,6 +240,9 @@ import "../../styles/admin-shop.css";
   const codeForm = document.querySelector<HTMLFormElement>("[data-admin-code-form]");
   const amountInput = document.querySelector<HTMLInputElement>("[data-code-amount]");
   const countInput = document.querySelector<HTMLInputElement>("[data-code-count]");
+  const customCodeInput = document.querySelector<HTMLInputElement>(
+    "[data-code-custom]",
+  );
   const codeResult = document.querySelector<HTMLElement>("[data-code-result]");
   const codeOutput = document.querySelector<HTMLTextAreaElement>("[data-code-output]");
   const copyCodes = document.querySelector<HTMLButtonElement>("[data-copy-codes]");
@@ -488,6 +503,7 @@ import "../../styles/admin-shop.css";
     event.preventDefault();
     const amount = Number(amountInput?.value);
     const count = Number(countInput?.value);
+    const customCode = customCodeInput?.value.normalize("NFKC").trim() ?? "";
     if (!Number.isInteger(amount) || amount < 1) {
       setStatus("请输入正确的积分数量。", "error");
       return;
@@ -496,17 +512,22 @@ import "../../styles/admin-shop.css";
       setStatus("生成数量需要在 1 到 20 之间。", "error");
       return;
     }
+    if (customCode && count !== 1) {
+      setStatus("自定义兑换码每次只能生成 1 个。", "error");
+      return;
+    }
     const submit = codeForm.querySelector<HTMLButtonElement>("button[type=submit]");
     if (submit) submit.disabled = true;
     setStatus("正在生成兑换码…");
     try {
       if (previewMode) {
-        const prefix = "YQPREVIEW";
-        latestCodes = Array.from(
-          { length: count },
-          (_, index) =>
-            `${prefix.slice(0, 2)}-${String(amount).padStart(4, "0")}-${String(index + 1).padStart(4, "0")}-DEMO-${crypto.randomUUID().slice(0, 4).toUpperCase()}`,
-        );
+        latestCodes = customCode
+          ? [customCode]
+          : Array.from(
+              { length: count },
+              (_, index) =>
+                `YQ-${String(amount).padStart(4, "0")}-${String(index + 1).padStart(4, "0")}-DEMO-${crypto.randomUUID().slice(0, 4).toUpperCase()}`,
+            );
         if (codeOutput) codeOutput.value = latestCodes.join("\n");
         if (codeResult) codeResult.hidden = false;
         setStatus(`预览：已生成 ${count} 个 ${amount} 积分兑换码。`, "success");
@@ -520,7 +541,7 @@ import "../../styles/admin-shop.css";
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ amount, count }),
+        body: JSON.stringify({ amount, count, customCode }),
       });
       const payload = await readJson<{
         error?: string;
@@ -533,6 +554,7 @@ import "../../styles/admin-shop.css";
       latestCodes = payload.codes.map((item) => item.code);
       if (codeOutput) codeOutput.value = latestCodes.join("\n");
       if (codeResult) codeResult.hidden = false;
+      if (customCodeInput) customCodeInput.value = "";
       await loadAdminShop();
       setStatus(`已生成 ${latestCodes.length} 个 ${payload.amount ?? amount} 积分兑换码。`, "success");
     } catch (error) {
