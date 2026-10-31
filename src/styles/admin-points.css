@@ -208,6 +208,10 @@
   grid-column: 1 / -1;
 }
 
+.admin-operation-form [hidden] {
+  display: none;
+}
+
 .admin-operation-form input,
 .admin-operation-form textarea,
 .admin-operation-form select,

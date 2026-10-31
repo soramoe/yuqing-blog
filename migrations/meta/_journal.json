@@ -148,6 +148,13 @@
       "when": 1793431200000,
       "tag": "0020_campaign_codes_announcements",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1793433900000,
+      "tag": "0021_announcement_priority_location",
+      "breakpoints": true
     }
   ]
 }

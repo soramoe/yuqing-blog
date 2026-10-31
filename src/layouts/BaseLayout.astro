@@ -44,7 +44,9 @@ const rssUrl = new URL("/rss.xml", Astro.site ?? Astro.url);
 const aboutUrl = new URL("/about/", siteUrl);
 const showSearchIsland =
   type !== "article" && Astro.url.pathname.startsWith("/blog/");
-const showAnnouncements = !Astro.url.pathname.startsWith("/admin/");
+const showAnnouncements =
+  !Astro.url.pathname.startsWith("/admin/") &&
+  !Astro.url.pathname.startsWith("/announcements");
 const websiteId = new URL("/#website", siteUrl).toString();
 
 const websiteEntity = {

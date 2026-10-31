@@ -16,6 +16,8 @@ export const siteAnnouncement = sqliteTable(
     body: text("body").notNull(),
     type: text("type").default("info").notNull(),
     placement: text("placement").default("site").notNull(),
+    priority: integer("priority").default(0).notNull(),
+    targetPath: text("target_path"),
     linkUrl: text("link_url"),
     linkText: text("link_text"),
     active: integer("active", { mode: "boolean" }).default(true).notNull(),

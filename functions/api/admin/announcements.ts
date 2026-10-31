@@ -6,6 +6,7 @@ import type {
   AnnouncementPlacement,
   AnnouncementType,
 } from "../../../src/lib/announcements";
+import { normalizeAnnouncementPath } from "../../../src/lib/announcements";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -30,6 +31,7 @@ const allowedPlacements = new Set<AnnouncementPlacement>([
   "site",
   "points",
   "shop",
+  "custom",
 ]);
 
 const optionalTimestamp = (value: unknown) => {
@@ -55,6 +57,7 @@ const listAnnouncements = async (db: D1Database) => {
     .prepare(
       `SELECT
          id, title, body, type, placement,
+         priority, target_path AS targetPath,
          link_url AS linkUrl, link_text AS linkText, active,
          starts_at AS startsAt, ends_at AS endsAt,
          created_at AS createdAt, updated_at AS updatedAt
@@ -65,6 +68,11 @@ const listAnnouncements = async (db: D1Database) => {
     .all<AnnouncementRow>();
   return result.results.map((row) => ({
     ...row,
+    type: row.type as AnnouncementType,
+    placement: row.targetPath
+      ? "custom"
+      : (row.placement as AnnouncementPlacement),
+    priority: Number(row.priority),
     active: Boolean(row.active),
     startsAt: row.startsAt ? Number(row.startsAt) : null,
     endsAt: row.endsAt ? Number(row.endsAt) : null,
@@ -140,6 +148,16 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const body = typeof input.body === "string" ? input.body.trim() : "";
   const type = input.type as AnnouncementType;
   const placement = input.placement as AnnouncementPlacement;
+  const priority =
+    input.priority === undefined || input.priority === null
+      ? 0
+      : Number(input.priority);
+  const rawTargetPath =
+    typeof input.targetPath === "string" ? input.targetPath : "";
+  const targetPath =
+    placement === "custom"
+      ? normalizeAnnouncementPath(rawTargetPath)
+      : null;
   const linkUrl =
     typeof input.linkUrl === "string" ? input.linkUrl.trim() : "";
   const linkText =
@@ -160,6 +178,22 @@ export const onRequest: PagesFunction<Env> = async (context) => {
     return json({ error: "公告展示位置无效。" }, 400);
   }
   if (
+    !Number.isSafeInteger(priority) ||
+    priority < 0 ||
+    priority > 100
+  ) {
+    return json({ error: "公告优先级需要是 0 到 100 的整数。" }, 400);
+  }
+  if (
+    placement === "custom" &&
+    (!targetPath || targetPath === "/")
+  ) {
+    return json(
+      { error: "指定页面公告需要填写有效的站内路径。" },
+      400,
+    );
+  }
+  if (
     linkUrl &&
     (linkUrl.length > 500 || !/^(https:\/\/|\/)/i.test(linkUrl))
   ) {
@@ -177,18 +211,22 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   const now = Date.now();
   const id = crypto.randomUUID();
+  const storedPlacement = placement === "custom" ? "site" : placement;
   await env.DB.prepare(
     `INSERT INTO site_announcement
-      (id, title, body, type, placement, link_url, link_text, active,
-       starts_at, ends_at, created_by_user_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`,
+      (id, title, body, type, placement, priority, target_path,
+       link_url, link_text, active, starts_at, ends_at,
+       created_by_user_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?, ?, ?, ?)`,
   )
     .bind(
       id,
       title,
       body,
       type,
-      placement,
+      storedPlacement,
+      priority,
+      targetPath,
       linkUrl || null,
       linkText || (linkUrl ? "查看详情" : null),
       startsAt,

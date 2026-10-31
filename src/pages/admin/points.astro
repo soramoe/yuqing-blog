@@ -232,7 +232,30 @@ import "../../styles/admin-points.css";
               <option value="site">全站</option>
               <option value="points">积分页</option>
               <option value="shop">兑换页</option>
+              <option value="custom">指定页面</option>
             </select>
+          </label>
+          <label data-announcement-path-wrap hidden>
+            <span>站内路径</span>
+            <input
+              type="text"
+              maxlength="200"
+              list="announcement-page-locations"
+              placeholder="/stories/"
+              data-announcement-path
+            />
+          </label>
+          <label>
+            <span>优先级（0–100）</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              inputmode="numeric"
+              value="0"
+              data-announcement-priority
+            />
           </label>
           <label>
             <span>链接地址（可选）</span>
@@ -262,6 +285,16 @@ import "../../styles/admin-points.css";
           </label>
           <button type="submit">发布公告</button>
         </form>
+        <datalist id="announcement-page-locations">
+          <option value="/"></option>
+          <option value="/account/"></option>
+          <option value="/blog/"></option>
+          <option value="/gallery/"></option>
+          <option value="/stories/"></option>
+          <option value="/games/"></option>
+          <option value="/shop/"></option>
+          <option value="/points/"></option>
+        </datalist>
 
         <div class="admin-operation-list" data-announcement-list></div>
       </section>
@@ -392,6 +425,15 @@ import "../../styles/admin-points.css";
   );
   const announcementPlacement = document.querySelector<HTMLSelectElement>(
     "[data-announcement-placement]",
+  );
+  const announcementPathWrap = document.querySelector<HTMLElement>(
+    "[data-announcement-path-wrap]",
+  );
+  const announcementPath = document.querySelector<HTMLInputElement>(
+    "[data-announcement-path]",
+  );
+  const announcementPriority = document.querySelector<HTMLInputElement>(
+    "[data-announcement-priority]",
   );
   const announcementLinkUrl = document.querySelector<HTMLInputElement>(
     "[data-announcement-link-url]",
@@ -629,6 +671,7 @@ import "../../styles/admin-points.css";
       site: "全站",
       points: "积分页",
       shop: "兑换页",
+      custom: "指定页面",
     };
     const types: Record<AnnouncementType, string> = {
       info: "普通",
@@ -642,7 +685,10 @@ import "../../styles/admin-points.css";
     const end = announcement.endsAt
       ? `结束 ${formatDate(announcement.endsAt)}`
       : "长期有效";
-    meta.textContent = `${placements[announcement.placement]} · ${types[announcement.type]} · ${time} · ${end}`;
+    const location =
+      announcement.targetPath ??
+      placements[announcement.placement];
+    meta.textContent = `${location} · ${types[announcement.type]} · 优先级 ${announcement.priority} · ${time} · ${end}`;
     main.append(heading, body, meta);
 
     const actions = document.createElement("div");
@@ -944,6 +990,17 @@ import "../../styles/admin-points.css";
     }
   });
 
+  const syncAnnouncementLocation = () => {
+    const custom = announcementPlacement?.value === "custom";
+    if (announcementPathWrap) announcementPathWrap.hidden = !custom;
+    if (announcementPath) announcementPath.required = custom;
+  };
+  announcementPlacement?.addEventListener(
+    "change",
+    syncAnnouncementLocation,
+  );
+  syncAnnouncementLocation();
+
   announcementForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (
@@ -951,6 +1008,8 @@ import "../../styles/admin-points.css";
       !announcementBody ||
       !announcementType ||
       !announcementPlacement ||
+      !announcementPath ||
+      !announcementPriority ||
       !announcementLinkUrl ||
       !announcementLinkText
     ) {
@@ -977,6 +1036,8 @@ import "../../styles/admin-points.css";
           body: announcementBody.value.trim(),
           type: announcementType.value,
           placement: announcementPlacement.value,
+          targetPath: announcementPath.value.trim(),
+          priority: Number(announcementPriority.value || 0),
           linkUrl: announcementLinkUrl.value.trim(),
           linkText: announcementLinkText.value.trim(),
           startsAt,
@@ -986,6 +1047,7 @@ import "../../styles/admin-points.css";
       announcements = payload.announcements;
       renderOperations();
       announcementForm.reset();
+      syncAnnouncementLocation();
       setStatus("站点公告已发布。", "success");
     } catch (error) {
       setStatus(
