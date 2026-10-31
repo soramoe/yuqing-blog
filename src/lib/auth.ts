@@ -46,6 +46,14 @@ export function createAuth(env: AuthEnv, requestUrl: URL) {
       },
     ),
     socialProviders: github ? { github } : undefined,
+    emailAndPassword: {
+      enabled: true,
+      disableSignUp: true,
+      minPasswordLength: 10,
+      maxPasswordLength: 128,
+      requireEmailVerification: false,
+      revokeSessionsOnPasswordReset: true,
+    },
     plugins: [
       emailOTP({
         otpLength: 6,
@@ -60,7 +68,12 @@ export function createAuth(env: AuthEnv, requestUrl: URL) {
           await sendOtpEmail(env, {
             email,
             otp,
-            purpose: type === "email-verification" ? "bind-email" : "login",
+            purpose:
+              type === "email-verification"
+                ? "bind-email"
+                : type === "forget-password"
+                  ? "reset-password"
+                  : "login",
           });
         },
       }),

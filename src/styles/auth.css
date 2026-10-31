@@ -186,6 +186,33 @@
   content: "";
 }
 
+.auth-methods {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  grid-template-columns: 1fr 1fr;
+}
+
+.auth-methods button {
+  min-height: 36px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.auth-methods button:hover,
+.auth-methods button.is-active {
+  background: var(--surface);
+  color: var(--text);
+}
+
 .auth-email-form,
 .auth-code-form {
   display: grid;
@@ -250,8 +277,21 @@
   text-align: center;
 }
 
-.auth-code-form[hidden] {
+.auth-code-form[hidden],
+.auth-password-form[hidden],
+.auth-otp-panel[hidden] {
   display: none;
+}
+
+.auth-inline-link {
+  justify-self: end;
+  border-bottom: 1px solid currentColor;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.auth-inline-link:hover {
+  color: var(--accent);
 }
 
 .auth-resend-code {
@@ -274,6 +314,10 @@
 
 .auth-status[data-state="error"] {
   color: #e38276;
+}
+
+.auth-status[data-state="success"] {
+  color: #79bd93;
 }
 
 .auth-back {
@@ -518,7 +562,8 @@
 }
 
 .account-method-row button,
-.account-email-bind-form button {
+.account-email-bind-form button,
+.account-password-form button {
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid var(--border);
@@ -530,13 +575,15 @@
 }
 
 .account-method-row button:hover,
-.account-email-bind-form button:hover:not(:disabled) {
+.account-email-bind-form button:hover:not(:disabled),
+.account-password-form button:hover:not(:disabled) {
   border-color: var(--accent);
   color: var(--accent);
 }
 
 .account-method-row button:disabled,
-.account-email-bind-form button:disabled {
+.account-email-bind-form button:disabled,
+.account-password-form button:disabled {
   cursor: wait;
   opacity: 0.55;
 }
@@ -550,14 +597,16 @@
   background: var(--background);
 }
 
-.account-email-bind-form label {
+.account-email-bind-form label,
+.account-password-form label {
   display: grid;
   gap: 5px;
   color: var(--muted);
   font-size: 0.62rem;
 }
 
-.account-email-bind-form input {
+.account-email-bind-form input,
+.account-password-form input {
   min-height: 42px;
   padding: 0 11px;
   border: 1px solid var(--border);
@@ -567,7 +616,8 @@
   font-size: 0.74rem;
 }
 
-.account-email-bind-form input:focus {
+.account-email-bind-form input:focus,
+.account-password-form input:focus {
   border-color: var(--accent);
 }
 
@@ -585,6 +635,37 @@
 .account-email-bind-form [data-bind-code] {
   font-family: Consolas, monospace;
   letter-spacing: 0.16em;
+}
+
+.account-password-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px dashed var(--strong-border);
+  background: var(--background);
+}
+
+.account-password-form[hidden],
+.account-password-form [hidden] {
+  display: none;
+}
+
+.account-password-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.account-password-actions a {
+  border-bottom: 1px solid currentColor;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.account-password-actions a:hover {
+  color: var(--accent);
 }
 
 .account-admin-tools {

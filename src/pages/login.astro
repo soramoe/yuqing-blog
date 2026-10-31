@@ -4,12 +4,12 @@ import AuthLayout from "../components/AuthLayout.astro";
 
 <AuthLayout
   title="登录渔情"
-  description="使用 GitHub 登录渔情。登录后才能参与后续开放的评论、签到和积分功能。"
+  description="使用邮箱密码、邮箱验证码或 GitHub 登录渔情。"
   eyebrow="MEMBER ACCESS"
 >
   <p class="auth-description">
-    可以使用 GitHub，也可以使用邮箱验证码。渔情不保存邮箱密码，登录状态会通过安全的
-    HttpOnly Cookie 保存 30 天。
+    可以使用 GitHub，也可以使用邮箱。首次使用邮箱时用验证码注册，登录后设置密码，
+    之后即可使用邮箱和密码登录。登录状态会通过安全的 HttpOnly Cookie 保存 30 天。
   </p>
 
   <button class="auth-button" type="button" data-github-login>
@@ -17,9 +17,29 @@ import AuthLayout from "../components/AuthLayout.astro";
     使用 GitHub 登录
   </button>
 
-  <div class="auth-divider"><span>或使用邮箱验证码</span></div>
+  <div class="auth-divider"><span>或使用邮箱</span></div>
 
-  <form class="auth-email-form" data-email-form>
+  <div class="auth-methods" role="tablist" aria-label="邮箱登录方式">
+    <button
+      class="is-active"
+      type="button"
+      role="tab"
+      aria-selected="true"
+      data-login-method="password"
+    >
+      密码登录
+    </button>
+    <button
+      type="button"
+      role="tab"
+      aria-selected="false"
+      data-login-method="otp"
+    >
+      验证码登录
+    </button>
+  </div>
+
+  <form class="auth-email-form auth-password-form" data-password-form>
     <label>
       <span>邮箱地址</span>
       <input
@@ -29,34 +49,72 @@ import AuthLayout from "../components/AuthLayout.astro";
         autocomplete="email"
         placeholder="name@example.com"
         required
-        data-email-input
+        data-password-email
       />
     </label>
-    <button type="button" data-send-code>发送验证码</button>
+    <label>
+      <span>登录密码</span>
+      <input
+        type="password"
+        name="password"
+        minlength="10"
+        maxlength="128"
+        autocomplete="current-password"
+        placeholder="输入登录密码"
+        required
+        data-password-input
+      />
+    </label>
+    <button type="submit" data-password-submit>登录</button>
+    <a class="auth-inline-link" href="/forgot-password/" data-forgot-password>
+      忘记密码？
+    </a>
   </form>
 
-  <div class="auth-code-form" data-code-form hidden>
-    <label>
-      <span>6 位验证码</span>
-      <input
-        type="text"
-        name="otp"
-        inputmode="numeric"
-        autocomplete="one-time-code"
-        pattern="[0-9]{6}"
-        maxlength="6"
-        placeholder="000000"
-        data-code-input
-      />
-    </label>
-    <button type="button" data-verify-code>验证并登录</button>
-    <button class="auth-resend-code" type="button" data-resend-code disabled>
-      重新发送
-    </button>
+  <div class="auth-otp-panel" data-otp-panel hidden>
+    <form class="auth-email-form" data-email-form>
+      <label>
+        <span>邮箱地址</span>
+        <input
+          type="email"
+          name="email"
+          maxlength="254"
+          autocomplete="email"
+          placeholder="name@example.com"
+          required
+          data-email-input
+        />
+      </label>
+      <button type="button" data-send-code>发送验证码</button>
+    </form>
+
+    <div class="auth-code-form" data-code-form hidden>
+      <label>
+        <span>6 位验证码</span>
+        <input
+          type="text"
+          name="otp"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          pattern="[0-9]{6}"
+          maxlength="6"
+          placeholder="000000"
+          data-code-input
+        />
+      </label>
+      <button type="button" data-verify-code>验证并登录</button>
+      <button class="auth-resend-code" type="button" data-resend-code disabled>
+        重新发送
+      </button>
+    </div>
   </div>
 
+  <p class="auth-note">
+    首次使用邮箱请选择“验证码登录”。忘记密码时，也可以通过验证码重新设置。
+  </p>
+
   <p class="auth-status" data-auth-status aria-live="polite">
-    首次登录会自动创建渔情账号。验证码 10 分钟内有效。
+    验证码 10 分钟内有效，首次登录会自动创建渔情账号。
   </p>
 
   <a class="auth-back" href="/">← 返回网站</a>
@@ -65,19 +123,45 @@ import AuthLayout from "../components/AuthLayout.astro";
 <script>
   import { authClient } from "../lib/auth-client";
 
+  type LoginMethod = "password" | "otp";
+
   const button = document.querySelector<HTMLButtonElement>("[data-github-login]");
   const status = document.querySelector<HTMLElement>("[data-auth-status]");
+  const methodButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-login-method]"),
+  );
+  const passwordForm = document.querySelector<HTMLFormElement>(
+    "[data-password-form]",
+  );
+  const passwordEmail = document.querySelector<HTMLInputElement>(
+    "[data-password-email]",
+  );
+  const passwordInput = document.querySelector<HTMLInputElement>(
+    "[data-password-input]",
+  );
+  const passwordSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-password-submit]",
+  );
+  const forgotPassword = document.querySelector<HTMLAnchorElement>(
+    "[data-forgot-password]",
+  );
+  const otpPanel = document.querySelector<HTMLElement>("[data-otp-panel]");
   const emailInput = document.querySelector<HTMLInputElement>("[data-email-input]");
   const sendCode = document.querySelector<HTMLButtonElement>("[data-send-code]");
   const codeForm = document.querySelector<HTMLElement>("[data-code-form]");
   const codeInput = document.querySelector<HTMLInputElement>("[data-code-input]");
   const verifyCode = document.querySelector<HTMLButtonElement>("[data-verify-code]");
   const resendCode = document.querySelector<HTMLButtonElement>("[data-resend-code]");
-  const next = new URLSearchParams(window.location.search).get("next");
+  const query = new URLSearchParams(window.location.search);
+  const next = query.get("next");
   const callbackURL =
     next?.startsWith("/") && !next.startsWith("//") ? next : "/account/";
+  const loginMethodKey = "yq-login-method";
 
-  const setStatus = (message: string, state: "idle" | "error" = "idle") => {
+  const setStatus = (
+    message: string,
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
     if (!status) return;
     status.textContent = message;
     status.dataset.state = state;
@@ -89,6 +173,15 @@ import AuthLayout from "../components/AuthLayout.astro";
   ) => {
     const message = payload.message || payload.error || fallback;
     const normalized = message.toLowerCase();
+    if (
+      normalized.includes("invalid email or password") ||
+      normalized.includes("invalid password")
+    ) {
+      return "邮箱或密码不正确，请重新输入。";
+    }
+    if (normalized.includes("user not found")) {
+      return "账号不存在，请先使用验证码登录。";
+    }
     if (normalized.includes("invalid otp")) {
       return "验证码不正确或已过期，请重新输入。";
     }
@@ -99,6 +192,31 @@ import AuthLayout from "../components/AuthLayout.astro";
       return "操作太频繁，请稍后再试。";
     }
     return message;
+  };
+
+  const syncForgotLink = () => {
+    if (!forgotPassword) return;
+    const target = new URL("/forgot-password/", window.location.origin);
+    const email = passwordEmail?.value.trim().toLowerCase() ?? "";
+    if (email) target.searchParams.set("email", email);
+    forgotPassword.href = `${target.pathname}${target.search}`;
+  };
+
+  const setLoginMethod = (method: LoginMethod) => {
+    methodButtons.forEach((item) => {
+      const active = item.dataset.loginMethod === method;
+      item.classList.toggle("is-active", active);
+      item.setAttribute("aria-selected", String(active));
+      item.tabIndex = active ? 0 : -1;
+    });
+    if (passwordForm) passwordForm.hidden = method !== "password";
+    if (otpPanel) otpPanel.hidden = method !== "otp";
+    if (method === "password") {
+      passwordEmail?.focus();
+      syncForgotLink();
+    } else {
+      emailInput?.focus();
+    }
   };
 
   let countdownTimer = 0;
@@ -159,7 +277,7 @@ import AuthLayout from "../components/AuthLayout.astro";
         codeInput.value = "";
         codeInput.focus();
       }
-      setStatus("验证码已发送，请检查邮箱和垃圾箱。");
+      setStatus("验证码已发送，请检查邮箱和垃圾箱。", "success");
       startCooldown(60);
     } catch (error) {
       setStatus(
@@ -171,6 +289,22 @@ import AuthLayout from "../components/AuthLayout.astro";
       if (sendCode) sendCode.disabled = false;
     }
   };
+
+  const initialMethod: LoginMethod =
+    query.get("mode") === "otp"
+      ? "otp"
+      : localStorage.getItem(loginMethodKey) === "password"
+        ? "password"
+        : "otp";
+  const initialEmail = query.get("email")?.trim().toLowerCase() ?? "";
+  if (initialEmail) {
+    if (passwordEmail) passwordEmail.value = initialEmail;
+    if (emailInput) emailInput.value = initialEmail;
+  }
+  setLoginMethod(initialMethod);
+  if (query.get("reset") === "1") {
+    setStatus("密码已重置，请使用新密码登录。", "success");
+  }
 
   void authClient.getSession().then(({ data }) => {
     if (data?.user) window.location.replace(callbackURL);
@@ -191,11 +325,65 @@ import AuthLayout from "../components/AuthLayout.astro";
     }
   });
 
+  methodButtons.forEach((item) => {
+    item.addEventListener("click", () => {
+      const method = item.dataset.loginMethod === "password" ? "password" : "otp";
+      const sourceEmail =
+        method === "password" ? emailInput?.value : passwordEmail?.value;
+      if (method === "password" && passwordEmail && !passwordEmail.value) {
+        passwordEmail.value = sourceEmail?.trim() ?? "";
+      }
+      if (method === "otp" && emailInput && !emailInput.value) {
+        emailInput.value = sourceEmail?.trim() ?? "";
+      }
+      setLoginMethod(method);
+    });
+  });
+
+  passwordEmail?.addEventListener("input", syncForgotLink);
   sendCode?.addEventListener("click", () => void requestCode());
   resendCode?.addEventListener("click", () => void requestCode());
 
   codeInput?.addEventListener("input", () => {
     codeInput.value = codeInput.value.replace(/\D/g, "").slice(0, 6);
+  });
+
+  passwordForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const email = passwordEmail?.value.trim().toLowerCase() ?? "";
+    const password = passwordInput?.value ?? "";
+    if (!email || !password) {
+      setStatus("请输入邮箱和密码。", "error");
+      return;
+    }
+    if (passwordSubmit) passwordSubmit.disabled = true;
+    setStatus("正在使用邮箱密码登录…");
+    try {
+      const response = await fetch("/api/auth/sign-in/email", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password, rememberMe: true }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        message?: string;
+      };
+      if (!response.ok) {
+        throw new Error(authErrorMessage(payload, "登录失败。"));
+      }
+      localStorage.setItem(loginMethodKey, "password");
+      window.location.replace(callbackURL);
+    } catch (error) {
+      if (passwordSubmit) passwordSubmit.disabled = false;
+      setStatus(
+        error instanceof Error ? error.message : "登录失败。",
+        "error",
+      );
+    }
   });
 
   verifyCode?.addEventListener("click", async () => {
@@ -225,7 +413,33 @@ import AuthLayout from "../components/AuthLayout.astro";
       if (!response.ok) {
         throw new Error(authErrorMessage(payload, "验证码验证失败。"));
       }
-      window.location.replace(callbackURL);
+
+      let hasPassword = true;
+      try {
+        const methodResponse = await fetch("/api/account/logins", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (methodResponse.ok) {
+          const methodPayload = (await methodResponse.json()) as {
+            hasPassword?: boolean;
+          };
+          hasPassword = Boolean(methodPayload.hasPassword);
+        }
+      } catch {
+        hasPassword = true;
+      }
+
+      if (hasPassword) {
+        localStorage.setItem(loginMethodKey, "password");
+        window.location.replace(callbackURL);
+      } else {
+        const setup = new URLSearchParams({
+          setupPassword: "1",
+          next: callbackURL,
+        });
+        window.location.replace(`/account/?${setup.toString()}`);
+      }
     } catch (error) {
       verifyCode.disabled = false;
       setStatus(

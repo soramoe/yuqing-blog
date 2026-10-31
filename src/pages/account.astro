@@ -192,6 +192,54 @@ import AuthLayout from "../components/AuthLayout.astro";
               <button type="button" data-bind-verify-code>验证并领取积分</button>
             </div>
           </form>
+
+          <div class="account-method-row">
+            <div>
+              <strong>登录密码</strong>
+              <span data-password-method-status>正在读取…</span>
+            </div>
+            <button type="button" data-password-action hidden>设置密码</button>
+          </div>
+
+          <form class="account-password-form" data-account-password-form hidden>
+            <label data-current-password-wrap hidden>
+              <span>当前密码</span>
+              <input
+                type="password"
+                maxlength="128"
+                autocomplete="current-password"
+                placeholder="修改密码时需要填写"
+                data-current-password
+              />
+            </label>
+            <label>
+              <span>新密码</span>
+              <input
+                type="password"
+                minlength="10"
+                maxlength="128"
+                autocomplete="new-password"
+                placeholder="至少 10 个字符"
+                data-new-password
+              />
+            </label>
+            <label>
+              <span>确认新密码</span>
+              <input
+                type="password"
+                minlength="10"
+                maxlength="128"
+                autocomplete="new-password"
+                placeholder="再次输入新密码"
+                data-confirm-password
+              />
+            </label>
+            <div class="account-password-actions">
+              <button type="submit" data-submit-password>保存密码</button>
+              <a href="/forgot-password/">通过邮箱验证码重置</a>
+              <button type="button" data-skip-password hidden>稍后设置</button>
+            </div>
+          </form>
         </div>
       </section>
 
@@ -296,6 +344,33 @@ import AuthLayout from "../components/AuthLayout.astro";
   const bindVerifyCode = document.querySelector<HTMLButtonElement>(
     "[data-bind-verify-code]",
   );
+  const passwordMethodStatus = document.querySelector<HTMLElement>(
+    "[data-password-method-status]",
+  );
+  const passwordAction = document.querySelector<HTMLButtonElement>(
+    "[data-password-action]",
+  );
+  const passwordForm = document.querySelector<HTMLFormElement>(
+    "[data-account-password-form]",
+  );
+  const currentPasswordWrap = document.querySelector<HTMLElement>(
+    "[data-current-password-wrap]",
+  );
+  const currentPassword = document.querySelector<HTMLInputElement>(
+    "[data-current-password]",
+  );
+  const newPassword = document.querySelector<HTMLInputElement>(
+    "[data-new-password]",
+  );
+  const confirmPassword = document.querySelector<HTMLInputElement>(
+    "[data-confirm-password]",
+  );
+  const submitPassword = document.querySelector<HTMLButtonElement>(
+    "[data-submit-password]",
+  );
+  const skipPassword = document.querySelector<HTMLButtonElement>(
+    "[data-skip-password]",
+  );
   const accountGalleryList = document.querySelector<HTMLElement>(
     "[data-account-gallery-list]",
   );
@@ -305,6 +380,16 @@ import AuthLayout from "../components/AuthLayout.astro";
   const accountGalleryStatus = document.querySelector<HTMLElement>(
     "[data-account-gallery-status]",
   );
+  const accountQuery = new URLSearchParams(window.location.search);
+  const setupPasswordRequested =
+    accountQuery.get("setupPassword") === "1";
+  const requestedNext = accountQuery.get("next");
+  const passwordNext =
+    requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/account/";
+  let passwordConfigured: boolean | null = null;
+  let passwordEmailVerified = false;
 
   const galleryStatusLabels: Record<GalleryUploadStatus, string> = {
     pending: "待审核",
@@ -508,6 +593,127 @@ import AuthLayout from "../components/AuthLayout.astro";
     }
   });
 
+  const setAccountStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+  };
+
+  const updatePasswordUi = () => {
+    if (passwordConfigured === null) return;
+    if (passwordMethodStatus) {
+      passwordMethodStatus.textContent = !passwordEmailVerified
+        ? "绑定并验证邮箱后可以设置"
+        : passwordConfigured
+          ? "已设置 · 可使用邮箱密码登录"
+          : "尚未设置 · 当前使用验证码登录";
+    }
+    if (passwordAction) {
+      passwordAction.hidden = !passwordEmailVerified;
+      passwordAction.textContent = passwordConfigured ? "修改密码" : "设置密码";
+    }
+    if (currentPasswordWrap) {
+      currentPasswordWrap.hidden = !passwordConfigured;
+    }
+    if (currentPassword) currentPassword.required = passwordConfigured;
+    if (submitPassword) {
+      submitPassword.textContent = passwordConfigured ? "修改密码" : "设置密码";
+    }
+    if (skipPassword) {
+      skipPassword.hidden = !(
+        setupPasswordRequested && passwordConfigured === false
+      );
+    }
+  };
+
+  const openPasswordForm = () => {
+    if (!passwordEmailVerified) {
+      setAccountStatus("请先绑定并验证邮箱，再设置登录密码。", "error");
+      return;
+    }
+    if (passwordForm) passwordForm.hidden = false;
+    updatePasswordUi();
+    (passwordConfigured ? currentPassword : newPassword)?.focus();
+  };
+
+  passwordAction?.addEventListener("click", openPasswordForm);
+
+  passwordForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const nextPassword = newPassword?.value ?? "";
+    const confirmation = confirmPassword?.value ?? "";
+    if (nextPassword.length < 10) {
+      setAccountStatus("新密码至少需要 10 个字符。", "error");
+      return;
+    }
+    if (nextPassword !== confirmation) {
+      setAccountStatus("两次输入的新密码不一致。", "error");
+      return;
+    }
+    if (passwordConfigured && !currentPassword?.value) {
+      setAccountStatus("请输入当前密码。", "error");
+      return;
+    }
+
+    if (submitPassword) submitPassword.disabled = true;
+    setAccountStatus(passwordConfigured ? "正在修改密码…" : "正在设置密码…");
+    try {
+      const response = await fetch(
+        passwordConfigured
+          ? "/api/auth/change-password"
+          : "/api/account/password",
+        {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          newPassword: nextPassword,
+          ...(passwordConfigured
+            ? {
+                currentPassword: currentPassword?.value ?? "",
+                revokeOtherSessions: true,
+              }
+            : {}),
+        }),
+        },
+      );
+      const payload = (await response.json()) as {
+        error?: string;
+        hasPassword?: boolean;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "登录密码保存失败。");
+      }
+
+      passwordConfigured = true;
+      localStorage.setItem("yq-login-method", "password");
+      passwordForm.reset();
+      if (passwordForm) passwordForm.hidden = true;
+      updatePasswordUi();
+      setAccountStatus("登录密码已保存，下次可以使用邮箱和密码登录。", "success");
+      if (setupPasswordRequested && passwordNext !== "/account/") {
+        window.setTimeout(() => window.location.replace(passwordNext), 900);
+      }
+    } catch (error) {
+      setAccountStatus(
+        error instanceof Error ? error.message : "登录密码保存失败。",
+        "error",
+      );
+    } finally {
+      if (submitPassword) submitPassword.disabled = false;
+    }
+  });
+
+  skipPassword?.addEventListener("click", () => {
+    window.location.replace(passwordNext);
+  });
+
   const { data, error } = await authClient.getSession();
 
   if (error || !data?.user) {
@@ -556,6 +762,7 @@ import AuthLayout from "../components/AuthLayout.astro";
       const methods = (await response.json()) as {
         email: string;
         emailVerified: boolean;
+        hasPassword: boolean;
         hasGitHub: boolean;
         githubLinkedLater: boolean;
         emailBindingRewardClaimed: boolean;
@@ -586,6 +793,12 @@ import AuthLayout from "../components/AuthLayout.astro";
       if (linkGitHub) linkGitHub.hidden = !methods.canLinkGitHub;
       if (showEmailBind) showEmailBind.hidden = !methods.canBindEmail;
       if (bindEmail) bindEmail.value = methods.email;
+      passwordConfigured = methods.hasPassword;
+      passwordEmailVerified = methods.emailVerified;
+      updatePasswordUi();
+      if (setupPasswordRequested && !methods.hasPassword) {
+        openPasswordForm();
+      }
 
       if (
         methods.hasGitHub &&
@@ -669,7 +882,7 @@ import AuthLayout from "../components/AuthLayout.astro";
     });
   });
 
-  activateAccountTab("overview");
+  activateAccountTab(setupPasswordRequested ? "methods" : "overview");
 
   signOut?.addEventListener("click", async () => {
     signOut.disabled = true;

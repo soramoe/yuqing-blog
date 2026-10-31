@@ -5,6 +5,7 @@ import { hasBindingReward } from "../../../src/lib/binding-rewards";
 interface AccountRow {
   providerId: string;
   createdAt: number;
+  hasPassword: number;
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
@@ -21,7 +22,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   const accountsResult = await env.DB.prepare(
-    `SELECT provider_id AS providerId, created_at AS createdAt
+    `SELECT
+       provider_id AS providerId,
+       created_at AS createdAt,
+       CASE WHEN password IS NOT NULL AND password != '' THEN 1 ELSE 0 END
+         AS hasPassword
      FROM account
      WHERE user_id = ?
      ORDER BY created_at`,
@@ -30,6 +35,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     .all<AccountRow>();
   const githubAccount = accountsResult.results.find(
     (account) => account.providerId === "github",
+  );
+  const credentialAccount = accountsResult.results.find(
+    (account) => account.providerId === "credential",
   );
   const [emailReward, githubReward] = await Promise.all([
     hasBindingReward(env.DB, session.user.id, "email"),
@@ -45,6 +53,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
     JSON.stringify({
       email: session.user.email,
       emailVerified: session.user.emailVerified,
+      hasPassword: Boolean(credentialAccount?.hasPassword),
       hasGitHub: Boolean(githubAccount),
       githubLinkedLater: Boolean(linkedLater),
       emailBindingRewardClaimed: emailReward,

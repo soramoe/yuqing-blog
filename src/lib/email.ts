@@ -6,7 +6,7 @@ interface EmailEnv {
 interface OtpEmail {
   email: string;
   otp: string;
-  purpose: "login" | "bind-email";
+  purpose: "login" | "bind-email" | "reset-password";
 }
 
 const escapeHtml = (value: string) =>
@@ -23,7 +23,11 @@ export async function sendOtpEmail(env: EmailEnv, input: OtpEmail) {
   }
 
   const action =
-    input.purpose === "login" ? "登录渔情" : "绑定渔情邮箱";
+    input.purpose === "login"
+      ? "登录渔情"
+      : input.purpose === "reset-password"
+        ? "重置渔情密码"
+        : "绑定渔情邮箱";
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
