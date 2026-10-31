@@ -453,6 +453,19 @@ export const STORY_TEMPLATES: StoryTemplate[] = [
           inventory: ["商业计划书", "合伙人名片"],
         },
       },
+      {
+        id: "entertainment",
+        title: "文娱新星",
+        description: "一次临时试镜让你站到聚光灯边缘，成名与失去自我只隔一场舆论。",
+        initialState: {
+          day: 1,
+          money: 5000,
+          energy: 90,
+          reputation: 5,
+          clues: 0,
+          inventory: ["试镜通知", "旧录音"],
+        },
+      },
     ],
   },
   {
@@ -499,6 +512,18 @@ export const STORY_TEMPLATES: StoryTemplate[] = [
           suspicion: 10,
           clues: 1,
           inventory: ["录音笔", "县志抄本"],
+        },
+      },
+      {
+        id: "supernatural",
+        title: "鬼怪灵异",
+        description: "你误闯一场不该出现的夜祭，从此能看见藏在人群里的东西。",
+        initialState: {
+          day: 1,
+          sanity: 80,
+          suspicion: 15,
+          clues: 1,
+          inventory: ["沾灰的符纸", "半截红蜡烛"],
         },
       },
     ],
