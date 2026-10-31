@@ -29,18 +29,18 @@ import "../styles/shop.css";
       <form class="shop-code-form" data-shop-code-form>
         <div>
           <p class="eyebrow">CODE REDEEM</p>
-          <h2>兑换积分码</h2>
-          <p>输入站长生成的兑换码，积分会立即到账。</p>
+          <h2>积分兑换码</h2>
+          <p>支持一次性兑换码和公开活动码，每个活动码每个账号限领一次。</p>
         </div>
         <label>
           <span class="sr-only">积分兑换码</span>
           <input
             type="text"
             name="code"
-            maxlength="32"
+            maxlength="40"
             autocomplete="off"
             spellcheck="false"
-            placeholder="YQ-XXXX-XXXX-XXXX-XXXX"
+            placeholder="例如 Moon渔渔"
             data-shop-code
             required
           />
@@ -328,7 +328,7 @@ import "../styles/shop.css";
   };
 
   codeInput?.addEventListener("input", () => {
-    codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9-]/g, "");
+    codeInput.value = codeInput.value.slice(0, 40);
   });
 
   grid?.addEventListener("click", async (event) => {
@@ -407,8 +407,8 @@ import "../styles/shop.css";
       return;
     }
     const code = codeInput?.value.trim() ?? "";
-    if (code.length < 12) {
-      setStatus("请输入完整的积分兑换码。", "error");
+    if (code.length < 2) {
+      setStatus("请输入完整的兑换码或活动码。", "error");
       return;
     }
     const submit = codeForm.querySelector<HTMLButtonElement>("button[type=submit]");
@@ -439,11 +439,17 @@ import "../styles/shop.css";
       const payload = await readJson<{
         error?: string;
         amount?: number;
+        campaignName?: string;
       }>(response);
       if (!response.ok) throw new Error(payload.error || "兑换码使用失败。");
       await loadShop();
       if (codeInput) codeInput.value = "";
-      setStatus(`兑换成功，获得 ${payload.amount ?? 0} 积分。`, "success");
+      setStatus(
+        payload.campaignName
+          ? `“${payload.campaignName}”兑换成功，获得 ${payload.amount ?? 0} 积分。`
+          : `兑换成功，获得 ${payload.amount ?? 0} 积分。`,
+        "success",
+      );
     } catch (error) {
       setStatus(
         error instanceof Error ? error.message : "兑换码使用失败。",

@@ -93,3 +93,68 @@ export const pointRedemptionCode = sqliteTable(
     check("point_redemption_code_amount_positive", sql`${table.amount} > 0`),
   ],
 );
+
+export const pointCampaignCode = sqliteTable(
+  "point_campaign_code",
+  {
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    code: text("code").notNull(),
+    codeKey: text("code_key").notNull(),
+    amount: integer("amount").notNull(),
+    maxRedemptions: integer("max_redemptions"),
+    redeemedCount: integer("redeemed_count").default(0).notNull(),
+    active: integer("active", { mode: "boolean" }).default(true).notNull(),
+    startsAt: integer("starts_at", { mode: "timestamp_ms" }),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("point_campaign_code_key_unique").on(table.codeKey),
+    index("point_campaign_code_active_created_idx").on(
+      table.active,
+      table.createdAt,
+    ),
+    check("point_campaign_code_amount_positive", sql`${table.amount} > 0`),
+    check(
+      "point_campaign_code_limit_positive",
+      sql`${table.maxRedemptions} is null or ${table.maxRedemptions} > 0`,
+    ),
+    check(
+      "point_campaign_code_count_nonnegative",
+      sql`${table.redeemedCount} >= 0`,
+    ),
+  ],
+);
+
+export const pointCampaignRedemption = sqliteTable(
+  "point_campaign_redemption",
+  {
+    id: text("id").primaryKey(),
+    campaignId: text("campaign_id")
+      .notNull()
+      .references(() => pointCampaignCode.id, { onDelete: "restrict" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    transactionId: text("transaction_id").notNull(),
+    redeemedAt: integer("redeemed_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("point_campaign_redemption_transaction_unique").on(
+      table.transactionId,
+    ),
+    uniqueIndex("point_campaign_redemption_user_unique").on(
+      table.campaignId,
+      table.userId,
+    ),
+    index("point_campaign_redemption_campaign_time_idx").on(
+      table.campaignId,
+      table.redeemedAt,
+    ),
+  ],
+);

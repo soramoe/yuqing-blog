@@ -1,0 +1,198 @@
+---
+const pathname = Astro.url.pathname;
+const placement = pathname.startsWith("/points")
+  ? "points"
+  : pathname.startsWith("/shop")
+    ? "shop"
+    : "site";
+---
+
+<aside
+  class="site-announcement"
+  data-site-announcement
+  data-placement={placement}
+  hidden
+  aria-live="polite"
+>
+  <div class="container site-announcement-inner">
+    <span class="site-announcement-label" data-announcement-label>公告</span>
+    <div class="site-announcement-copy">
+      <strong data-announcement-title></strong>
+      <span data-announcement-body></span>
+      <a data-announcement-link hidden></a>
+    </div>
+    <button type="button" data-announcement-close aria-label="关闭公告">×</button>
+  </div>
+</aside>
+
+<script>
+  import type {
+    Announcement,
+    AnnouncementType,
+  } from "../lib/announcements";
+
+  const banner = document.querySelector<HTMLElement>("[data-site-announcement]");
+  const close = document.querySelector<HTMLButtonElement>(
+    "[data-announcement-close]",
+  );
+  const title = document.querySelector<HTMLElement>("[data-announcement-title]");
+  const body = document.querySelector<HTMLElement>("[data-announcement-body]");
+  const label = document.querySelector<HTMLElement>("[data-announcement-label]");
+  const link = document.querySelector<HTMLAnchorElement>(
+    "[data-announcement-link]",
+  );
+  const placement = banner?.dataset.placement;
+  const labels: Record<AnnouncementType, string> = {
+    info: "公告",
+    success: "活动",
+    warning: "提醒",
+    maintenance: "维护",
+  };
+
+  if (import.meta.env.PROD && banner && placement) {
+    const storageKey = (id: string) => `yq-announcement-dismissed:${id}`;
+    const show = (announcement: Announcement) => {
+      if (localStorage.getItem(storageKey(announcement.id))) return;
+      banner.dataset.type = announcement.type;
+      if (label) label.textContent = labels[announcement.type] ?? "公告";
+      if (title) title.textContent = announcement.title;
+      if (body) body.textContent = announcement.body;
+      if (link) {
+        const validLink =
+          announcement.linkUrl &&
+          /^(https:\/\/|\/)/i.test(announcement.linkUrl);
+        link.hidden = !validLink;
+        if (validLink && announcement.linkUrl) {
+          link.href = announcement.linkUrl;
+          link.textContent = announcement.linkText || "查看详情";
+        }
+      }
+      banner.hidden = false;
+      close?.addEventListener(
+        "click",
+        () => {
+          localStorage.setItem(storageKey(announcement.id), "1");
+          banner.hidden = true;
+        },
+        { once: true },
+      );
+    };
+
+    fetch(`/api/announcements?placement=${encodeURIComponent(placement)}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { announcements?: Announcement[] } | null) => {
+        const announcement = payload?.announcements?.[0];
+        if (announcement) show(announcement);
+      })
+      .catch(() => undefined);
+  }
+</script>
+
+<style>
+  .site-announcement {
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--accent) 11%, var(--surface)),
+        var(--surface)
+      );
+  }
+
+  .site-announcement[data-type="success"] {
+    border-bottom-color: rgb(83 160 112 / 35%);
+  }
+
+  .site-announcement[data-type="warning"],
+  .site-announcement[data-type="maintenance"] {
+    border-bottom-color: rgb(205 125 54 / 40%);
+  }
+
+  .site-announcement-inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.8rem;
+    align-items: center;
+    min-height: 2.8rem;
+    padding-block: 0.55rem;
+  }
+
+  .site-announcement-label {
+    padding: 0.18rem 0.46rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .site-announcement-copy {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.65rem;
+    align-items: baseline;
+    min-width: 0;
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+
+  .site-announcement-copy strong {
+    color: var(--text);
+  }
+
+  .site-announcement-copy span {
+    color: var(--muted);
+  }
+
+  .site-announcement-copy a {
+    color: var(--accent);
+    font-weight: 650;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .site-announcement-copy a:hover {
+    text-decoration: underline;
+  }
+
+  .site-announcement-inner > button {
+    width: 1.85rem;
+    height: 1.85rem;
+    border: 0;
+    border-radius: 50%;
+    color: var(--muted);
+    background: transparent;
+    font-size: 1.25rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .site-announcement-inner > button:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+  }
+
+  @media (max-width: 640px) {
+    .site-announcement-inner {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 0.55rem;
+    }
+
+    .site-announcement-copy {
+      display: grid;
+      gap: 0.1rem;
+      font-size: 0.76rem;
+    }
+
+    .site-announcement-copy span {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+    }
+  }
+</style>

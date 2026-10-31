@@ -4,6 +4,7 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import BackToTop from "../components/BackToTop.astro";
 import SearchIsland from "../components/SearchIsland.astro";
+import AnnouncementBanner from "../components/AnnouncementBanner.astro";
 import { SITE } from "../site.config";
 
 interface Props {
@@ -43,6 +44,7 @@ const rssUrl = new URL("/rss.xml", Astro.site ?? Astro.url);
 const aboutUrl = new URL("/about/", siteUrl);
 const showSearchIsland =
   type !== "article" && Astro.url.pathname.startsWith("/blog/");
+const showAnnouncements = !Astro.url.pathname.startsWith("/admin/");
 const websiteId = new URL("/#website", siteUrl).toString();
 
 const websiteEntity = {
@@ -166,6 +168,7 @@ const structuredData = noindex
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     {showSearchIsland && <SearchIsland />}
     <Header />
+    {showAnnouncements && <AnnouncementBanner />}
     <main id="main-content" tabindex="-1">
       <slot />
     </main>

@@ -141,6 +141,13 @@
       "when": 1793428272795,
       "tag": "0019_siliconflow_provider",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1793431200000,
+      "tag": "0020_campaign_codes_announcements",
+      "breakpoints": true
     }
   ]
 }
