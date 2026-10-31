@@ -20,5 +20,9 @@
       "binding": "MEDIA_PRIVATE_BUCKET",
       "bucket_name": "yuqing-private-media"
     }
-  ]
+  ],
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  }
 }

@@ -6,6 +6,7 @@ interface Env {
   DB: D1Database;
   MEDIA_BUCKET: R2Bucket;
   MEDIA_PRIVATE_BUCKET: R2Bucket;
+  AI?: Ai;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
   GITHUB_CLIENT_ID?: string;
@@ -16,6 +17,8 @@ interface Env {
   STORY_AI_API_KEY?: string;
   STORY_AI_BASE_URL?: string;
   STORY_AI_MODEL?: string;
+  IMAGE_QWEN_API_KEY?: string;
+  IMAGE_QWEN_BASE_URL?: string;
 }
 
 interface ImportMetaEnv {}

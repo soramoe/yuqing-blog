@@ -7,3 +7,5 @@ EMAIL_FROM=渔情 <login@xhz6.com>
 STORY_AI_API_KEY=
 STORY_AI_BASE_URL=https://api.deepseek.com
 STORY_AI_MODEL=deepseek-flash
+IMAGE_QWEN_API_KEY=
+IMAGE_QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
