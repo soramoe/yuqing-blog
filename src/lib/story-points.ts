@@ -1,5 +1,3 @@
-import { STORY_POINTS_PER_TURN } from "./story-templates";
-
 export class StoryPointError extends Error {
   constructor(
     message: string,
@@ -14,6 +12,7 @@ export async function chargeStoryTurn(
   db: D1Database,
   userId: string,
   requestId: string,
+  pointsCost: number,
 ) {
   const now = Date.now();
   await db
@@ -31,12 +30,7 @@ export async function chargeStoryTurn(
        WHERE user_id = ? AND balance >= ?
        RETURNING balance`,
     )
-    .bind(
-      STORY_POINTS_PER_TURN,
-      now,
-      userId,
-      STORY_POINTS_PER_TURN,
-    )
+    .bind(pointsCost, now, userId, pointsCost)
     .first<{ balance: number }>();
 
   if (!updated) {
@@ -45,7 +39,7 @@ export async function chargeStoryTurn(
       .bind(userId)
       .first<{ balance: number }>();
     throw new StoryPointError(
-      `积分不足，本回合需要 ${STORY_POINTS_PER_TURN} 积分。`,
+      `积分不足，本回合需要 ${pointsCost} 积分。`,
       402,
       Number(balanceRow?.balance ?? 0),
     );
@@ -57,24 +51,31 @@ export async function chargeStoryTurn(
         `INSERT INTO point_transaction
           (id, user_id, amount, type, description, reference_id,
            balance_after, created_at)
-         VALUES (?, ?, ?, 'story_turn', '互动小说剧情回合', ?, ?, ?)`,
+         VALUES (?, ?, ?, 'story_turn', ?, ?, ?, ?)`,
       )
       .bind(
         crypto.randomUUID(),
         userId,
-        -STORY_POINTS_PER_TURN,
+        -pointsCost,
+        `互动小说剧情回合（${pointsCost} 积分）`,
         `story:turn:${requestId}`,
         updated.balance,
         now,
       )
       .run();
   } catch (error) {
-    await refundStoryTurn(db, userId, requestId, "剧情请求失败退款");
+    await refundStoryTurn(
+      db,
+      userId,
+      requestId,
+      pointsCost,
+      "剧情请求失败退款",
+    );
     throw error;
   }
 
   return {
-    cost: STORY_POINTS_PER_TURN,
+    cost: pointsCost,
     balance: Number(updated.balance),
   };
 }
@@ -83,6 +84,7 @@ export async function refundStoryTurn(
   db: D1Database,
   userId: string,
   requestId: string,
+  pointsCost: number,
   description = "互动小说生成失败退款",
 ) {
   const now = Date.now();
@@ -93,7 +95,7 @@ export async function refundStoryTurn(
        WHERE user_id = ?
        RETURNING balance`,
     )
-    .bind(STORY_POINTS_PER_TURN, now, userId)
+    .bind(pointsCost, now, userId)
     .first<{ balance: number }>();
 
   if (!updated) return 0;
@@ -109,7 +111,7 @@ export async function refundStoryTurn(
       .bind(
         crypto.randomUUID(),
         userId,
-        STORY_POINTS_PER_TURN,
+        pointsCost,
         description,
         `story:refund:${requestId}`,
         updated.balance,

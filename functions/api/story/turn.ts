@@ -9,16 +9,18 @@ import {
   applyStoryStatePatch,
   getStoryMode,
   getStoryTemplate,
+  sanitizeStoryCharacters,
   sanitizeStoryState,
   STORY_MAX_ACTION_LENGTH,
   STORY_MAX_HISTORY_TURNS,
-  STORY_POINTS_PER_TURN,
   STORY_STYLES,
   type StoryModelResult,
   type StoryPayload,
   type StoryStatePatch,
   type StoryTurn,
 } from "../../../src/lib/story-templates";
+import { getStorySettings } from "../../../src/lib/story-settings";
+import { chinaDateKey } from "../../../src/lib/points";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -35,6 +37,7 @@ const safeString = (value: unknown, maximum: number) =>
 const parseRequest = (
   value: unknown,
   templateId: string,
+  contextTurns: number,
 ): StoryPayload | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const body = value as Record<string, unknown>;
@@ -46,7 +49,7 @@ const parseRequest = (
   const turnIndex = Number(body.turnIndex);
   const history = Array.isArray(body.history)
     ? body.history
-        .slice(-STORY_MAX_HISTORY_TURNS)
+        .slice(-Math.min(contextTurns, STORY_MAX_HISTORY_TURNS))
         .map((turn): StoryTurn | null => {
           if (!turn || typeof turn !== "object") return null;
           const item = turn as Record<string, unknown>;
@@ -79,6 +82,7 @@ const parseRequest = (
     history,
     state: sanitizeStoryState(templateId, body.state),
     summary: safeString(body.summary, 1200),
+    characters: sanitizeStoryCharacters(body.characters),
   } as StoryPayload;
 };
 
@@ -101,6 +105,9 @@ const buildPrompt = (
 规则：${template.rules}
 文风：${payload.style}
 
+角色设定：
+${JSON.stringify(payload.characters)}
+
 当前结构化状态：
 ${JSON.stringify(payload.state)}
 
@@ -120,7 +127,8 @@ ${payload.userAction || "开始故事，请写出有吸引力的开场，并给�
 4. 三个选项必须具体、差异明显，每个不超过 32 个汉字。
 5. 不输出 Markdown、解释、思考过程或格式之外的文字。
 6. 避免露骨色情、仇恨、真实个人信息和详细违法伤害步骤。
-7. 严格使用以下格式：
+7. 主角姓名、性别、年龄、性格和背景必须保持稳定；配角只能按已设定的姓名、关系和性格行动。留空字段由你一次性确定，之后不得随意更改。
+8. 严格使用以下格式：
 
 @@STORY@@
 剧情正文
@@ -231,6 +239,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
   if (!session?.user) {
     return json({ error: "请先登录后开始互动小说。" }, 401);
   }
+  const settings = await getStorySettings(env.DB);
   let body: Record<string, unknown>;
   try {
     const contents = await request.text();
@@ -246,7 +255,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
   const template = getStoryTemplate(templateId);
   if (!template) return json({ error: "故事模板不存在。" }, 400);
 
-  const payload = parseRequest(body, templateId);
+  const payload = parseRequest(body, templateId, settings.contextTurns);
   if (!payload) return json({ error: "故事状态或回合参数无效。" }, 400);
   if (
     !STORY_STYLES.includes(payload.style as (typeof STORY_STYLES)[number])
@@ -260,6 +269,12 @@ const handleStoryTurn: PagesFunction<Env> = async ({
   }
 
   const userApiKey = safeString(body.userApiKey, 256);
+  if (keyMode === "site" && !settings.siteKeyEnabled) {
+    return json(
+      { error: "站长 Key 模式当前已暂时关闭，请使用自己的 Key。" },
+      503,
+    );
+  }
   const apiKey =
     keyMode === "site" ? env.STORY_AI_API_KEY : userApiKey;
   if (!apiKey) {
@@ -284,10 +299,29 @@ const handleStoryTurn: PagesFunction<Env> = async ({
 
   try {
     if (keyMode === "site") {
+      const today = chinaDateKey();
+      const turnsToday = await env.DB.prepare(
+        `SELECT COUNT(*) AS total
+         FROM point_transaction
+         WHERE user_id = ?
+           AND type = 'story_turn'
+           AND date(created_at / 1000, 'unixepoch', '+8 hours') = ?`,
+      )
+        .bind(session.user.id, today)
+        .first<{ total: number }>();
+      if (Number(turnsToday?.total ?? 0) >= settings.dailyTurnLimit) {
+        return json(
+          {
+            error: `今天的站长 Key 剧情回合已达到 ${settings.dailyTurnLimit} 次上限，请明天再试或使用自己的 Key。`,
+          },
+          429,
+        );
+      }
       charged = await chargeStoryTurn(
         env.DB,
         session.user.id,
         payload.requestId,
+        settings.pointsPerTurn,
       );
       chargedSitePoints = true;
     }
@@ -330,7 +364,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
         ],
         stream: false,
         temperature: 0.9,
-        max_tokens: 1200,
+        max_tokens: settings.maxOutputTokens,
       }),
     });
   } catch {
@@ -341,6 +375,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
           env.DB,
           session.user.id,
           payload.requestId,
+          settings.pointsPerTurn,
         ),
       };
     }
@@ -354,6 +389,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
           env.DB,
           session.user.id,
           payload.requestId,
+          settings.pointsPerTurn,
         ),
       };
     }
@@ -405,6 +441,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
           env.DB,
           session.user.id,
           payload.requestId,
+          settings.pointsPerTurn,
         )
       : charged.balance;
     return json(
@@ -432,11 +469,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   }
 };
 
-export const onRequestGet: PagesFunction<Env> = async () => {
+export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+  const settings = await getStorySettings(env.DB);
   return json({
     ready: true,
     transport: "json-v1",
-    pointsPerTurn: STORY_POINTS_PER_TURN,
+    pointsPerTurn: settings.pointsPerTurn,
   });
 };
 

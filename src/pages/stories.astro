@@ -30,7 +30,7 @@ import "../styles/stories.css";
   </section>
 
   <div class="container stories-layout" data-story-app>
-    <aside class="story-setup" aria-labelledby="story-setup-title">
+    <aside class="story-setup" aria-labelledby="story-setup-title" data-story-setup-panel>
       <div class="story-panel-heading">
         <div>
           <p class="eyebrow">STORY SETUP</p>
@@ -69,8 +69,61 @@ import "../styles/stories.css";
       </section>
 
       <section class="story-setup-section">
+        <span class="story-field-label">03 / 角色（可选）</span>
+        <details class="story-character-settings" data-character-settings>
+          <summary>
+            <span>自定义主角与配角</span>
+            <small data-character-summary>留空时由 AI 决定</small>
+          </summary>
+          <div class="story-character-editor">
+            <div class="story-protagonist-fields">
+              <label>
+                <span>主角名字</span>
+                <input type="text" maxlength="20" placeholder="留空由 AI 生成" data-protagonist-name />
+              </label>
+              <label>
+                <span>性别</span>
+                <select data-protagonist-gender>
+                  <option value="">不指定</option>
+                  <option value="男">男</option>
+                  <option value="女">女</option>
+                  <option value="非二元">非二元</option>
+                  <option value="自定义">自定义</option>
+                </select>
+              </label>
+              <label>
+                <span>年龄</span>
+                <input type="text" maxlength="30" placeholder="例如：20 岁 / 外表 20 岁，实际 300 岁" data-protagonist-age />
+              </label>
+              <label>
+                <span>性格</span>
+                <input type="text" maxlength="60" placeholder="最多 3 个，用顿号分隔" data-protagonist-personality />
+              </label>
+              <label class="story-character-wide">
+                <span>身份与背景</span>
+                <input type="text" maxlength="160" placeholder="例如：失去记忆的剑修" data-protagonist-background />
+              </label>
+              <label class="story-character-wide">
+                <span>外貌或补充设定</span>
+                <input type="text" maxlength="160" placeholder="例如：银发，左眼有旧伤" data-protagonist-appearance />
+              </label>
+            </div>
+
+            <div class="story-cast-heading">
+              <div>
+                <strong>关键配角</strong>
+                <small>最多 3 位，留空时由 AI 创建</small>
+              </div>
+              <button type="button" data-add-character>添加角色</button>
+            </div>
+            <div class="story-cast-list" data-character-list></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="story-setup-section">
         <label class="story-select-field">
-          <span class="story-field-label">03 / 文风</span>
+          <span class="story-field-label">04 / 文风</span>
           <select data-story-style>
             {STORY_STYLES.map((style) => <option value={style}>{style}</option>)}
           </select>
@@ -78,13 +131,13 @@ import "../styles/stories.css";
       </section>
 
       <section class="story-setup-section">
-        <span class="story-field-label">04 / 模型 Key</span>
+        <span class="story-field-label">05 / 模型 Key</span>
         <fieldset class="story-key-options">
           <label>
             <input type="radio" name="story-key-mode" value="site" checked />
             <span>
               <strong>站长 Key</strong>
-              <small>每回合消耗 {STORY_POINTS_PER_TURN} 积分</small>
+              <small>每回合消耗 <span data-story-price-label>{STORY_POINTS_PER_TURN}</span> 积分</small>
             </span>
           </label>
           <label>
@@ -120,10 +173,13 @@ import "../styles/stories.css";
       <button class="story-resume-button" type="button" data-story-resume hidden>
         继续上次故事
       </button>
+      <button class="story-close-setup" type="button" data-story-close-setup hidden>
+        返回当前故事
+      </button>
       <p class="story-setup-status" data-story-setup-status aria-live="polite"></p>
     </aside>
 
-    <section class="story-reader" aria-live="polite">
+    <section class="story-reader" aria-live="polite" data-story-reader tabindex="-1">
       <div class="story-empty" data-story-empty>
         <span aria-hidden="true">序</span>
         <h2>故事尚未开始</h2>
@@ -136,9 +192,11 @@ import "../styles/stories.css";
             <p class="eyebrow" data-story-eyebrow>INTERACTIVE STORY</p>
             <h2 data-story-title></h2>
             <span data-story-subtitle></span>
+            <span data-story-cast-summary></span>
           </div>
           <div class="story-game-actions">
             <span data-story-turn>第 1 回合</span>
+            <button type="button" data-story-settings-toggle>故事设置</button>
             <button type="button" data-story-reset>重新开始</button>
           </div>
         </header>
@@ -186,11 +244,13 @@ import "../styles/stories.css";
 
 <script>
   import type {
+    StoryCharacters,
     StoryModelResult,
     StoryState,
     StoryTemplate,
     StoryTurn,
   } from "../lib/story-templates";
+  import { emptyStoryCharacters } from "../lib/story-templates";
 
   interface StorySave {
     sessionId: string;
@@ -204,6 +264,7 @@ import "../styles/stories.css";
     history: StoryTurn[];
     choices: string[];
     ending: boolean;
+    characters?: StoryCharacters;
     updatedAt: number;
   }
 
@@ -255,6 +316,52 @@ import "../styles/stories.css";
   );
   const setupStatus = document.querySelector<HTMLElement>(
     "[data-story-setup-status]",
+  );
+  const setupPanel = document.querySelector<HTMLElement>(
+    "[data-story-setup-panel]",
+  );
+  const storyReader = document.querySelector<HTMLElement>("[data-story-reader]");
+  const settingsToggle = document.querySelector<HTMLButtonElement>(
+    "[data-story-settings-toggle]",
+  );
+  const closeSetupButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-close-setup]",
+  );
+  const castSummary = document.querySelector<HTMLElement>(
+    "[data-story-cast-summary]",
+  );
+  const priceLabel = document.querySelector<HTMLElement>(
+    "[data-story-price-label]",
+  );
+  const characterSettings = document.querySelector<HTMLDetailsElement>(
+    "[data-character-settings]",
+  );
+  const characterSummary = document.querySelector<HTMLElement>(
+    "[data-character-summary]",
+  );
+  const protagonistName = document.querySelector<HTMLInputElement>(
+    "[data-protagonist-name]",
+  );
+  const protagonistGender = document.querySelector<HTMLSelectElement>(
+    "[data-protagonist-gender]",
+  );
+  const protagonistAge = document.querySelector<HTMLInputElement>(
+    "[data-protagonist-age]",
+  );
+  const protagonistPersonality = document.querySelector<HTMLInputElement>(
+    "[data-protagonist-personality]",
+  );
+  const protagonistBackground = document.querySelector<HTMLInputElement>(
+    "[data-protagonist-background]",
+  );
+  const protagonistAppearance = document.querySelector<HTMLInputElement>(
+    "[data-protagonist-appearance]",
+  );
+  const characterList = document.querySelector<HTMLElement>(
+    "[data-character-list]",
+  );
+  const addCharacterButton = document.querySelector<HTMLButtonElement>(
+    "[data-add-character]",
   );
   const emptyState = document.querySelector<HTMLElement>("[data-story-empty]");
   const gamePanel = document.querySelector<HTMLElement>("[data-story-game]");
@@ -310,6 +417,8 @@ import "../styles/stories.css";
   let loggedIn = false;
   let balance: number | null = null;
   let siteKeyConfigured = true;
+  let siteKeyEnabled = true;
+  let pointsPerTurn = config.pointsPerTurn;
 
   const setSetupStatus = (
     message = "",
@@ -336,6 +445,194 @@ import "../styles/stories.css";
     if (thinkingPanel) thinkingPanel.hidden = !value || !currentSave;
   };
 
+  const parsePersonality = (value: string) =>
+    value
+      .split(/[，,、\s]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .slice(0, 3);
+
+  const getCharacterCards = () =>
+    Array.from(
+      characterList?.querySelectorAll<HTMLElement>("[data-character-card]") ??
+        [],
+    );
+
+  const collectCharacters = (): StoryCharacters => ({
+    protagonist: {
+      name: protagonistName?.value.trim() ?? "",
+      gender: protagonistGender?.value.trim() ?? "",
+      age: protagonistAge?.value.trim() ?? "",
+      personality: parsePersonality(protagonistPersonality?.value ?? ""),
+      background: protagonistBackground?.value.trim() ?? "",
+      appearance: protagonistAppearance?.value.trim() ?? "",
+    },
+    supportingCast: getCharacterCards().map((card) => ({
+      name:
+        card.querySelector<HTMLInputElement>("[data-support-name]")?.value.trim() ??
+        "",
+      relationship:
+        card.querySelector<HTMLInputElement>("[data-support-relationship]")
+          ?.value.trim() ?? "",
+      gender:
+        card
+          .querySelector<HTMLInputElement>("[data-support-gender]")
+          ?.value.trim() ?? "",
+      age:
+        card.querySelector<HTMLInputElement>("[data-support-age]")?.value.trim() ??
+        "",
+      personality: parsePersonality(
+        card.querySelector<HTMLInputElement>("[data-support-personality]")
+          ?.value ?? "",
+      ),
+      role:
+        card.querySelector<HTMLInputElement>("[data-support-role]")?.value.trim() ??
+        "",
+    })),
+  });
+
+  const characterSummaryText = () => {
+    const profile = collectCharacters();
+    const name = profile.protagonist.name || "AI 自动主角";
+    const details = [
+      profile.protagonist.gender,
+      profile.protagonist.age,
+      profile.protagonist.personality.join(" / "),
+    ].filter(Boolean);
+    const supporting = profile.supportingCast.filter((item) => item.name).length;
+    return `${name}${details.length > 0 ? ` · ${details.join(" · ")}` : ""}${supporting > 0 ? ` · ${supporting} 位配角` : ""}`;
+  };
+
+  const updateCharacterSummary = () => {
+    if (characterSummary) characterSummary.textContent = characterSummaryText();
+  };
+
+  const addSupportingCharacter = (profile?: {
+    name?: string;
+    relationship?: string;
+    gender?: string;
+    age?: string;
+    personality?: string[];
+    role?: string;
+  }) => {
+    if (!characterList || getCharacterCards().length >= 3) return;
+    const card = document.createElement("article");
+    card.className = "story-cast-card";
+    card.dataset.characterCard = "";
+
+    const heading = document.createElement("header");
+    const title = document.createElement("strong");
+    title.textContent = `配角 ${getCharacterCards().length + 1}`;
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "删除";
+    remove.addEventListener("click", () => {
+      card.remove();
+      updateCharacterSummary();
+    });
+    heading.append(title, remove);
+
+    const fields = document.createElement("div");
+    fields.className = "story-cast-fields";
+    const addField = (
+      labelText: string,
+      field: string,
+      placeholder: string,
+      value = "",
+      wide = false,
+    ) => {
+      const label = document.createElement("label");
+      if (wide) label.classList.add("story-character-wide");
+      const span = document.createElement("span");
+      span.textContent = labelText;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.maxLength = field === "personality" ? 60 : 160;
+      input.placeholder = placeholder;
+      input.value = value;
+      input.dataset[field] = "";
+      input.addEventListener("input", updateCharacterSummary);
+      label.append(span, input);
+      fields.append(label);
+    };
+    addField("名字", "supportName", "留空则由 AI 生成", profile?.name);
+    addField(
+      "与主角关系",
+      "supportRelationship",
+      "例如：同门师兄",
+      profile?.relationship,
+    );
+    addField("性别", "supportGender", "例如：男 / 女", profile?.gender);
+    addField("年龄", "supportAge", "例如：二十四岁", profile?.age);
+    addField(
+      "性格",
+      "supportPersonality",
+      "最多 3 个，用顿号分隔",
+      profile?.personality?.join("、") ?? "",
+      true,
+    );
+    addField(
+      "角色作用",
+      "supportRole",
+      "例如：导师、同伴、对手",
+      profile?.role,
+      true,
+    );
+
+    card.append(heading, fields);
+    characterList.append(card);
+    updateCharacterSummary();
+  };
+
+  const clearCharacterForm = () => {
+    if (protagonistName) protagonistName.value = "";
+    if (protagonistGender) protagonistGender.value = "";
+    if (protagonistAge) protagonistAge.value = "";
+    if (protagonistPersonality) protagonistPersonality.value = "";
+    if (protagonistBackground) protagonistBackground.value = "";
+    if (protagonistAppearance) protagonistAppearance.value = "";
+    characterList?.replaceChildren();
+    updateCharacterSummary();
+  };
+
+  const fillCharacterForm = (characters?: StoryCharacters) => {
+    clearCharacterForm();
+    if (!characters) return;
+    if (protagonistName) protagonistName.value = characters.protagonist.name;
+    if (protagonistGender) {
+      protagonistGender.value = characters.protagonist.gender;
+    }
+    if (protagonistAge) protagonistAge.value = characters.protagonist.age;
+    if (protagonistPersonality) {
+      protagonistPersonality.value =
+        characters.protagonist.personality.join("、");
+    }
+    if (protagonistBackground) {
+      protagonistBackground.value = characters.protagonist.background;
+    }
+    if (protagonistAppearance) {
+      protagonistAppearance.value = characters.protagonist.appearance;
+    }
+    characters.supportingCast.forEach((character) =>
+      addSupportingCharacter(character),
+    );
+    updateCharacterSummary();
+  };
+
+  [
+    protagonistName,
+    protagonistGender,
+    protagonistAge,
+    protagonistPersonality,
+    protagonistBackground,
+    protagonistAppearance,
+  ].forEach((field) => field?.addEventListener("input", updateCharacterSummary));
+
+  addCharacterButton?.addEventListener("click", () => {
+    addSupportingCharacter();
+    if (characterSettings) characterSettings.open = true;
+  });
+
   const selectedKeyMode = () =>
     (keyModeInputs.find((input) => input.checked)?.value ?? "site") as
       | "site"
@@ -347,12 +644,41 @@ import "../styles/stories.css";
 
   const applySiteKeyAvailability = () => {
     const siteInput = keyModeInputs.find((input) => input.value === "site");
-    if (siteInput) siteInput.disabled = !siteKeyConfigured;
-    if (!siteKeyConfigured) {
+    if (siteInput) siteInput.disabled = !siteKeyConfigured || !siteKeyEnabled;
+    if (!siteKeyConfigured || !siteKeyEnabled) {
       const userInput = keyModeInputs.find((input) => input.value === "user");
       if (userInput) userInput.checked = true;
       showKeyField();
     }
+  };
+
+  const isMobileStoryLayout = () =>
+    window.matchMedia("(max-width: 980px)").matches;
+
+  const enterStoryView = () => {
+    document.body.classList.add("story-active");
+    document.body.classList.remove("story-setup-open");
+    if (closeSetupButton) closeSetupButton.hidden = false;
+  };
+
+  const leaveStoryView = () => {
+    document.body.classList.remove("story-active", "story-setup-open");
+    if (closeSetupButton) closeSetupButton.hidden = true;
+  };
+
+  const toggleSetup = (open?: boolean) => {
+    const shouldOpen =
+      open ?? !document.body.classList.contains("story-setup-open");
+    document.body.classList.toggle("story-setup-open", shouldOpen);
+    window.setTimeout(() => {
+      if (shouldOpen) {
+        setupPanel?.scrollIntoView({ behavior: "smooth", block: "start" });
+        setupPanel?.querySelector<HTMLElement>("button, input, select")?.focus();
+      } else {
+        storyReader?.scrollIntoView({ behavior: "smooth", block: "start" });
+        storyReader?.focus();
+      }
+    }, 0);
   };
 
   const saveProgress = () => {
@@ -452,7 +778,19 @@ import "../styles/stories.css";
     if (storyEyebrow) storyEyebrow.textContent = template?.eyebrow ?? "STORY";
     if (storyTitle) storyTitle.textContent = template?.title ?? "互动小说";
     if (storySubtitle) {
-      storySubtitle.textContent = `${mode?.title ?? ""} · ${currentSave.style}`;
+      const keyText =
+        currentSave.keyMode === "site"
+          ? `站长 Key · ${pointsPerTurn} 积分/回合`
+          : "自己的 Key · 不消耗积分";
+      storySubtitle.textContent = `${mode?.title ?? ""} · ${currentSave.style} · ${keyText}`;
+    }
+    if (castSummary) {
+      const protagonist =
+        currentSave.characters?.protagonist.name || "AI 自动主角";
+      const castCount =
+        currentSave.characters?.supportingCast.filter((item) => item.name)
+          .length ?? 0;
+      castSummary.textContent = `${protagonist}${castCount > 0 ? ` · ${castCount} 位关键配角` : ""}`;
     }
     if (storyTurnLabel) {
       storyTurnLabel.textContent = `第 ${Math.max(1, currentSave.turnIndex)} 回合`;
@@ -462,6 +800,7 @@ import "../styles/stories.css";
     renderHistory();
     renderChoices();
     if (actionForm) actionForm.hidden = currentSave.ending;
+    enterStoryView();
   };
 
   const renderModes = () => {
@@ -518,6 +857,9 @@ import "../styles/stories.css";
     input.addEventListener("change", showKeyField);
   });
 
+  settingsToggle?.addEventListener("click", () => toggleSetup());
+  closeSetupButton?.addEventListener("click", () => toggleSetup(false));
+
   const requestTurn = async (action: string) => {
     if (!currentSave || !selectedTemplate || busy) return;
     if (!loggedIn) {
@@ -529,7 +871,11 @@ import "../styles/stories.css";
       apiKeyInput?.focus();
       return;
     }
-    if (currentSave.keyMode === "site" && balance !== null && balance < 2) {
+    if (
+      currentSave.keyMode === "site" &&
+      balance !== null &&
+      balance < pointsPerTurn
+    ) {
       setReaderStatus("积分不足。可以签到获得积分，或改用你自己的 Key。", "error");
       return;
     }
@@ -574,6 +920,7 @@ import "../styles/stories.css";
           history: currentSave.history,
           state: currentSave.state,
           summary: currentSave.summary,
+          characters: currentSave.characters ?? emptyStoryCharacters(),
           keyMode: currentSave.keyMode,
           userApiKey:
             currentSave.keyMode === "user" ? runtimeApiKey : undefined,
@@ -695,10 +1042,14 @@ import "../styles/stories.css";
       history: [],
       choices: [],
       ending: false,
+      characters: collectCharacters(),
       updatedAt: Date.now(),
     };
     setSetupStatus("");
     renderGame();
+    if (isMobileStoryLayout()) {
+      storyReader?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
     await requestTurn("开始故事");
   };
 
@@ -711,6 +1062,7 @@ import "../styles/stories.css";
       return;
     }
     currentSave = saved;
+    fillCharacterForm(saved.characters);
     keyModeInputs.forEach((input) => {
       input.checked = input.value === saved.keyMode;
     });
@@ -749,6 +1101,8 @@ import "../styles/stories.css";
     if (emptyState) emptyState.hidden = false;
     if (transcript) transcript.replaceChildren();
     if (choicesPanel) choicesPanel.replaceChildren();
+    leaveStoryView();
+    clearCharacterForm();
     setSetupStatus("当前进度已清除。", "success");
   };
 
@@ -766,22 +1120,45 @@ import "../styles/stories.css";
 
   renderModes();
   showKeyField();
+  updateCharacterSummary();
+  if (priceLabel) priceLabel.textContent = String(pointsPerTurn);
 
   void fetch("/api/story/status", {
     credentials: "same-origin",
     headers: { Accept: "application/json" },
   })
     .then((response) => (response.ok ? response.json() : null))
-    .then((payload: { siteKeyConfigured?: boolean } | null) => {
+    .then(
+      (
+        payload: {
+          siteKeyConfigured?: boolean;
+          siteKeyEnabled?: boolean;
+          pointsPerTurn?: number;
+        } | null,
+      ) => {
       siteKeyConfigured = payload?.siteKeyConfigured !== false;
+      siteKeyEnabled = payload?.siteKeyEnabled !== false;
+      if (
+        typeof payload?.pointsPerTurn === "number" &&
+        payload.pointsPerTurn > 0
+      ) {
+        pointsPerTurn = payload.pointsPerTurn;
+      }
+      if (priceLabel) priceLabel.textContent = String(pointsPerTurn);
       applySiteKeyAvailability();
       if (!siteKeyConfigured) {
         setSetupStatus(
           "站长 AI Key 尚未配置。当前可使用自己的 DeepSeek Key，不消耗积分。",
           "error",
         );
+      } else if (!siteKeyEnabled) {
+        setSetupStatus(
+          "站长 Key 模式当前已关闭。可以使用自己的 DeepSeek Key。",
+          "error",
+        );
       }
-    })
+      },
+    )
     .catch(() => undefined);
 
   void fetch("/api/points", {

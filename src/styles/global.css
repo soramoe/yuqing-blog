@@ -2233,6 +2233,7 @@ body.gallery-lightbox-open {
     padding: 8px 6px;
     min-height: 44px;
     border: 0;
+    white-space: nowrap;
   }
 
   .nav-index {
@@ -2355,6 +2356,14 @@ body.gallery-lightbox-open {
   .site-nav a {
     padding: 8px 4px;
     font-size: 0.76rem;
+  }
+
+  .site-nav a[href="/stories/"] > span:last-child {
+    width: 2.15em;
+    line-height: 1.08;
+    text-align: center;
+    white-space: normal;
+    word-break: break-all;
   }
 
   .hero-copy h1 {

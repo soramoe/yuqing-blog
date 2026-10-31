@@ -1,4 +1,4 @@
-export const STORY_POINTS_PER_TURN = 2;
+export const STORY_POINTS_PER_TURN = 4;
 export const STORY_MAX_ACTION_LENGTH = 500;
 export const STORY_MAX_HISTORY_TURNS = 5;
 
@@ -39,6 +39,30 @@ export interface StoryPayload {
   history: StoryTurn[];
   state: StoryState;
   summary: string;
+  characters: StoryCharacters;
+}
+
+export interface StoryProtagonist {
+  name: string;
+  gender: string;
+  age: string;
+  personality: string[];
+  background: string;
+  appearance: string;
+}
+
+export interface StorySupportingCharacter {
+  name: string;
+  relationship: string;
+  gender: string;
+  age: string;
+  personality: string[];
+  role: string;
+}
+
+export interface StoryCharacters {
+  protagonist: StoryProtagonist;
+  supportingCast: StorySupportingCharacter[];
 }
 
 export interface StoryModelResult {
@@ -55,6 +79,74 @@ export const STORY_STYLES = [
   "黑暗悬疑",
   "史诗严肃",
 ] as const;
+
+const safeText = (value: unknown, maximum: number) =>
+  typeof value === "string" ? value.trim().slice(0, maximum) : "";
+
+const safePersonality = (value: unknown) =>
+  (Array.isArray(value) ? value : [])
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim().slice(0, 12))
+    .filter(Boolean)
+    .slice(0, 3);
+
+export function sanitizeStoryCharacters(value: unknown): StoryCharacters {
+  const input =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const protagonistInput =
+    input.protagonist &&
+    typeof input.protagonist === "object" &&
+    !Array.isArray(input.protagonist)
+      ? (input.protagonist as Record<string, unknown>)
+      : {};
+  const supportingInput = Array.isArray(input.supportingCast)
+    ? input.supportingCast
+    : [];
+
+  return {
+    protagonist: {
+      name: safeText(protagonistInput.name, 20),
+      gender: safeText(protagonistInput.gender, 20),
+      age: safeText(protagonistInput.age, 30),
+      personality: safePersonality(protagonistInput.personality),
+      background: safeText(protagonistInput.background, 160),
+      appearance: safeText(protagonistInput.appearance, 160),
+    },
+    supportingCast: supportingInput
+      .slice(0, 3)
+      .map((item) => {
+        const character =
+          item && typeof item === "object" && !Array.isArray(item)
+            ? (item as Record<string, unknown>)
+            : {};
+        return {
+          name: safeText(character.name, 20),
+          relationship: safeText(character.relationship, 40),
+          gender: safeText(character.gender, 20),
+          age: safeText(character.age, 30),
+          personality: safePersonality(character.personality),
+          role: safeText(character.role, 60),
+        };
+      })
+      .filter((character) => character.name || character.relationship),
+  };
+}
+
+export function emptyStoryCharacters(): StoryCharacters {
+  return {
+    protagonist: {
+      name: "",
+      gender: "",
+      age: "",
+      personality: [],
+      background: "",
+      appearance: "",
+    },
+    supportingCast: [],
+  };
+}
 
 export const STORY_TEMPLATES: StoryTemplate[] = [
   {

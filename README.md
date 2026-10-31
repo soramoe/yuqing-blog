@@ -68,14 +68,16 @@ pnpm preview
 
 `/stories/` 提供 AI 实时互动小说。第一版包含修仙与末世基地两个模板，支持推荐选项、自由行动、浏览器本地续读，以及站长 Key 和用户自己的 DeepSeek Key 两种模式。
 
-使用站长 Key 时，每个剧情回合消耗 2 积分；失败会退回。用户自己的 Key 只用于当次请求，不会写入数据库、日志或浏览器存储。
+使用站长 Key 时默认每个剧情回合消耗 4 积分；失败会退回。用户自己的 Key 只用于当次请求，不会写入数据库、日志或浏览器存储。
+
+站长可在 `/admin/stories/` 调整积分价格、最大输出、上下文回合、每日上限和站长 Key 开关，并查看修改审计记录。
 
 站长 Key 需要在 Cloudflare Pages 的生产环境中配置以下变量：
 
 ```text
 STORY_AI_API_KEY
 STORY_AI_BASE_URL=https://api.deepseek.com
-STORY_AI_MODEL=deepseek-chat
+STORY_AI_MODEL=deepseek-flash
 ```
 
 其中 `STORY_AI_API_KEY` 应使用加密 Secret。未配置时，页面会自动切换到用户自己的 Key 模式。

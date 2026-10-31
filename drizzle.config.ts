@@ -9,6 +9,7 @@ export default defineConfig({
     "./src/lib/shop-schema.ts",
     "./src/lib/gallery-upload-schema.ts",
     "./src/lib/account-binding-schema.ts",
+    "./src/lib/story-settings-schema.ts",
   ],
   out: "./migrations",
 });

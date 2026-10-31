@@ -1,0 +1,345 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/admin-story.css";
+---
+
+<BaseLayout
+  title="互动小说管理"
+  description="调整互动小说积分价格、生成参数和站长 Key 开关。"
+  bodyClass="page-admin-story"
+  noindex
+>
+  <div class="container admin-story-shell">
+    <header class="admin-story-header">
+      <div>
+        <p class="eyebrow">AI STORY OPERATIONS</p>
+        <h1>互动小说管理</h1>
+        <p>修改后立即影响下一个剧情回合，历史积分流水不会被重算。</p>
+      </div>
+      <div class="admin-story-nav">
+        <a href="/admin/comments/">评论审核</a>
+        <a href="/admin/gallery/">图库管理</a>
+        <a href="/admin/points/">积分管理</a>
+        <a href="/account/">返回账户</a>
+      </div>
+    </header>
+
+    <p class="admin-story-status" data-story-admin-status aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-story-denied" data-story-admin-gate hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-story-gate-title>请先登录</strong>
+      <p data-story-gate-copy>登录后才能管理互动小说。</p>
+      <a href="/login/?next=%2Fadmin%2Fstories%2F" data-story-gate-link>
+        登录站长账号
+      </a>
+    </div>
+
+    <div class="admin-story-content" data-story-admin-content hidden>
+      <section class="admin-story-settings">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">RUNTIME SETTINGS</p>
+            <h2>价格与生成参数</h2>
+          </div>
+          <span data-story-settings-updated>尚未更新</span>
+        </div>
+
+        <form data-story-settings-form>
+          <label>
+            <span>站长 Key：每回合积分</span>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              step="1"
+              data-setting-points
+              required
+            />
+            <small>建议 4 积分；修改只影响后续回合。</small>
+          </label>
+          <label>
+            <span>最大输出 Token</span>
+            <input
+              type="number"
+              min="300"
+              max="4000"
+              step="50"
+              data-setting-output
+              required
+            />
+            <small>输出越长成本越高，推荐 800～1200。</small>
+          </label>
+          <label>
+            <span>最近上下文回合</span>
+            <input
+              type="number"
+              min="1"
+              max="12"
+              step="1"
+              data-setting-context
+              required
+            />
+            <small>建议 3～5 回合，并配合剧情摘要。</small>
+          </label>
+          <label>
+            <span>每日站长 Key 回合上限</span>
+            <input
+              type="number"
+              min="1"
+              max="500"
+              step="1"
+              data-setting-daily
+              required
+            />
+            <small>每个账号每天最多发起的付费剧情回合数。</small>
+          </label>
+          <label class="admin-story-toggle">
+            <input type="checkbox" data-setting-site-enabled />
+            <span>
+              <strong>开放站长 Key</strong>
+              <small>关闭后用户仍可使用自己的 DeepSeek Key。</small>
+            </span>
+          </label>
+          <div class="admin-story-form-actions">
+            <button type="submit" data-story-settings-submit>保存设置</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-story-audit">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">AUDIT LOG</p>
+            <h2>最近修改</h2>
+          </div>
+        </div>
+        <ol data-story-audit-list></ol>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+  import { sanitizeStorySettings, type StorySettings } from "../../lib/story-settings";
+
+  interface AuditItem {
+    id: string;
+    beforeJson: string;
+    afterJson: string;
+    createdAt: number;
+    operatorName: string | null;
+  }
+
+  const status = document.querySelector<HTMLElement>(
+    "[data-story-admin-status]",
+  );
+  const gate = document.querySelector<HTMLElement>("[data-story-admin-gate]");
+  const content = document.querySelector<HTMLElement>(
+    "[data-story-admin-content]",
+  );
+  const gateTitle = document.querySelector<HTMLElement>(
+    "[data-story-gate-title]",
+  );
+  const gateCopy = document.querySelector<HTMLElement>(
+    "[data-story-gate-copy]",
+  );
+  const gateLink = document.querySelector<HTMLAnchorElement>(
+    "[data-story-gate-link]",
+  );
+  const form = document.querySelector<HTMLFormElement>(
+    "[data-story-settings-form]",
+  );
+  const pointsInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-points]",
+  );
+  const outputInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-output]",
+  );
+  const contextInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-context]",
+  );
+  const dailyInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-daily]",
+  );
+  const siteEnabledInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-site-enabled]",
+  );
+  const submitButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-settings-submit]",
+  );
+  const updatedLabel = document.querySelector<HTMLElement>(
+    "[data-story-settings-updated]",
+  );
+  const auditList = document.querySelector<HTMLElement>(
+    "[data-story-audit-list]",
+  );
+
+  const setStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.state = state;
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const fillSettings = (settings: StorySettings) => {
+    if (pointsInput) pointsInput.value = String(settings.pointsPerTurn);
+    if (outputInput) outputInput.value = String(settings.maxOutputTokens);
+    if (contextInput) contextInput.value = String(settings.contextTurns);
+    if (dailyInput) dailyInput.value = String(settings.dailyTurnLimit);
+    if (siteEnabledInput) {
+      siteEnabledInput.checked = settings.siteKeyEnabled;
+    }
+    if (updatedLabel) {
+      updatedLabel.textContent = settings.updatedAt
+        ? `最后更新 ${formatDate(settings.updatedAt)}`
+        : "当前使用默认值";
+    }
+  };
+
+  const renderAudit = (items: AuditItem[]) => {
+    if (!auditList) return;
+    auditList.replaceChildren();
+    if (items.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "admin-story-empty";
+      empty.textContent = "还没有修改记录。";
+      auditList.append(empty);
+      return;
+    }
+    for (const item of items) {
+      let before: StorySettings;
+      let after: StorySettings;
+      try {
+        before = JSON.parse(item.beforeJson) as StorySettings;
+        after = JSON.parse(item.afterJson) as StorySettings;
+      } catch {
+        continue;
+      }
+      const row = document.createElement("li");
+      const heading = document.createElement("strong");
+      heading.textContent = `${before.pointsPerTurn} → ${after.pointsPerTurn} 积分/回合`;
+      const summary = document.createElement("span");
+      summary.textContent = `输出 ${after.maxOutputTokens} · 上下文 ${after.contextTurns} 回合 · 每日 ${after.dailyTurnLimit} 次 · 站长 Key ${after.siteKeyEnabled ? "开启" : "关闭"}`;
+      const meta = document.createElement("small");
+      meta.textContent = `${item.operatorName ?? "已删除管理员"} / ${formatDate(item.createdAt)}`;
+      row.append(heading, summary, meta);
+      auditList.append(row);
+    }
+  };
+
+  const loadSettings = async () => {
+    setStatus("正在读取设置…");
+    const response = await fetch("/api/admin/story", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as {
+      settings?: StorySettings;
+      audit?: AuditItem[];
+      error?: string;
+    };
+    if (!response.ok || !payload.settings) {
+      const error = new Error(payload.error || "设置读取失败。") as Error & {
+        status?: number;
+      };
+      error.status = response.status;
+      throw error;
+    }
+    fillSettings(payload.settings);
+    renderAudit(payload.audit ?? []);
+    setStatus("");
+  };
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (submitButton) submitButton.disabled = true;
+    const settings = sanitizeStorySettings({
+      pointsPerTurn: pointsInput?.value,
+      maxOutputTokens: outputInput?.value,
+      contextTurns: contextInput?.value,
+      dailyTurnLimit: dailyInput?.value,
+      siteKeyEnabled: siteEnabledInput?.checked,
+    });
+    try {
+      const response = await fetch("/api/admin/story", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(settings),
+      });
+      const payload = (await response.json()) as {
+        settings?: StorySettings;
+        audit?: AuditItem[];
+        error?: string;
+      };
+      if (!response.ok || !payload.settings) {
+        throw new Error(payload.error || "设置保存失败。");
+      }
+      fillSettings(payload.settings);
+      renderAudit(payload.audit ?? []);
+      setStatus("互动小说设置已保存。", "success");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "设置保存失败。",
+        "error",
+      );
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+
+  void authClient
+    .getSession()
+    .then(async ({ data }) => {
+      if (!data?.user) {
+        if (gateTitle) gateTitle.textContent = "请先登录";
+        if (gateCopy) gateCopy.textContent = "登录站长账号后才能修改设置。";
+        gate?.removeAttribute("hidden");
+        return;
+      }
+      try {
+        await loadSettings();
+        gate?.setAttribute("hidden", "");
+        content?.removeAttribute("hidden");
+      } catch (error) {
+        const requestError = error as Error & { status?: number };
+        if (requestError.status === 403) {
+          if (gateTitle) gateTitle.textContent = "没有管理权限";
+          if (gateCopy) gateCopy.textContent = "当前账号不是站长。";
+        } else if (requestError.status === 401) {
+          if (gateTitle) gateTitle.textContent = "登录已过期";
+          if (gateCopy) gateCopy.textContent = "请重新登录后再试。";
+        } else {
+          if (gateTitle) gateTitle.textContent = "暂时无法读取设置";
+          if (gateCopy) {
+            gateCopy.textContent =
+              error instanceof Error ? error.message : "请稍后重试。";
+          }
+          if (gateLink) gateLink.hidden = true;
+        }
+        gate?.removeAttribute("hidden");
+        setStatus("");
+      }
+    })
+    .catch(() => {
+      if (gateTitle) gateTitle.textContent = "无法验证登录状态";
+      if (gateCopy) gateCopy.textContent = "请刷新页面后重试。";
+      gate?.removeAttribute("hidden");
+    });
+</script>

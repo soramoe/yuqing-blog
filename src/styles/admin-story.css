@@ -1,0 +1,250 @@
+.page-admin-story main {
+  padding-block: 58px 100px;
+}
+
+.admin-story-shell {
+  max-width: 980px;
+}
+
+.admin-story-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--strong-border);
+}
+
+.admin-story-header h1 {
+  margin: 8px 0 10px;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  letter-spacing: -0.06em;
+}
+
+.admin-story-header p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.admin-story-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.admin-story-nav a,
+.admin-story-denied a {
+  border-bottom: 1px solid currentColor;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.admin-story-nav a:hover,
+.admin-story-denied a:hover {
+  color: #d48d62;
+}
+
+.admin-story-status {
+  margin: 20px 0;
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.admin-story-status[data-state="error"] {
+  color: #e38276;
+}
+
+.admin-story-status[data-state="success"] {
+  color: #79b98b;
+}
+
+.admin-story-denied {
+  margin-top: 28px;
+  padding: 24px;
+  border: 1px dashed var(--strong-border);
+}
+
+.admin-story-denied[hidden],
+.admin-story-content[hidden] {
+  display: none;
+}
+
+.admin-story-denied strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.admin-story-denied p:not(.eyebrow) {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.admin-story-settings,
+.admin-story-audit {
+  margin-top: 26px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 68%, transparent);
+}
+
+.admin-story-section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.admin-story-section-heading h2 {
+  margin: 5px 0 0;
+  font-size: 1.2rem;
+}
+
+.admin-story-section-heading > span {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: 0.56rem;
+}
+
+.admin-story-settings form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-story-settings form > label {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.admin-story-settings input[type="number"] {
+  min-height: 42px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.76rem;
+}
+
+.admin-story-settings label small {
+  color: var(--muted);
+  font-size: 0.54rem;
+  line-height: 1.55;
+}
+
+.admin-story-toggle {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.admin-story-toggle input {
+  margin-top: 3px;
+  accent-color: #d48d62;
+}
+
+.admin-story-toggle > span {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-story-toggle strong {
+  color: var(--text);
+  font-size: 0.7rem;
+}
+
+.admin-story-form-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
+.admin-story-form-actions button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 1px solid var(--text);
+  background: var(--text);
+  color: var(--background);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.admin-story-form-actions button:hover:not(:disabled) {
+  border-color: #d48d62;
+  background: #d48d62;
+  color: #fff;
+}
+
+.admin-story-form-actions button:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
+.admin-story-audit ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-story-audit li {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border-left: 2px solid #d48d62;
+  background: var(--background);
+}
+
+.admin-story-audit li strong {
+  font-size: 0.68rem;
+}
+
+.admin-story-audit li span,
+.admin-story-audit li small {
+  color: var(--muted);
+  font-size: 0.56rem;
+  line-height: 1.55;
+}
+
+.admin-story-audit li small {
+  font-family: Consolas, monospace;
+}
+
+.admin-story-empty {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+@media (max-width: 720px) {
+  .page-admin-story main {
+    padding-block: 34px 72px;
+  }
+
+  .admin-story-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .admin-story-settings form {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-story-form-actions {
+    grid-column: 1;
+  }
+
+  .admin-story-form-actions button {
+    width: 100%;
+  }
+}
