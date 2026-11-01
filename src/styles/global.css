@@ -2104,12 +2104,6 @@ body.gallery-lightbox-open {
   object-fit: contain;
 }
 
-.gallery-lightbox-figure figcaption {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 0.76rem;
-  letter-spacing: 0.04em;
-}
-
 .gallery-lightbox-close {
   position: fixed;
   top: max(18px, env(safe-area-inset-top));
