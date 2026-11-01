@@ -329,9 +329,10 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
       })
       .then((payload) => {
         if (!payload || !homeGalleryGrid) return;
-        const latest = payload.images.slice(0, 4);
+        const publicImages = payload.images.filter((image) => !image.locked);
+        const latest = publicImages.slice(0, 4);
         if (homeGalleryCount) {
-          homeGalleryCount.textContent = String(payload.images.length).padStart(
+          homeGalleryCount.textContent = String(publicImages.length).padStart(
             2,
             "0",
           );
