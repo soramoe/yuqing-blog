@@ -91,7 +91,6 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
                   fetchpriority={index === 0 ? "high" : "auto"}
                   decoding="async"
                 />
-                <span>{image.title}</span>
               </a>
             );
           })}
@@ -205,10 +204,6 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
           { once: true },
         );
 
-        const caption = document.createElement("span");
-        caption.textContent = image.locked
-          ? "私密图片 · 仅投稿者可见"
-          : image.title;
         item.append(thumbnail);
         if (image.locked) {
           const lock = document.createElement("div");
@@ -216,8 +211,10 @@ const images = [...galleryImages, ...coverImages].sort((a, b) =>
           lock.innerHTML =
             '<span aria-hidden="true">⌑</span><strong>已锁定</strong>';
           item.append(lock);
+          const caption = document.createElement("span");
+          caption.textContent = "私密图片 · 仅投稿者可见";
+          item.append(caption);
         }
-        item.append(caption);
         fragment.append(item);
       });
       grid.prepend(fragment);

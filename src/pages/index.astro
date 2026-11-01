@@ -75,10 +75,6 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
               fetchpriority={index === 0 ? "high" : "auto"}
               decoding="async"
             />
-            <span class="home-gallery-caption">
-              <span>{image.title}</span>
-              <span aria-hidden="true"><ArrowUpRight /></span>
-            </span>
           </a>
         ))}
       </div>
@@ -365,15 +361,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
           thumbnail.loading = index === 0 ? "eager" : "lazy";
           thumbnail.decoding = "async";
 
-          const caption = document.createElement("span");
-          caption.className = "home-gallery-caption";
-          const label = document.createElement("span");
-          label.textContent = image.locked ? "私密图片" : image.title;
-          const marker = document.createElement("span");
-          marker.setAttribute("aria-hidden", "true");
-          marker.textContent = image.locked ? "锁定" : "↗";
-          caption.append(label, marker);
-          item.append(thumbnail, caption);
+          item.append(thumbnail);
           homeGalleryGrid.append(item);
         });
         homeGalleryGrid.hidden = false;
