@@ -139,3 +139,24 @@ export const storyTrialBudget = sqliteTable("story_trial_budget", {
   spentCents: integer("spent_cents").default(0).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
 });
+
+export const storyOpeningHistory = sqliteTable(
+  "story_opening_history",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    templateId: text("template_id").notNull(),
+    modeId: text("mode_id").notNull(),
+    openingId: text("opening_id").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("story_opening_history_user_template_created_idx").on(
+      table.userId,
+      table.templateId,
+      table.createdAt,
+    ),
+  ],
+);

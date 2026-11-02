@@ -1,3 +1,5 @@
+import type { StoryOpeningCard } from "./story-openings";
+
 export const STORY_POINTS_PER_TURN = 4;
 export const STORY_MAX_ACTION_LENGTH = 500;
 export const STORY_MAX_HISTORY_TURNS = 5;
@@ -53,6 +55,7 @@ export interface StoryPayload {
   difficultyId: StoryDifficulty["id"];
   customDifficulty: string;
   memory: StoryMemory;
+  openingCard: StoryOpeningCard | null;
 }
 
 export interface StoryMemory {

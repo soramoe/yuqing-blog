@@ -24,6 +24,12 @@ import {
 import { getStorySettings } from "../../../src/lib/story-settings";
 import { chinaDateKey } from "../../../src/lib/points";
 import {
+  createStoryOpeningCard,
+  getStoryOpeningGuidance,
+  restoreStoryOpeningCard,
+  sanitizeStoryOpeningCard,
+} from "../../../src/lib/story-openings";
+import {
   finalizeStoryTrial,
   releaseStoryTrial,
   reserveStoryTrial,
@@ -68,6 +74,11 @@ const parseRequest = (
         })
         .filter((turn): turn is StoryTurn => turn !== null)
     : [];
+  const requestedOpeningCard = sanitizeStoryOpeningCard(body.openingCard);
+  const difficulty = getStoryDifficulty(
+    body.difficultyId,
+    body.customDifficulty,
+  );
 
   if (
     !/^[a-zA-Z0-9-]{8,80}$/.test(sessionId) ||
@@ -92,12 +103,17 @@ const parseRequest = (
     state: sanitizeStoryState(templateId, body.state),
     summary: safeString(body.summary, 1200),
     characters: sanitizeStoryCharacters(body.characters),
-    difficultyId: getStoryDifficulty(
-      body.difficultyId,
-      body.customDifficulty,
-    ).id,
+    difficultyId: difficulty.id,
     customDifficulty: safeString(body.customDifficulty, 200),
     memory: sanitizeStoryMemory(body.memory),
+    openingCard: requestedOpeningCard
+      ? restoreStoryOpeningCard({
+          id: requestedOpeningCard.id,
+          templateId,
+          modeId,
+          difficultyId: difficulty.id,
+        })
+      : null,
   } as StoryPayload;
 };
 
@@ -116,6 +132,29 @@ const buildPrompt = (
         `回合 ${payload.turnIndex - payload.history.length + index + 1}\n玩家行动：${turn.action}\n剧情：${turn.narrative}`,
     )
     .join("\n\n");
+  const openingCard = payload.openingCard;
+  const openingSection = openingCard
+    ? `已锁定的开场卡：
+地点：${openingCard.location}
+触发事件：${openingCard.incitingEvent}
+即时压力：${openingCard.immediatePressure}
+关键人物关系：${openingCard.relationship}
+异常细节：${openingCard.anomaly}
+主角当前目标：${openingCard.personalGoal}
+建议第一个选择：${openingCard.firstChoice}
+`
+    : "";
+  const openingRequirements =
+    payload.turnIndex === 0 && openingCard
+      ? `第一回合硬性规则：
+- 第一句直接进入动作、对话或异常，不得先铺陈天气、环境、回忆或世界观。
+- 在前 150 字内让开场卡中的触发事件真实发生，并同时建立即时压力。
+- 地点、触发事件、关键人物关系和异常细节都是已验证的既定事实，不得替换、推迟或含糊处理。
+- 禁止使用“你缓缓睁开眼”“阳光透过窗户”“空气中弥漫着”“你发现自己穿越了”“命运的齿轮开始转动”等空泛套话，也不要换一种说法复刻这些结构。
+- 三个行动必须直接承接开场卡的建议第一个选择，并形成调查、交涉、冒险或撤离等明显不同的路线。`
+      : openingCard
+        ? `开场卡已经在第一回合发生，其中的地点、事件、人物关系和异常细节都是既定事实。续写时不得遗忘、替换或重新解释这些事实。`
+        : "";
 
   return `你是中文互动小说叙事引擎。请根据设定续写一段剧情，并给出三个可点击行动。
 
@@ -125,6 +164,11 @@ const buildPrompt = (
 文风：${payload.style}
 难度：${difficulty.title}。${difficulty.rule}
 ${difficulty.customDifficulty ? `自定义难度规则：${difficulty.customDifficulty}` : ""}
+
+${openingSection}
+开场呈现要求：
+${getStoryOpeningGuidance(payload.difficultyId)}
+${openingRequirements}
 
 角色设定：
 ${JSON.stringify(payload.characters)}
@@ -338,6 +382,35 @@ const handleStoryTurn: PagesFunction<Env> = async ({
     );
   }
 
+  if (payload.turnIndex === 0) {
+    let recentOpeningIds: string[] = [];
+    try {
+      const recentOpenings = await env.DB.prepare(
+        `SELECT opening_id
+         FROM story_opening_history
+         WHERE user_id = ? AND template_id = ?
+         ORDER BY created_at DESC
+         LIMIT 12`,
+      )
+        .bind(session.user.id, payload.templateId)
+        .all<{ opening_id: string }>();
+      recentOpeningIds = recentOpenings.results.map(
+        (row) => row.opening_id,
+      );
+    } catch {
+      // Older deployments may not have the history table yet.
+    }
+    payload.openingCard = createStoryOpeningCard({
+      templateId: payload.templateId,
+      modeId: payload.modeId,
+      difficultyId: payload.difficultyId,
+      excludeIds: recentOpeningIds,
+    });
+    if (!payload.openingCard) {
+      return json({ error: "当前世界暂时没有可用的开场事件。" }, 503);
+    }
+  }
+
   let charged:
     | { cost: number; balance: number }
     | { cost: 0; balance: number | null } = {
@@ -544,6 +617,26 @@ const handleStoryTurn: PagesFunction<Env> = async ({
         Number(providerPayload.usage?.total_tokens ?? 0),
       );
     }
+    if (payload.turnIndex === 0 && payload.openingCard) {
+      try {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO story_opening_history
+             (id, user_id, template_id, mode_id, opening_id, created_at)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+          .bind(
+            payload.requestId,
+            session.user.id,
+            payload.templateId,
+            payload.modeId,
+            payload.openingCard.id,
+            Date.now(),
+          )
+          .run();
+      } catch {
+        // Opening history improves variety but must not fail a paid turn.
+      }
+    }
     return json({
       narrative: result.narrative,
       choices: result.choices,
@@ -554,6 +647,7 @@ const handleStoryTurn: PagesFunction<Env> = async ({
       balance: charged.balance,
       cost: charged.cost,
       trialRemaining,
+      openingCard: payload.openingCard,
     });
   } catch {
     const balance = chargedSitePoints

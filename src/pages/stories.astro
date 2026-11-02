@@ -408,6 +408,10 @@ import "../styles/stories.css";
     getStoryDifficulty,
     sanitizeStoryMemory,
   } from "../lib/story-templates";
+  import {
+    sanitizeStoryOpeningCard,
+    type StoryOpeningCard,
+  } from "../lib/story-openings";
 
   interface StorySnapshot {
     turnIndex: number;
@@ -418,6 +422,7 @@ import "../styles/stories.css";
     choices: string[];
     ending: boolean;
     memory: StoryMemory;
+    openingCard?: StoryOpeningCard | null;
   }
 
   interface StorySave {
@@ -443,6 +448,7 @@ import "../styles/stories.css";
     pointsSpent?: number;
     illustrationsEnabled?: boolean;
     illustrations?: Record<string, StoryIllustration>;
+    openingCard?: StoryOpeningCard | null;
     updatedAt: number;
   }
 
@@ -466,6 +472,7 @@ import "../styles/stories.css";
     balance?: number | null;
     cost?: number;
     trialRemaining?: number | null;
+    openingCard?: StoryOpeningCard | null;
   }
 
   interface CloudSave {
@@ -1335,6 +1342,7 @@ import "../styles/stories.css";
         !Array.isArray(parsed.illustrations)
           ? parsed.illustrations
           : {},
+      openingCard: sanitizeStoryOpeningCard(parsed.openingCard),
       updatedAt: Number(parsed.updatedAt) || Date.now(),
       modeId: String(parsed.modeId || ""),
       templateId: String(parsed.templateId),
@@ -1918,6 +1926,9 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     memory: structuredClone(
       currentSave?.memory ?? createInitialStoryMemory(),
     ),
+    openingCard: currentSave?.openingCard
+      ? structuredClone(currentSave.openingCard)
+      : null,
   });
 
   const restoreSnapshot = (snapshot: StorySnapshot) => {
@@ -1940,6 +1951,9 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
     currentSave.choices = [...snapshot.choices];
     currentSave.ending = snapshot.ending;
     currentSave.memory = structuredClone(snapshot.memory);
+    currentSave.openingCard = snapshot.openingCard
+      ? structuredClone(snapshot.openingCard)
+      : null;
     saveProgress();
     renderGame();
   };
@@ -2314,6 +2328,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
             currentSave.difficultyId ?? "normal",
           customDifficulty: currentSave.customDifficulty ?? "",
           memory: currentSave.memory ?? createInitialStoryMemory(),
+          openingCard: currentSave.openingCard ?? null,
           keyMode: currentSave.keyMode,
           userApiKey:
             currentSave.keyMode === "user" ? runtimeApiKey : undefined,
@@ -2353,6 +2368,12 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       ) {
         throw new Error("AI 没有返回完整剧情。");
       }
+      const returnedOpeningCard = sanitizeStoryOpeningCard(
+        result.openingCard,
+      );
+      if (currentSave.turnIndex === 0 && !returnedOpeningCard) {
+        throw new Error("AI 没有返回有效的故事开场。");
+      }
       if (typeof result.balance === "number") balance = result.balance;
       const reduceMotion = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
@@ -2380,6 +2401,9 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       currentSave.choices = result.choices;
       currentSave.ending = result.ending;
       currentSave.memory = sanitizeStoryMemory(result.memory);
+      if (returnedOpeningCard) {
+        currentSave.openingCard = returnedOpeningCard;
+      }
       if (typeof result.cost === "number" && result.cost > 0) {
         currentSave.pointsSpent =
           (currentSave.pointsSpent ?? 0) + result.cost;
@@ -2624,6 +2648,7 @@ ${chapters}<p class="meta">由渔情 AI 互动小说生成</p></body></html>`;
       pointsSpent: 0,
       illustrationsEnabled: useIllustrations,
       illustrations: {},
+      openingCard: null,
       updatedAt: Date.now(),
     };
     currentSave.state = applyDifficultyToInitialState(
