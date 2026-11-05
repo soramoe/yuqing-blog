@@ -2,6 +2,7 @@
 title: "渔情LiveBot使用手册——1.0.5版本"
 description: "渔情LiveBot 1.0.5 版本使用手册：从安装、登录和插件配置，到点歌、战报、OBS 挂件、更新与数据备份。"
 pubDate: 2026-11-06
+publishedAt: 2026-11-06T05:21:31+08:00
 category: "日常"
 tags: ["渔情LiveBot", "B站直播", "使用手册", "工具"]
 draft: false
