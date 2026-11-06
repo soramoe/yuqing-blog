@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#132a46"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#58c8ff"/>
+      <stop offset="1" stop-color="#1f6fb2"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#58c8ff" stop-opacity=".34"/>
+      <stop offset="1" stop-color="#58c8ff" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#fff" stroke-opacity=".055"/>
+    </pattern>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#020817" flood-opacity=".42"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  <circle cx="1020" cy="80" r="330" fill="url(#glow)"/>
+  <circle cx="1120" cy="560" r="280" fill="url(#glow)" opacity=".5"/>
+
+  <g font-family="Segoe UI, Microsoft YaHei, sans-serif">
+    <rect x="72" y="68" width="58" height="58" rx="14" fill="url(#accent)"/>
+    <text x="101" y="107" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">渔</text>
+    <text x="148" y="93" font-size="24" font-weight="700" fill="#eaf1fb">渔情LiveBot</text>
+    <text x="148" y="120" font-size="13" letter-spacing="2.5" fill="#7f9bbc">BILIBILI LIVE TOOL</text>
+
+    <text x="72" y="244" font-size="70" font-weight="760" letter-spacing="-4" fill="#f6faff">你负责发光，</text>
+    <text x="72" y="327" font-size="70" font-weight="760" letter-spacing="-4" fill="#58c8ff">杂事交给它。</text>
+    <text x="74" y="382" font-size="22" fill="#a9bdd4">弹幕、礼物、SC、舰长、点歌、战报，一个窗口全接住。</text>
+
+    <g transform="translate(72 442)">
+      <rect width="154" height="42" rx="21" fill="#58c8ff" fill-opacity=".13" stroke="#58c8ff" stroke-opacity=".34"/>
+      <text x="77" y="27" text-anchor="middle" font-size="15" fill="#dff4ff">Windows 10 / 11</text>
+      <rect x="170" width="142" height="42" rx="21" fill="#fff" fill-opacity=".05" stroke="#fff" stroke-opacity=".12"/>
+      <text x="241" y="27" text-anchor="middle" font-size="15" fill="#d6e4f4">本地运行</text>
+      <rect x="328" width="118" height="42" rx="21" fill="#fff" fill-opacity=".05" stroke="#fff" stroke-opacity=".12"/>
+      <text x="387" y="27" text-anchor="middle" font-size="15" fill="#d6e4f4">v1.0.6</text>
+    </g>
+
+    <g transform="translate(762 120)" filter="url(#shadow)">
+      <rect width="370" height="390" rx="22" fill="#111c2e" stroke="#fff" stroke-opacity=".12"/>
+      <rect x="1" y="1" width="368" height="46" rx="21" fill="#fff" fill-opacity=".035"/>
+      <circle cx="26" cy="24" r="5" fill="#58c8ff"/>
+      <circle cx="43" cy="24" r="5" fill="#46617f"/>
+      <circle cx="60" cy="24" r="5" fill="#46617f"/>
+      <text x="342" y="29" text-anchor="end" font-family="Consolas, monospace" font-size="10" fill="#6e88a6">LOCAL · 127.0.0.1:8900</text>
+
+      <g transform="translate(42 92)">
+        <rect width="48" height="48" rx="12" fill="url(#accent)"/>
+        <text x="24" y="32" text-anchor="middle" font-size="21" font-weight="800" fill="#fff">渔</text>
+        <text x="64" y="18" font-size="12" fill="#7f9bbc">LIVE CONTROL DESK</text>
+        <text x="64" y="40" font-size="18" font-weight="700" fill="#eef6ff">渔情LiveBot</text>
+      </g>
+
+      <g transform="translate(42 168)">
+        <circle cx="5" cy="5" r="5" fill="#58c8ff"/>
+        <text x="19" y="9" font-size="13" fill="#9fb4cc">直播会话已准备</text>
+      </g>
+      <rect x="42" y="197" width="286" height="1" fill="#fff" fill-opacity=".08"/>
+
+      <g transform="translate(42 220)">
+        <rect width="88" height="86" rx="14" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".08"/>
+        <text x="44" y="35" text-anchor="middle" font-size="12" fill="#7f9bbc">弹幕</text>
+        <text x="44" y="64" text-anchor="middle" font-size="24" font-weight="700" fill="#eaf1fb">LIVE</text>
+        <rect x="98" width="88" height="86" rx="14" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".08"/>
+        <text x="142" y="35" text-anchor="middle" font-size="12" fill="#7f9bbc">点歌</text>
+        <text x="142" y="64" text-anchor="middle" font-size="24" font-weight="700" fill="#58c8ff">100</text>
+        <rect x="196" width="90" height="86" rx="14" fill="#fff" fill-opacity=".045" stroke="#fff" stroke-opacity=".08"/>
+        <text x="241" y="35" text-anchor="middle" font-size="12" fill="#7f9bbc">本地数据</text>
+        <text x="241" y="64" text-anchor="middle" font-size="24" font-weight="700" fill="#eaf1fb">DATA</text>
+      </g>
+
+      <g transform="translate(42 330)" font-size="11" fill="#8ea7c2">
+        <rect width="286" height="26" rx="7" fill="#fff" fill-opacity=".035"/>
+        <text x="12" y="18">弹幕答谢 · 点歌队列 · SC 与舰长 · 下播战报</text>
+      </g>
+    </g>
+
+    <text x="72" y="572" font-family="Consolas, monospace" font-size="14" letter-spacing="1.5" fill="#728ba7">XHZ6.COM / TOOLS / LIVEBOT</text>
+  </g>
+</svg>

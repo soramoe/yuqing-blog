@@ -1,0 +1,113 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/tools.css";
+
+const tools = (await getCollection("tools", ({ data }) => !data.draft)).sort(
+  (left, right) =>
+    left.data.order - right.data.order ||
+    right.data.releasedAt.valueOf() - left.data.releasedAt.valueOf() ||
+    left.data.name.localeCompare(right.data.name, "zh-CN"),
+);
+
+const formatDate = (date: Date) =>
+  new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Shanghai",
+  }).format(date);
+---
+
+<BaseLayout
+  title="工具"
+  description="渔情自用的桌面工具与下载入口，包括 B站直播助手、弹幕、点歌、OBS 挂件等内容。"
+  bodyClass="page-tools"
+>
+  <div class="tools-page">
+    <header class="tools-index-head">
+      <div>
+        <p class="eyebrow">LOCAL TOOLS / 01</p>
+        <h1>工具<span>。</span></h1>
+      </div>
+      <div class="tools-index-intro">
+        <p>把日常折腾里真正会反复使用的东西，做成可以下载、可以更新的本地工具。</p>
+        <dl>
+          <div>
+            <dt>工具</dt>
+            <dd>{String(tools.length).padStart(2, "0")}</dd>
+          </div>
+          <div>
+            <dt>运行</dt>
+            <dd>LOCAL</dd>
+          </div>
+          <div>
+            <dt>平台</dt>
+            <dd>WINDOWS</dd>
+          </div>
+        </dl>
+      </div>
+    </header>
+
+    {
+      tools.length > 0 ? (
+        <section class="tools-grid" aria-label="可下载工具">
+          {tools.map((tool, index) => {
+            const statusLabel =
+              tool.data.status === "available"
+                ? "可下载"
+                : tool.data.status === "coming-soon"
+                  ? "即将推出"
+                  : "已停止更新";
+            return (
+              <article class="tool-index-card" data-status={tool.data.status}>
+                <a
+                  class="tool-index-cover"
+                  href={`/tools/${tool.id}/`}
+                  aria-label={`查看${tool.data.name}下载页`}
+                >
+                  {tool.data.coverImage ? (
+                    <img
+                      src={tool.data.coverImage}
+                      alt=""
+                      loading={index === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                    />
+                  ) : (
+                    <span class="tool-index-mark" aria-hidden="true">渔</span>
+                  )}
+                  <span class="tool-index-type">{tool.data.eyebrow}</span>
+                  <span class="tool-index-number">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+                </a>
+                <div class="tool-index-body">
+                  <div class="tool-index-meta">
+                    <span>{statusLabel}</span>
+                    <span>v{tool.data.version}</span>
+                  </div>
+                  <h2>
+                    <a href={`/tools/${tool.id}/`}>{tool.data.name}</a>
+                  </h2>
+                  <p>{tool.data.summary}</p>
+                  <div class="tool-index-foot">
+                    <span>{tool.data.platforms.join(" / ")}</span>
+                    <span>{formatDate(tool.data.releasedAt)}</span>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </section>
+      ) : (
+        <p class="tools-empty">工具正在准备中，请稍后再来。</p>
+      )
+    }
+
+    <section class="tools-index-note">
+      <span>ABOUT TOOLS</span>
+      <p>工具优先本地运行。下载前请核对系统要求、授权说明和文件校验值。</p>
+      <a href="/about/">了解渔情</a>
+    </section>
+  </div>
+</BaseLayout>

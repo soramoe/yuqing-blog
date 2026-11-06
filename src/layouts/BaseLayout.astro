@@ -12,7 +12,14 @@ interface Props {
   description?: string;
   image?: string;
   type?: "website" | "article";
-  schemaType?: "WebSite" | "WebPage" | "AboutPage" | "Blog" | "CollectionPage";
+  schemaType?:
+    | "WebSite"
+    | "WebPage"
+    | "AboutPage"
+    | "Blog"
+    | "CollectionPage"
+    | "SoftwareApplication";
+  schemaExtra?: Record<string, unknown>;
   publishedTime?: Date;
   updatedTime?: Date;
   section?: string;
@@ -27,6 +34,7 @@ const {
   image = "/og-default.png",
   type = "website",
   schemaType = "WebPage",
+  schemaExtra = {},
   publishedTime,
   updatedTime,
   section,
@@ -119,6 +127,7 @@ const structuredData = noindex
           url: canonical.toString(),
           inLanguage: "zh-CN",
           isPartOf: websiteEntity,
+          ...schemaExtra,
         };
 ---
 
