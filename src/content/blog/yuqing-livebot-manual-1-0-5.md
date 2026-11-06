@@ -1,9 +1,9 @@
 ---
-title: "渔情LiveBot使用手册——1.0.5版本"
-description: "渔情LiveBot 1.0.5 版本使用手册：从安装、登录和插件配置，到点歌、战报、OBS 挂件、更新与数据备份。"
+title: "渔情LiveBot使用手册——1.0.8版本"
+description: "渔情LiveBot 1.0.8 版本使用手册：从安装、登录和插件配置，到点歌、战报、OBS 挂件、更新与数据备份。"
 pubDate: 2026-11-06
 publishedAt: 2026-11-06T05:21:31+08:00
-updatedDate: 2026-11-06T06:03:48+08:00
+updatedDate: 2026-11-07T02:33:44+08:00
 category: "日常"
 tags: ["渔情LiveBot", "B站直播", "使用手册", "工具"]
 cover: "/covers/yuqing-livebot-manual-1-0-5.png"
@@ -11,7 +11,7 @@ draft: false
 ---
 # 渔情B站直播助手机器人 · 使用手册
 
-> 版本 1.0.5 · 更新于 2026-11-06  
+> 版本 1.0.8 · 更新于 2026-11-07  
 > 公益项目，请勿挪用收费 · BUG 反馈群：1092065806  
 > 项目地址：https://github.com/soramoe/yq-bot
 
