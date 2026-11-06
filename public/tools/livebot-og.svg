@@ -40,7 +40,7 @@
       <rect x="170" width="142" height="42" rx="21" fill="#fff" fill-opacity=".05" stroke="#fff" stroke-opacity=".12"/>
       <text x="241" y="27" text-anchor="middle" font-size="15" fill="#d6e4f4">本地运行</text>
       <rect x="328" width="118" height="42" rx="21" fill="#fff" fill-opacity=".05" stroke="#fff" stroke-opacity=".12"/>
-      <text x="387" y="27" text-anchor="middle" font-size="15" fill="#d6e4f4">v1.0.6</text>
+      <text x="387" y="27" text-anchor="middle" font-size="15" fill="#d6e4f4">v1.0.8</text>
     </g>
 
     <g transform="translate(762 120)" filter="url(#shadow)">

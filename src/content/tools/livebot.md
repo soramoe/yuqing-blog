@@ -4,18 +4,18 @@ title: "渔情LiveBot下载 · B站直播弹幕与点歌助手"
 description: "渔情LiveBot 是本地运行的 B 站直播助手，集中处理弹幕答谢、SC、舰长、点歌、OBS 挂件和下播战报。"
 summary: "B站直播助手机器人：弹幕、礼物、SC、舰长、点歌、战报，一个窗口全接住。"
 eyebrow: "WINDOWS LIVE TOOL"
-version: "1.0.6"
+version: "1.0.8"
 releasedAt: 2026-11-06
-updatedAt: 2026-11-06
+updatedAt: 2026-11-07
 status: "available"
 platforms:
   - "Windows 10 / 11 x64"
-packageName: "渔情LiveBot-1.0.6.zip"
-sizeBytes: 34615211
-packageCount: 221
-sha256: "8FEA509E98AAC7DE583A7A21AA25BBDEFE2CF88C8E61DBA8B8BECA60418DB621"
-downloadUrl: "https://github.com/soramoe/yq-bot/releases/download/v1.0.6/yuqing-bot-1.0.6.zip"
-releaseUrl: "https://github.com/soramoe/yq-bot/releases/tag/v1.0.6"
+packageName: "yuqing-bot-1.0.8.zip"
+sizeBytes: 37877344
+packageCount: 1879
+sha256: "E28BACBF6C845526DE746AD49707D8119AF6795BABB40641C9799AD1BAC0089E"
+downloadUrl: "https://github.com/soramoe/yq-bot/releases/download/v1.0.8/yuqing-bot-1.0.8.zip"
+releaseUrl: "https://github.com/soramoe/yq-bot/releases/tag/v1.0.8"
 manualUrl: "https://xhz6.com/blog/yuqing-livebot-manual-1-0-5/"
 repoUrl: "https://github.com/soramoe/yq-bot"
 licenseUrl: "https://github.com/soramoe/yq-bot/blob/main/docs/licensing.md"
