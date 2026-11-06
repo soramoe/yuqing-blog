@@ -64,7 +64,7 @@ faqs:
   - question: "更新会丢配置吗？"
     answer: "不会。更新只替换程序文件，data/ 目录不会被覆盖。"
 trialDays: 7
-priceNote: "个人版预估参考价约 ¥199（含一年更新），最终价格与条款以购买页为准。"
+priceNote: "主播个人与有爱DD永久免费使用，工作室、公会禁止使用。"
 licenseNotes:
   - "授权绑定本机与 B站 uid。"
   - "换机或换号需要重新签发。"
