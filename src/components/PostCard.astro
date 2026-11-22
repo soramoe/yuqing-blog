@@ -1,7 +1,12 @@
 ---
 import type { BlogPost } from "../lib/blog";
-import { formatDate, getReadingTime } from "../lib/blog";
+import {
+  formatDate,
+  getPostPublishedAt,
+  getReadingTime,
+} from "../lib/blog";
 import { getResponsiveImage } from "../lib/images";
+import ArrowUpRight from "./ArrowUpRight.astro";
 
 interface Props {
   post: BlogPost;
@@ -9,7 +14,9 @@ interface Props {
 }
 
 const { post, index = 0 } = Astro.props;
-const cover = post.data.cover
+const publishedAt = getPostPublishedAt(post);
+const showCover = Boolean(post.data.cover && !post.data.hideCover);
+const cover = showCover && post.data.cover
   ? getResponsiveImage(post.data.cover, [480, 960, 1440])
   : null;
 ---
@@ -25,7 +32,7 @@ const cover = post.data.cover
       aria-label={`阅读《${post.data.title}》`}
     >
       {
-        post.data.cover && cover ? (
+        showCover && cover ? (
           <img
             src={cover.src}
             srcset={cover.srcSet}
@@ -47,14 +54,14 @@ const cover = post.data.cover
           </div>
         )
       }
-      <span class="post-open" aria-hidden="true">↗</span>
+      <span class="post-open" aria-hidden="true"><ArrowUpRight /></span>
     </a>
   </div>
 
   <div class="post-body">
     <div class="post-card-top">
-      <time datetime={post.data.pubDate.toISOString()}>
-        {formatDate(post.data.pubDate)}
+      <time datetime={publishedAt.toISOString()}>
+        {formatDate(publishedAt)}
       </time>
       <span>{getReadingTime(post.body)} MIN</span>
     </div>

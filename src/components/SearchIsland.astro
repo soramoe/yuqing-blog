@@ -1,6 +1,7 @@
 ---
 import {
   formatDate,
+  getPostPublishedAt,
   getPublishedPosts,
   getReadingTime,
 } from "../lib/blog";
@@ -12,7 +13,7 @@ const searchFallbackItems = posts.map((post) => ({
   category: post.data.category,
   tags: post.data.tags,
   url: `/blog/${post.id}/`,
-  date: formatDate(post.data.pubDate),
+  date: formatDate(getPostPublishedAt(post)),
   readingTime: getReadingTime(post.body),
 }));
 
@@ -20,7 +21,9 @@ const quickLinks = [
   { href: "/", label: "首页" },
   { href: "/blog/", label: "博客" },
   { href: "/gallery/", label: "图库" },
+  { href: "/stories/", label: "互动小说" },
   { href: "/games/", label: "游戏" },
+  { href: "/tools/", label: "工具" },
   { href: "/about/", label: "关于" },
   { href: "/rss.xml", label: "RSS" },
 ];

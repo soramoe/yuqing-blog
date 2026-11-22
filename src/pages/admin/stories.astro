@@ -1,0 +1,963 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/admin-story.css";
+---
+
+<BaseLayout
+  title="互动小说管理"
+  description="调整互动小说积分价格、生成参数和站长 Key 开关。"
+  bodyClass="page-admin-story"
+  noindex
+>
+  <div class="container admin-story-shell">
+    <header class="admin-story-header">
+      <div>
+        <p class="eyebrow">AI STORY OPERATIONS</p>
+        <h1>互动小说管理</h1>
+        <p>修改后立即影响下一个剧情回合，历史积分流水不会被重算。</p>
+      </div>
+      <div class="admin-story-nav">
+        <a href="/admin/comments/">评论审核</a>
+        <a href="/admin/gallery/">图库管理</a>
+        <a href="/admin/points/">积分管理</a>
+        <a href="/account/">返回账户</a>
+      </div>
+    </header>
+
+    <p class="admin-story-status" data-story-admin-status aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-story-denied" data-story-admin-gate hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-story-gate-title>请先登录</strong>
+      <p data-story-gate-copy>登录后才能管理互动小说。</p>
+      <a href="/login/?next=%2Fadmin%2Fstories%2F" data-story-gate-link>
+        登录站长账号
+      </a>
+    </div>
+
+    <div class="admin-story-content" data-story-admin-content hidden>
+      <section class="admin-story-settings">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">RUNTIME SETTINGS</p>
+            <h2>价格与生成参数</h2>
+          </div>
+          <span data-story-settings-updated>尚未更新</span>
+        </div>
+
+        <form data-story-settings-form>
+          <label>
+            <span>站长 Key：每回合积分</span>
+            <input
+              type="number"
+              min="1"
+              max="20"
+              step="1"
+              data-setting-points
+              required
+            />
+            <small>建议 4 积分；修改只影响后续回合。</small>
+          </label>
+          <label>
+            <span>最大输出 Token</span>
+            <input
+              type="number"
+              min="300"
+              max="4000"
+              step="50"
+              data-setting-output
+              required
+            />
+            <small>输出越长成本越高，推荐 800～1200。</small>
+          </label>
+          <label>
+            <span>最近上下文回合</span>
+            <input
+              type="number"
+              min="1"
+              max="12"
+              step="1"
+              data-setting-context
+              required
+            />
+            <small>建议 3～5 回合，并配合剧情摘要。</small>
+          </label>
+          <label>
+            <span>每日站长 Key 回合上限</span>
+            <input
+              type="number"
+              min="1"
+              max="500"
+              step="1"
+              data-setting-daily
+              required
+            />
+            <small>每个账号每天最多发起的付费剧情回合数。</small>
+          </label>
+          <label class="admin-story-toggle">
+            <input type="checkbox" data-setting-trial-enabled />
+            <span>
+              <strong>开放免费试玩</strong>
+              <small>每个账号一次，免费额度会绑定首次开始的故事。</small>
+            </span>
+          </label>
+          <label>
+            <span>GitHub 账号试玩回合</span>
+            <input
+              type="number"
+              min="0"
+              max="10"
+              step="1"
+              data-setting-trial-github
+              required
+            />
+            <small>推荐 2 回合，包含故事开场。</small>
+          </label>
+          <label>
+            <span>邮箱账号试玩回合</span>
+            <input
+              type="number"
+              min="0"
+              max="10"
+              step="1"
+              data-setting-trial-email
+              required
+            />
+            <small>推荐 1 回合，降低匿名刷额度成本。</small>
+          </label>
+          <label>
+            <span>试玩单回合输出上限</span>
+            <input
+              type="number"
+              min="300"
+              max="1200"
+              step="50"
+              data-setting-trial-output
+              required
+            />
+            <small>免费回合单独限流，推荐 500～700 Token。</small>
+          </label>
+          <label>
+            <span>每日试玩预算（元）</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              data-setting-trial-budget
+              required
+            />
+            <small>按保守成本预留，预算耗尽后自动停止试玩。</small>
+          </label>
+          <label>
+            <span>同一网络每日试玩账号数</span>
+            <input
+              type="number"
+              min="1"
+              max="10"
+              step="1"
+              data-setting-trial-ip
+              required
+            />
+            <small>用于限制批量注册；同一网络建议 1～2 个账号。</small>
+          </label>
+          <label class="admin-story-toggle">
+            <input type="checkbox" data-setting-site-enabled />
+            <span>
+              <strong>开放站长 Key</strong>
+              <small>关闭后用户仍可使用自己的 DeepSeek Key。</small>
+            </span>
+          </label>
+          <div class="admin-story-form-actions">
+            <button type="submit" data-story-settings-submit>保存设置</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-story-audit">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">AUDIT LOG</p>
+            <h2>最近修改</h2>
+          </div>
+        </div>
+        <ol data-story-audit-list></ol>
+      </section>
+
+      <section class="admin-story-settings admin-image-control-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">IMAGE CONTROL</p>
+            <h2>生图控制</h2>
+          </div>
+          <span data-image-config-status>正在读取…</span>
+        </div>
+        <form data-image-config-form>
+          <label class="admin-story-toggle admin-image-master-toggle">
+            <input type="checkbox" data-image-enabled />
+            <span>
+              <strong>开放生图能力</strong>
+              <small>总开关关闭时，管理员测试也不会调用图片模型。</small>
+            </span>
+          </label>
+          <label>
+            <span>标准图积分</span>
+            <input type="number" min="1" max="1000" data-image-standard-points required />
+            <small>推荐 20 积分，加上文本回合后总价 24。</small>
+          </label>
+          <label>
+            <span>高清图积分</span>
+            <input type="number" min="1" max="1000" data-image-hd-points required />
+            <small>推荐 32 积分，加上文本回合后总价 36。</small>
+          </label>
+          <label>
+            <span>每日全站任务上限</span>
+            <input type="number" min="1" max="5000" data-image-daily-limit required />
+            <small>达到上限后自动停止新任务。</small>
+          </label>
+          <label>
+            <span>每月全站预算（元）</span>
+            <input type="number" min="0" max="10000" data-image-monthly-budget required />
+            <small>只统计付费供应商的保守成本。</small>
+          </label>
+          <div class="admin-image-provider-list" data-image-provider-list></div>
+          <div class="admin-story-form-actions">
+            <button type="submit" data-image-config-submit>保存生图控制</button>
+          </div>
+          <p data-image-config-message aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="admin-story-settings admin-image-test-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">IMAGE PROVIDER TEST</p>
+            <h2>生图模型测试</h2>
+          </div>
+          <span>仅管理员可见</span>
+        </div>
+        <form data-image-test-form>
+          <label>
+            <span>测试提示词</span>
+            <textarea
+              rows="3"
+              maxlength="1000"
+              data-image-test-prompt
+              required
+            >雨夜中的中式旧城，一名撑伞的旅人站在河桥边，电影感，水墨与霓虹交织，无文字</textarea>
+            <small>会按后台供应商顺序调用，并产生一次测试任务。</small>
+          </label>
+          <label>
+            <span>图片质量</span>
+            <select data-image-test-quality>
+              <option value="standard">标准图</option>
+              <option value="hd">高清图</option>
+            </select>
+            <small>正式环境默认标准图附加 20 积分，高清图附加 32 积分。</small>
+          </label>
+          <div class="admin-story-form-actions">
+            <button type="submit" data-image-test-submit>开始测试</button>
+          </div>
+          <p data-image-test-status aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="admin-story-publications">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">PUBLIC STORY REVIEW</p>
+            <h2>公共故事审核</h2>
+          </div>
+          <label>
+            <span class="sr-only">筛选状态</span>
+            <select data-story-publication-filter>
+              <option value="pending">待审核</option>
+              <option value="approved">已发布</option>
+              <option value="rejected">已拒绝</option>
+              <option value="all">全部</option>
+            </select>
+          </label>
+        </div>
+        <div class="admin-story-publication-list" data-story-publication-list></div>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+  import { sanitizeStorySettings, type StorySettings } from "../../lib/story-settings";
+
+  interface AuditItem {
+    id: string;
+    beforeJson: string;
+    afterJson: string;
+    createdAt: number;
+    operatorName: string | null;
+  }
+
+  interface AdminImageProvider {
+    id: string;
+    name: string;
+    adapter: string;
+    model: string;
+    enabled: boolean;
+    priority: number;
+    configured: boolean;
+    cooldownActive: boolean;
+  }
+
+  interface AdminImageConfig {
+    enabled: boolean;
+    standardPoints: number;
+    hdPoints: number;
+    dailyJobLimit: number;
+    monthlyBudgetCents: number;
+  }
+
+  const status = document.querySelector<HTMLElement>(
+    "[data-story-admin-status]",
+  );
+  const gate = document.querySelector<HTMLElement>("[data-story-admin-gate]");
+  const content = document.querySelector<HTMLElement>(
+    "[data-story-admin-content]",
+  );
+  const gateTitle = document.querySelector<HTMLElement>(
+    "[data-story-gate-title]",
+  );
+  const gateCopy = document.querySelector<HTMLElement>(
+    "[data-story-gate-copy]",
+  );
+  const gateLink = document.querySelector<HTMLAnchorElement>(
+    "[data-story-gate-link]",
+  );
+  const form = document.querySelector<HTMLFormElement>(
+    "[data-story-settings-form]",
+  );
+  const pointsInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-points]",
+  );
+  const outputInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-output]",
+  );
+  const contextInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-context]",
+  );
+  const dailyInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-daily]",
+  );
+  const trialEnabledInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-enabled]",
+  );
+  const trialGithubInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-github]",
+  );
+  const trialEmailInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-email]",
+  );
+  const trialOutputInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-output]",
+  );
+  const trialBudgetInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-budget]",
+  );
+  const trialIpInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-trial-ip]",
+  );
+  const siteEnabledInput = document.querySelector<HTMLInputElement>(
+    "[data-setting-site-enabled]",
+  );
+  const submitButton = document.querySelector<HTMLButtonElement>(
+    "[data-story-settings-submit]",
+  );
+  const updatedLabel = document.querySelector<HTMLElement>(
+    "[data-story-settings-updated]",
+  );
+  const auditList = document.querySelector<HTMLElement>(
+    "[data-story-audit-list]",
+  );
+  const publicationFilter = document.querySelector<HTMLSelectElement>(
+    "[data-story-publication-filter]",
+  );
+  const publicationList = document.querySelector<HTMLElement>(
+    "[data-story-publication-list]",
+  );
+  const imageTestForm = document.querySelector<HTMLFormElement>(
+    "[data-image-test-form]",
+  );
+  const imageTestPrompt = document.querySelector<HTMLTextAreaElement>(
+    "[data-image-test-prompt]",
+  );
+  const imageTestQuality = document.querySelector<HTMLSelectElement>(
+    "[data-image-test-quality]",
+  );
+  const imageTestSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-image-test-submit]",
+  );
+  const imageTestStatus = document.querySelector<HTMLElement>(
+    "[data-image-test-status]",
+  );
+  const imageConfigForm = document.querySelector<HTMLFormElement>(
+    "[data-image-config-form]",
+  );
+  const imageEnabledInput = document.querySelector<HTMLInputElement>(
+    "[data-image-enabled]",
+  );
+  const imageStandardInput = document.querySelector<HTMLInputElement>(
+    "[data-image-standard-points]",
+  );
+  const imageHdInput = document.querySelector<HTMLInputElement>(
+    "[data-image-hd-points]",
+  );
+  const imageDailyInput = document.querySelector<HTMLInputElement>(
+    "[data-image-daily-limit]",
+  );
+  const imageBudgetInput = document.querySelector<HTMLInputElement>(
+    "[data-image-monthly-budget]",
+  );
+  const imageProviderList = document.querySelector<HTMLElement>(
+    "[data-image-provider-list]",
+  );
+  const imageConfigSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-image-config-submit]",
+  );
+  const imageConfigStatus = document.querySelector<HTMLElement>(
+    "[data-image-config-status]",
+  );
+  const imageConfigMessage = document.querySelector<HTMLElement>(
+    "[data-image-config-message]",
+  );
+  let imageConfigProviders: AdminImageProvider[] = [];
+
+  const setStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.state = state;
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const setImageConfigMessage = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!imageConfigMessage) return;
+    imageConfigMessage.textContent = message;
+    imageConfigMessage.dataset.state = state;
+  };
+
+  const renderImageProviders = () => {
+    if (!imageProviderList) return;
+    imageProviderList.replaceChildren();
+    for (const provider of imageConfigProviders) {
+      const card = document.createElement("article");
+      card.className = "admin-image-provider";
+      card.dataset.imageProviderId = provider.id;
+
+      const heading = document.createElement("header");
+      const active = document.createElement("label");
+      active.className = "admin-image-provider-toggle";
+      const enabled = document.createElement("input");
+      enabled.type = "checkbox";
+      enabled.checked = provider.enabled;
+      enabled.dataset.imageProviderEnabled = "";
+      const name = document.createElement("span");
+      const strong = document.createElement("strong");
+      strong.textContent = provider.name;
+      const state = document.createElement("small");
+      state.textContent = provider.configured
+        ? provider.cooldownActive
+          ? "冷却中"
+          : "已配置"
+        : "缺少密钥";
+      state.dataset.configured = String(provider.configured);
+      name.append(strong, state);
+      active.append(enabled, name);
+      heading.append(active);
+
+      const fields = document.createElement("div");
+      fields.className = "admin-image-provider-fields";
+      const modelLabel = document.createElement("label");
+      const modelSpan = document.createElement("span");
+      modelSpan.textContent = "模型";
+      const modelInput = document.createElement("input");
+      modelInput.type = "text";
+      modelInput.maxLength = 160;
+      modelInput.value = provider.model;
+      modelInput.dataset.imageProviderModel = "";
+      modelLabel.append(modelSpan, modelInput);
+
+      const priorityLabel = document.createElement("label");
+      const prioritySpan = document.createElement("span");
+      prioritySpan.textContent = "优先级";
+      const priorityInput = document.createElement("input");
+      priorityInput.type = "number";
+      priorityInput.min = "0";
+      priorityInput.max = "10000";
+      priorityInput.value = String(provider.priority);
+      priorityInput.dataset.imageProviderPriority = "";
+      priorityLabel.append(prioritySpan, priorityInput);
+      fields.append(modelLabel, priorityLabel);
+      card.append(heading, fields);
+      imageProviderList.append(card);
+    }
+  };
+
+  const fillImageConfig = (
+    settings: AdminImageConfig,
+    providers: AdminImageProvider[],
+  ) => {
+    imageConfigProviders = providers;
+    if (imageEnabledInput) imageEnabledInput.checked = settings.enabled;
+    if (imageStandardInput) {
+      imageStandardInput.value = String(settings.standardPoints);
+    }
+    if (imageHdInput) imageHdInput.value = String(settings.hdPoints);
+    if (imageDailyInput) {
+      imageDailyInput.value = String(settings.dailyJobLimit);
+    }
+    if (imageBudgetInput) {
+      imageBudgetInput.value = String(settings.monthlyBudgetCents / 100);
+    }
+    if (imageConfigStatus) {
+      imageConfigStatus.textContent = settings.enabled ? "生图已开启" : "生图已关闭";
+    }
+    renderImageProviders();
+  };
+
+  const loadImageConfig = async () => {
+    const response = await fetch("/api/admin/image", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as {
+      settings?: AdminImageConfig;
+      providers?: AdminImageProvider[];
+      error?: string;
+    };
+    if (!response.ok || !payload.settings) {
+      throw new Error(payload.error || "生图设置读取失败。");
+    }
+    fillImageConfig(payload.settings, payload.providers ?? []);
+  };
+
+  const fillSettings = (settings: StorySettings) => {
+    if (pointsInput) pointsInput.value = String(settings.pointsPerTurn);
+    if (outputInput) outputInput.value = String(settings.maxOutputTokens);
+    if (contextInput) contextInput.value = String(settings.contextTurns);
+    if (dailyInput) dailyInput.value = String(settings.dailyTurnLimit);
+    if (trialEnabledInput) trialEnabledInput.checked = settings.trialEnabled;
+    if (trialGithubInput) {
+      trialGithubInput.value = String(settings.trialGithubTurns);
+    }
+    if (trialEmailInput) {
+      trialEmailInput.value = String(settings.trialEmailTurns);
+    }
+    if (trialOutputInput) {
+      trialOutputInput.value = String(settings.trialMaxOutputTokens);
+    }
+    if (trialBudgetInput) {
+      trialBudgetInput.value = String(settings.trialDailyBudgetYuan);
+    }
+    if (trialIpInput) {
+      trialIpInput.value = String(settings.trialIpDailyLimit);
+    }
+    if (siteEnabledInput) {
+      siteEnabledInput.checked = settings.siteKeyEnabled;
+    }
+    if (updatedLabel) {
+      updatedLabel.textContent = settings.updatedAt
+        ? `最后更新 ${formatDate(settings.updatedAt)}`
+        : "当前使用默认值";
+    }
+  };
+
+  const renderAudit = (items: AuditItem[]) => {
+    if (!auditList) return;
+    auditList.replaceChildren();
+    if (items.length === 0) {
+      const empty = document.createElement("li");
+      empty.className = "admin-story-empty";
+      empty.textContent = "还没有修改记录。";
+      auditList.append(empty);
+      return;
+    }
+    for (const item of items) {
+      let before: StorySettings;
+      let after: StorySettings;
+      try {
+        before = JSON.parse(item.beforeJson) as StorySettings;
+        after = JSON.parse(item.afterJson) as StorySettings;
+      } catch {
+        continue;
+      }
+      const row = document.createElement("li");
+      const heading = document.createElement("strong");
+      heading.textContent = `${before.pointsPerTurn} → ${after.pointsPerTurn} 积分/回合`;
+      const summary = document.createElement("span");
+      summary.textContent = `输出 ${after.maxOutputTokens} · 上下文 ${after.contextTurns} 回合 · 每日 ${after.dailyTurnLimit} 次 · 试玩 ${after.trialEnabled ? `${after.trialGithubTurns}/${after.trialEmailTurns} 回合` : "关闭"} · 站长 Key ${after.siteKeyEnabled ? "开启" : "关闭"}`;
+      const meta = document.createElement("small");
+      meta.textContent = `${item.operatorName ?? "已删除管理员"} / ${formatDate(item.createdAt)}`;
+      row.append(heading, summary, meta);
+      auditList.append(row);
+    }
+  };
+
+  const loadSettings = async () => {
+    setStatus("正在读取设置…");
+    const response = await fetch("/api/admin/story", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as {
+      settings?: StorySettings;
+      audit?: AuditItem[];
+      error?: string;
+    };
+    if (!response.ok || !payload.settings) {
+      const error = new Error(payload.error || "设置读取失败。") as Error & {
+        status?: number;
+      };
+      error.status = response.status;
+      throw error;
+    }
+    fillSettings(payload.settings);
+    renderAudit(payload.audit ?? []);
+    setStatus("");
+  };
+
+  const loadPublications = async () => {
+    if (!publicationList) return;
+    const status = publicationFilter?.value ?? "pending";
+    const response = await fetch(
+      `/api/admin/story/publications?status=${encodeURIComponent(status)}`,
+      {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      },
+    );
+    const payload = (await response.json()) as {
+      stories?: Array<{
+        id: string;
+        slug: string;
+        title: string;
+        summary: string;
+        status: string;
+        authorName: string;
+        difficultyId: string;
+        style: string;
+        readCount: number;
+        tipTotal: number;
+        updatedAt: number;
+      }>;
+      error?: string;
+    };
+    if (!response.ok) throw new Error(payload.error || "公共故事读取失败。");
+    publicationList.replaceChildren();
+    if (!payload.stories?.length) {
+      const empty = document.createElement("p");
+      empty.className = "admin-story-empty";
+      empty.textContent = "当前状态下没有故事。";
+      publicationList.append(empty);
+      return;
+    }
+    for (const story of payload.stories) {
+      const card = document.createElement("article");
+      card.className = "admin-story-publication";
+      const heading = document.createElement("header");
+      const title = document.createElement("strong");
+      title.textContent = story.title;
+      const state = document.createElement("span");
+      state.textContent =
+        {
+          pending: "待审核",
+          approved: "已发布",
+          rejected: "已拒绝",
+        }[story.status] ?? story.status;
+      heading.append(title, state);
+      const summary = document.createElement("p");
+      summary.textContent = story.summary;
+      const meta = document.createElement("small");
+      meta.textContent = `${story.authorName} · ${story.difficultyId} · ${story.style} · ${story.readCount} 阅读 · ${story.tipTotal} 积分`;
+      const actions = document.createElement("div");
+      const preview = document.createElement("a");
+      preview.href = `/stories/read/?slug=${encodeURIComponent(story.slug)}`;
+      preview.target = "_blank";
+      preview.rel = "noopener";
+      preview.textContent = "预览";
+      actions.append(preview);
+      for (const [nextStatus, label] of [
+        ["approved", "通过"],
+        ["rejected", "拒绝"],
+      ] as const) {
+        if (story.status === nextStatus) continue;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = label;
+        button.dataset.publicationId = story.id;
+        button.dataset.publicationStatus = nextStatus;
+        actions.append(button);
+      }
+      card.append(heading, summary, meta, actions);
+      publicationList.append(card);
+    }
+  };
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (submitButton) submitButton.disabled = true;
+    const settings = sanitizeStorySettings({
+      pointsPerTurn: pointsInput?.value,
+      maxOutputTokens: outputInput?.value,
+      contextTurns: contextInput?.value,
+      dailyTurnLimit: dailyInput?.value,
+      trialEnabled: trialEnabledInput?.checked,
+      trialGithubTurns: trialGithubInput?.value,
+      trialEmailTurns: trialEmailInput?.value,
+      trialMaxOutputTokens: trialOutputInput?.value,
+      trialDailyBudgetYuan: trialBudgetInput?.value,
+      trialIpDailyLimit: trialIpInput?.value,
+      siteKeyEnabled: siteEnabledInput?.checked,
+    });
+    try {
+      const response = await fetch("/api/admin/story", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(settings),
+      });
+      const payload = (await response.json()) as {
+        settings?: StorySettings;
+        audit?: AuditItem[];
+        error?: string;
+      };
+      if (!response.ok || !payload.settings) {
+        throw new Error(payload.error || "设置保存失败。");
+      }
+      fillSettings(payload.settings);
+      renderAudit(payload.audit ?? []);
+      setStatus("互动小说设置已保存。", "success");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "设置保存失败。",
+        "error",
+      );
+    } finally {
+      if (submitButton) submitButton.disabled = false;
+    }
+  });
+
+  publicationFilter?.addEventListener("change", () => {
+    void loadPublications().catch((error) => {
+      setStatus(
+        error instanceof Error ? error.message : "公共故事读取失败。",
+        "error",
+      );
+    });
+  });
+
+  imageTestForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const prompt = imageTestPrompt?.value.trim() ?? "";
+    if (prompt.length < 6 || !imageTestSubmit) {
+      if (imageTestStatus) imageTestStatus.textContent = "测试提示词过短。";
+      return;
+    }
+    imageTestSubmit.disabled = true;
+    if (imageTestStatus) imageTestStatus.textContent = "正在生成测试图片…";
+    try {
+      const response = await fetch("/api/admin/image/test", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          quality: imageTestQuality?.value === "hd" ? "hd" : "standard",
+          aspectRatio: "1:1",
+          requestId: crypto.randomUUID(),
+        }),
+      });
+      const payload = (await response.json()) as {
+        job?: {
+          providerName?: string;
+          model?: string;
+          r2Key?: string;
+          width?: number;
+          height?: number;
+          pointsCost?: number;
+          balance?: number;
+        };
+        error?: string;
+      };
+      if (!response.ok || !payload.job) {
+        throw new Error(payload.error || "生图测试失败。");
+      }
+      if (imageTestStatus) {
+        imageTestStatus.textContent = `成功：${payload.job.providerName} / ${payload.job.model} / ${payload.job.width}×${payload.job.height} / 扣 ${payload.job.pointsCost} 积分 / 余额 ${payload.job.balance} / ${payload.job.r2Key}`;
+      }
+    } catch (error) {
+      if (imageTestStatus) {
+        imageTestStatus.textContent =
+          error instanceof Error ? error.message : "生图测试失败。";
+      }
+    } finally {
+      imageTestSubmit.disabled = false;
+    }
+  });
+
+  imageConfigForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!imageConfigSubmit) return;
+    imageConfigSubmit.disabled = true;
+    setImageConfigMessage("正在保存生图控制…");
+    const providers = Array.from(
+      imageProviderList?.querySelectorAll<HTMLElement>(
+        "[data-image-provider-id]",
+      ) ?? [],
+    ).map((card) => ({
+      id: card.dataset.imageProviderId,
+      enabled:
+        card.querySelector<HTMLInputElement>(
+          "[data-image-provider-enabled]",
+        )?.checked ?? false,
+      model:
+        card.querySelector<HTMLInputElement>("[data-image-provider-model]")
+          ?.value.trim() ?? "",
+      priority: Number(
+        card.querySelector<HTMLInputElement>(
+          "[data-image-provider-priority]",
+        )?.value ?? 100,
+      ),
+    }));
+    try {
+      const response = await fetch("/api/admin/image", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          settings: {
+            enabled: imageEnabledInput?.checked ?? false,
+            standardPoints: Number(imageStandardInput?.value),
+            hdPoints: Number(imageHdInput?.value),
+            dailyJobLimit: Number(imageDailyInput?.value),
+            monthlyBudgetCents: Math.round(
+              Number(imageBudgetInput?.value ?? 0) * 100,
+            ),
+          },
+          providers,
+        }),
+      });
+      const payload = (await response.json()) as {
+        settings?: AdminImageConfig;
+        providers?: AdminImageProvider[];
+        error?: string;
+      };
+      if (!response.ok || !payload.settings) {
+        throw new Error(payload.error || "生图控制保存失败。");
+      }
+      fillImageConfig(payload.settings, payload.providers ?? []);
+      setImageConfigMessage("生图控制已保存。", "success");
+    } catch (error) {
+      setImageConfigMessage(
+        error instanceof Error ? error.message : "生图控制保存失败。",
+        "error",
+      );
+    } finally {
+      imageConfigSubmit.disabled = false;
+    }
+  });
+
+  publicationList?.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-publication-id]",
+    );
+    if (!button) return;
+    button.disabled = true;
+    try {
+      const response = await fetch("/api/admin/story/publications", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: button.dataset.publicationId,
+          status: button.dataset.publicationStatus,
+        }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) throw new Error(payload.error || "审核失败。");
+      await loadPublications();
+      setStatus("故事审核状态已更新。", "success");
+    } catch (error) {
+      button.disabled = false;
+      setStatus(
+        error instanceof Error ? error.message : "故事审核失败。",
+        "error",
+      );
+    }
+  });
+
+  void authClient
+    .getSession()
+    .then(async ({ data }) => {
+      if (!data?.user) {
+        if (gateTitle) gateTitle.textContent = "请先登录";
+        if (gateCopy) gateCopy.textContent = "登录站长账号后才能修改设置。";
+        gate?.removeAttribute("hidden");
+        return;
+      }
+      try {
+        await Promise.all([
+          loadSettings(),
+          loadPublications(),
+          loadImageConfig(),
+        ]);
+        gate?.setAttribute("hidden", "");
+        content?.removeAttribute("hidden");
+      } catch (error) {
+        const requestError = error as Error & { status?: number };
+        if (requestError.status === 403) {
+          if (gateTitle) gateTitle.textContent = "没有管理权限";
+          if (gateCopy) gateCopy.textContent = "当前账号不是站长。";
+        } else if (requestError.status === 401) {
+          if (gateTitle) gateTitle.textContent = "登录已过期";
+          if (gateCopy) gateCopy.textContent = "请重新登录后再试。";
+        } else {
+          if (gateTitle) gateTitle.textContent = "暂时无法读取设置";
+          if (gateCopy) {
+            gateCopy.textContent =
+              error instanceof Error ? error.message : "请稍后重试。";
+          }
+          if (gateLink) gateLink.hidden = true;
+        }
+        gate?.removeAttribute("hidden");
+        setStatus("");
+      }
+    })
+    .catch(() => {
+      if (gateTitle) gateTitle.textContent = "无法验证登录状态";
+      if (gateCopy) gateCopy.textContent = "请刷新页面后重试。";
+      gate?.removeAttribute("hidden");
+    });
+</script>

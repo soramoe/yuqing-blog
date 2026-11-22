@@ -1,7 +1,13 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import ArrowUpRight from "../components/ArrowUpRight.astro";
 import GalleryLightbox from "../components/GalleryLightbox.astro";
-import { formatDate, getPublishedPosts, getReadingTime } from "../lib/blog";
+import {
+  formatDate,
+  getPostPublishedAt,
+  getPublishedPosts,
+  getReadingTime,
+} from "../lib/blog";
 import { galleryImages } from "../lib/gallery";
 import { getResponsiveImage } from "../lib/images";
 import { SITE } from "../site.config";
@@ -42,42 +48,43 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
           <p class="eyebrow">VISUAL LOG</p>
           <h2>最近的光影</h2>
         </div>
-        <a class="column-link" href="/gallery/">全部图库 <span aria-hidden="true">↗</span></a>
+        <a class="column-link" href="/gallery/">全部图库 <span aria-hidden="true"><ArrowUpRight /></span></a>
       </div>
 
-      {
-        homeGalleryImages.length > 0 ? (
-          <div class="home-gallery-grid">
-            {homeGalleryImages.map((image, index) => (
-              <a
-                class="home-gallery-item"
-                href={image.href}
-                aria-label={`${image.title}，打开图片预览`}
-                data-gallery-open="true"
-                data-gallery-title={image.title}
-                data-gallery-srcset={image.lightboxSrcSet}
-                data-gallery-sizes="(max-width: 1915px) 94vw, 1800px"
-              >
-                <img
-                  src={image.preview}
-                  srcset={image.srcSet}
-                  sizes="(max-width: 600px) 44vw, 24vw"
-                  alt={image.alt}
-                  loading={index === 0 ? "eager" : "lazy"}
-                  fetchpriority={index === 0 ? "high" : "auto"}
-                  decoding="async"
-                />
-                <span class="home-gallery-caption">
-                  <span>{image.title}</span>
-                  <span aria-hidden="true">↗</span>
-                </span>
-              </a>
-            ))}
-          </div>
-        ) : (
-          <p class="home-empty">图库里还没有图片。</p>
-        )
-      }
+      <div
+        class="home-gallery-grid"
+        data-home-gallery-grid
+        hidden={homeGalleryImages.length === 0}
+      >
+        {homeGalleryImages.map((image, index) => (
+          <a
+            class="home-gallery-item"
+            href={image.href}
+            aria-label={`${image.title}，打开图片预览`}
+            data-gallery-open="true"
+            data-gallery-title={image.title}
+            data-gallery-srcset={image.lightboxSrcSet}
+            data-gallery-sizes="(max-width: 1915px) 94vw, 1800px"
+          >
+            <img
+              src={image.preview}
+              srcset={image.srcSet}
+              sizes="(max-width: 600px) 44vw, 24vw"
+              alt={image.alt}
+              loading={index === 0 ? "eager" : "lazy"}
+              fetchpriority={index === 0 ? "high" : "auto"}
+              decoding="async"
+            />
+          </a>
+        ))}
+      </div>
+      <p
+        class="home-empty"
+        data-home-gallery-empty
+        hidden={homeGalleryImages.length > 0}
+      >
+        图库里还没有图片。
+      </p>
     </div>
 
     <div class="home-posts">
@@ -86,7 +93,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
           <p class="eyebrow">LATEST WRITING</p>
           <h2>最近写的</h2>
         </div>
-        <a class="column-link" href="/blog/">全部文章 <span aria-hidden="true">↗</span></a>
+        <a class="column-link" href="/blog/">全部文章 <span aria-hidden="true"><ArrowUpRight /></span></a>
       </div>
 
       {
@@ -105,8 +112,8 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                   <span class="home-post-copy">
                     <span class="home-post-meta">
                       <span class="home-post-category">{post.data.category}</span>
-                      <time datetime={post.data.pubDate.toISOString()}>
-                        {formatDate(post.data.pubDate)}
+                      <time datetime={getPostPublishedAt(post).toISOString()}>
+                        {formatDate(getPostPublishedAt(post))}
                       </time>
                       <span>{getReadingTime(post.body)} MIN</span>
                     </span>
@@ -114,7 +121,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                     <span class="home-post-description">{post.data.description}</span>
                   </span>
                   <span class="home-post-thumb" aria-hidden="true">
-                    {post.data.cover ? (
+                    {post.data.cover && !post.data.hideCover ? (
                       <img
                         src={getResponsiveImage(post.data.cover, [480, 960]).src}
                         srcset={getResponsiveImage(post.data.cover, [480, 960]).srcSet}
@@ -127,7 +134,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
                       <span>{post.data.category.slice(0, 1)}</span>
                     )}
                   </span>
-                  <span class="home-post-arrow" aria-hidden="true">↗</span>
+                  <span class="home-post-arrow" aria-hidden="true"><ArrowUpRight /></span>
                 </a>
               </li>
             ))}
@@ -193,17 +200,20 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
       <a href="/blog/">
         <span>01 / ARCHIVE</span>
         <strong>全部文章</strong>
-        <small>{String(posts.length).padStart(2, "0")} 篇记录 <b aria-hidden="true">↗</b></small>
+        <small>{String(posts.length).padStart(2, "0")} 篇记录 <b aria-hidden="true"><ArrowUpRight /></b></small>
       </a>
       <a href="/gallery/">
         <span>02 / VISUAL LOG</span>
         <strong>完整图库</strong>
-        <small>{String(galleryImages.length).padStart(2, "0")} 张图片 <b aria-hidden="true">↗</b></small>
+        <small>
+          <span data-home-gallery-count>{String(galleryImages.length).padStart(2, "0")}</span>
+          张图片 <b aria-hidden="true"><ArrowUpRight /></b>
+        </small>
       </a>
       <a href="/about/">
         <span>03 / ABOUT</span>
         <strong>关于渔情</strong>
-        <small>认识这里 <b aria-hidden="true">↗</b></small>
+        <small>认识这里 <b aria-hidden="true"><ArrowUpRight /></b></small>
       </a>
     </nav>
 
@@ -291,6 +301,74 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     window.addEventListener("offline", updateConnectionStatus);
     networkConnection?.addEventListener?.("change", updateConnectionStatus);
   </script>
+
+  <script>
+    import type { OnlineGalleryItem } from "../lib/gallery-upload";
+
+    const homeGalleryGrid = document.querySelector<HTMLElement>(
+      "[data-home-gallery-grid]",
+    );
+    const homeGalleryEmpty = document.querySelector<HTMLElement>(
+      "[data-home-gallery-empty]",
+    );
+    const homeGalleryCount = document.querySelector<HTMLElement>(
+      "[data-home-gallery-count]",
+    );
+
+    fetch("/api/gallery/uploads", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as { images: OnlineGalleryItem[] };
+      })
+      .then((payload) => {
+        if (!payload || !homeGalleryGrid) return;
+        const publicImages = payload.images.filter((image) => !image.locked);
+        const latest = publicImages.slice(0, 4);
+        if (homeGalleryCount) {
+          homeGalleryCount.textContent = String(publicImages.length).padStart(
+            2,
+            "0",
+          );
+        }
+        if (latest.length === 0) return;
+
+        homeGalleryGrid.replaceChildren();
+        latest.forEach((image, index) => {
+          const item = document.createElement(image.locked ? "button" : "a");
+          item.className = "home-gallery-item";
+          if (item instanceof HTMLButtonElement) {
+            item.type = "button";
+            item.disabled = true;
+            item.classList.add("is-private");
+            item.setAttribute("aria-label", "私密图片，仅投稿者可见");
+          } else {
+            item.href = image.href;
+            item.dataset.galleryOpen = "true";
+            item.dataset.galleryTitle = image.title;
+            item.dataset.gallerySrcset = image.srcSet;
+            item.dataset.gallerySizes =
+              "(max-width: 1915px) 94vw, 1800px";
+          }
+
+          const thumbnail = document.createElement("img");
+          thumbnail.src = image.src;
+          if (!image.locked) thumbnail.srcset = image.srcSet;
+          thumbnail.sizes = "(max-width: 600px) 44vw, 24vw";
+          thumbnail.alt = image.locked ? "私密图片" : image.title;
+          thumbnail.loading = index === 0 ? "eager" : "lazy";
+          thumbnail.decoding = "async";
+
+          item.append(thumbnail);
+          homeGalleryGrid.append(item);
+        });
+        homeGalleryGrid.hidden = false;
+        if (homeGalleryEmpty) homeGalleryEmpty.hidden = true;
+      })
+      .catch(() => undefined);
+  </script>
 </BaseLayout>
 
 <style>
@@ -354,7 +432,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     grid-template-rows: repeat(2, minmax(0, 1fr));
   }
 
-  .home-gallery-item {
+  .home-gallery-grid :global(.home-gallery-item) {
     position: relative;
     display: block;
     min-width: 0;
@@ -363,7 +441,22 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     background: var(--surface);
   }
 
-  .home-gallery-item::after {
+  .home-gallery-grid :global(.home-gallery-item.is-private) {
+    width: 100%;
+    padding: 0;
+    appearance: none;
+    color: var(--text);
+    cursor: default;
+    font: inherit;
+    opacity: 1;
+  }
+
+  .home-gallery-grid :global(.home-gallery-item.is-private img) {
+    filter: blur(6px) saturate(0.72) contrast(0.92);
+    transform: scale(1.08);
+  }
+
+  .home-gallery-grid :global(.home-gallery-item::after) {
     position: absolute;
     inset: 0;
     z-index: 2;
@@ -372,7 +465,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     pointer-events: none;
   }
 
-  .home-gallery-item::before {
+  .home-gallery-grid :global(.home-gallery-item::before) {
     position: absolute;
     inset: 52% 0 0;
     z-index: 1;
@@ -382,7 +475,9 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     pointer-events: none;
   }
 
-  .home-gallery-item img {
+  .home-gallery-grid :global(.home-gallery-item img) {
+    position: absolute;
+    inset: 0;
     display: block;
     width: 100%;
     height: 100%;
@@ -392,12 +487,12 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
       transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
-  .home-gallery-item noscript {
+  .home-gallery-grid :global(.home-gallery-item noscript) {
     display: contents;
   }
 
-  .home-gallery-item:hover img,
-  .home-gallery-item:focus-visible img {
+  .home-gallery-grid :global(.home-gallery-item:hover img),
+  .home-gallery-grid :global(.home-gallery-item:focus-visible img) {
     transform: scale(1.025);
   }
 

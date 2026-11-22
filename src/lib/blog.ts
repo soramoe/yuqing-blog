@@ -2,6 +2,10 @@ import { getCollection, type CollectionEntry } from "astro:content";
 
 export type BlogPost = CollectionEntry<"blog">;
 
+export function getPostPublishedAt(post: BlogPost): Date {
+  return post.data.publishedAt;
+}
+
 export async function getPublishedPosts(): Promise<BlogPost[]> {
   const posts = await getCollection(
     "blog",
@@ -10,13 +14,14 @@ export async function getPublishedPosts(): Promise<BlogPost[]> {
 
   return posts.sort((a, b) => {
     const dateDifference =
-      b.data.pubDate.valueOf() - a.data.pubDate.valueOf();
+      getPostPublishedAt(b).valueOf() - getPostPublishedAt(a).valueOf();
     return dateDifference || a.id.localeCompare(b.id);
   });
 }
 
 export function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
     year: "numeric",
     month: "long",
     day: "numeric",

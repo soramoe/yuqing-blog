@@ -1,0 +1,420 @@
+<aside
+  class="site-announcement"
+  data-site-announcement
+  hidden
+  aria-live="polite"
+>
+  <div class="container site-announcement-inner">
+    <span class="site-announcement-label" data-announcement-label>公告</span>
+    <div class="site-announcement-copy">
+      <strong data-announcement-title></strong>
+      <span data-announcement-body></span>
+      <a data-announcement-link hidden></a>
+    </div>
+    <div class="site-announcement-tools">
+      <a class="site-announcement-all" href="/announcements/">全部</a>
+      <div class="site-announcement-pager" data-announcement-pager hidden>
+        <button type="button" data-announcement-prev aria-label="上一条公告">
+          ‹
+        </button>
+        <span data-announcement-count>1 / 1</span>
+        <button type="button" data-announcement-next aria-label="下一条公告">
+          ›
+        </button>
+      </div>
+      <button
+        class="site-announcement-expand"
+        type="button"
+        data-announcement-expand
+        aria-expanded="false"
+        aria-label="展开公告内容"
+      >
+        ⌄
+      </button>
+      <button
+        class="site-announcement-close"
+        type="button"
+        data-announcement-close
+        aria-label="关闭公告"
+      >
+        ×
+      </button>
+    </div>
+  </div>
+</aside>
+
+<script>
+  import type {
+    Announcement,
+    AnnouncementType,
+  } from "../lib/announcements";
+
+  const banner = document.querySelector<HTMLElement>("[data-site-announcement]");
+  const close = document.querySelector<HTMLButtonElement>(
+    "[data-announcement-close]",
+  );
+  const previous = document.querySelector<HTMLButtonElement>(
+    "[data-announcement-prev]",
+  );
+  const next = document.querySelector<HTMLButtonElement>(
+    "[data-announcement-next]",
+  );
+  const expand = document.querySelector<HTMLButtonElement>(
+    "[data-announcement-expand]",
+  );
+  const pager = document.querySelector<HTMLElement>(
+    "[data-announcement-pager]",
+  );
+  const count = document.querySelector<HTMLElement>("[data-announcement-count]");
+  const title = document.querySelector<HTMLElement>("[data-announcement-title]");
+  const body = document.querySelector<HTMLElement>("[data-announcement-body]");
+  const label = document.querySelector<HTMLElement>("[data-announcement-label]");
+  const link = document.querySelector<HTMLAnchorElement>(
+    "[data-announcement-link]",
+  );
+  const labels: Record<AnnouncementType, string> = {
+    info: "公告",
+    success: "活动",
+    warning: "提醒",
+    maintenance: "维护",
+  };
+
+  if (import.meta.env.PROD && banner) {
+    const storageKey = (id: string) => `yq-announcement-dismissed:${id}`;
+    let announcements: Announcement[] = [];
+    let activeIndex = 0;
+    const syncHeight = () => {
+      document.body.style.setProperty(
+        "--announcement-height",
+        `${banner.hidden ? 0 : banner.offsetHeight}px`,
+      );
+    };
+
+    const hideBanner = () => {
+      banner.hidden = true;
+      document.body.classList.remove("has-announcement");
+      document.body.style.setProperty("--announcement-height", "0px");
+    };
+
+    const render = () => {
+      const announcement = announcements[activeIndex];
+      if (!announcement) {
+        hideBanner();
+        return;
+      }
+      document.body.classList.add("has-announcement");
+      banner.classList.remove("is-expanded");
+      if (expand) {
+        expand.setAttribute("aria-expanded", "false");
+        expand.setAttribute("aria-label", "展开公告内容");
+      }
+      banner.dataset.type = announcement.type;
+      if (label) label.textContent = labels[announcement.type] ?? "公告";
+      if (title) title.textContent = announcement.title;
+      if (body) body.textContent = announcement.body;
+      if (count) {
+        count.textContent = `${activeIndex + 1} / ${announcements.length}`;
+      }
+      if (pager) pager.hidden = announcements.length <= 1;
+      if (link) {
+        const validLink =
+          announcement.linkUrl &&
+          /^(https:\/\/|\/)/i.test(announcement.linkUrl);
+        link.hidden = !validLink;
+        if (validLink && announcement.linkUrl) {
+          link.href = announcement.linkUrl;
+          link.textContent = announcement.linkText || "查看详情";
+        }
+      }
+      banner.hidden = false;
+      requestAnimationFrame(syncHeight);
+    };
+
+    const switchAnnouncement = (offset: number) => {
+      if (announcements.length < 2) return;
+      activeIndex =
+        (activeIndex + offset + announcements.length) %
+        announcements.length;
+      render();
+    };
+
+    previous?.addEventListener("click", () => switchAnnouncement(-1));
+    next?.addEventListener("click", () => switchAnnouncement(1));
+    expand?.addEventListener("click", () => {
+      const expanded = banner.classList.toggle("is-expanded");
+      expand.setAttribute("aria-expanded", String(expanded));
+      expand.setAttribute(
+        "aria-label",
+        expanded ? "收起公告内容" : "展开公告内容",
+      );
+    });
+    close?.addEventListener("click", () => {
+      const announcement = announcements[activeIndex];
+      if (announcement) {
+        localStorage.setItem(storageKey(announcement.id), "1");
+      }
+      announcements = announcements.filter(
+        (_, index) => index !== activeIndex,
+      );
+      activeIndex = Math.min(activeIndex, Math.max(0, announcements.length - 1));
+      render();
+    });
+    new ResizeObserver(syncHeight).observe(banner);
+
+    fetch(
+      `/api/announcements?path=${encodeURIComponent(window.location.pathname)}`,
+      {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      },
+    )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { announcements?: Announcement[] } | null) => {
+        announcements = (payload?.announcements ?? []).filter(
+          (announcement) => !localStorage.getItem(storageKey(announcement.id)),
+        );
+        activeIndex = 0;
+        render();
+      })
+      .catch(() => undefined);
+  }
+</script>
+
+<style>
+  .site-announcement {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+    background:
+      linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--accent) 11%, var(--surface)),
+        var(--surface)
+      );
+    box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+    align-self: start;
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .site-announcement[data-type="success"] {
+    border-bottom-color: rgb(83 160 112 / 35%);
+  }
+
+  .site-announcement[data-type="warning"],
+  .site-announcement[data-type="maintenance"] {
+    border-bottom-color: rgb(205 125 54 / 40%);
+  }
+
+  .site-announcement-inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.8rem;
+    align-items: center;
+    min-height: 2.8rem;
+    padding-block: 0.55rem;
+  }
+
+  .site-announcement-label {
+    padding: 0.18rem 0.46rem;
+    border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+    border-radius: 999px;
+    color: var(--accent);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+
+  .site-announcement-copy {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem 0.65rem;
+    align-items: baseline;
+    min-width: 0;
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+
+  .site-announcement-copy strong {
+    color: var(--text);
+  }
+
+  .site-announcement-copy span {
+    color: var(--muted);
+  }
+
+  .site-announcement-copy a,
+  .site-announcement-all {
+    color: var(--accent);
+    font-weight: 650;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .site-announcement-copy a:hover,
+  .site-announcement-all:hover {
+    text-decoration: underline;
+  }
+
+  .site-announcement-tools,
+  .site-announcement-pager {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .site-announcement-all {
+    padding-inline: 0.3rem;
+    font-size: 0.65rem;
+  }
+
+  .site-announcement-pager {
+    padding-inline: 0.2rem;
+    border-inline: 1px solid var(--border);
+  }
+
+  .site-announcement-pager > span {
+    min-width: 2.8rem;
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    font-size: 0.58rem;
+    text-align: center;
+  }
+
+  .site-announcement-tools button {
+    display: grid;
+    width: 1.8rem;
+    height: 1.8rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    place-items: center;
+    color: var(--muted);
+    background: transparent;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .site-announcement-tools button:hover {
+    color: var(--text);
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+  }
+
+  .site-announcement-pager[hidden] {
+    display: none;
+  }
+
+  .site-announcement-expand {
+    display: none !important;
+  }
+
+  .site-announcement-close {
+    font-size: 1.25rem !important;
+  }
+
+  @media (max-width: 720px) {
+    .site-announcement {
+      top: 64px;
+    }
+
+    body.has-search-island .site-announcement {
+      top: 120px;
+    }
+
+    .site-announcement-inner {
+      grid-template-columns: auto minmax(0, 1fr) auto;
+      gap: 0.4rem;
+      min-height: 2.45rem;
+      padding-block: 0.3rem;
+    }
+
+    .site-announcement-copy {
+      display: grid;
+      gap: 0;
+      font-size: 0.76rem;
+      line-height: 1.35;
+    }
+
+    .site-announcement-copy strong,
+    .site-announcement-copy span {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .site-announcement-copy a {
+      display: none;
+    }
+
+    .site-announcement-copy span {
+      font-size: 0.68rem;
+    }
+
+    .site-announcement-tools {
+      grid-column: auto;
+      gap: 0;
+    }
+
+    .site-announcement-pager {
+      gap: 0;
+      padding-inline: 0;
+      border-inline: 0;
+    }
+
+    .site-announcement-pager > span {
+      min-width: 1.8rem;
+      font-size: 0.54rem;
+    }
+
+    .site-announcement-tools button {
+      width: 1.55rem;
+      height: 1.55rem;
+      font-size: 0.95rem;
+    }
+
+    .site-announcement-all {
+      padding-inline: 0.15rem;
+      font-size: 0.58rem;
+    }
+
+    .site-announcement-expand {
+      display: grid !important;
+      font-size: 0.82rem !important;
+      transition: transform 160ms ease;
+    }
+
+    .site-announcement.is-expanded .site-announcement-expand {
+      transform: rotate(180deg);
+    }
+
+    .site-announcement.is-expanded .site-announcement-inner {
+      align-items: start;
+    }
+
+    .site-announcement.is-expanded .site-announcement-copy span {
+      display: -webkit-box;
+      overflow: hidden;
+      white-space: normal;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+    }
+
+    .site-announcement.is-expanded .site-announcement-copy a {
+      display: inline;
+      margin-top: 0.15rem;
+    }
+  }
+
+  @media (min-width: 821px) {
+    :global(body.has-search-island.has-announcement .search-island) {
+      top: calc(var(--announcement-height, 0px) + 12px);
+    }
+  }
+
+  :global(body.page-gallery .site-announcement-inner) {
+    width: min(calc(100% - 32px), 860px);
+  }
+</style>

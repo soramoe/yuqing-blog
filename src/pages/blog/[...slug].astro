@@ -4,6 +4,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import Comments from "../../components/Comments.astro";
 import {
   formatDate,
+  getPostPublishedAt,
   getPublishedPosts,
   getReadingTime,
 } from "../../lib/blog";
@@ -24,6 +25,7 @@ interface Props {
 }
 
 const { post } = Astro.props;
+const publishedAt = getPostPublishedAt(post);
 const allPosts = await getPublishedPosts();
 const { Content, headings } = await render(post);
 const tocHeadings = headings.filter(
@@ -32,8 +34,11 @@ const tocHeadings = headings.filter(
 const titleParts = post.data.title.split("：");
 const titleLead = titleParts.length > 1 ? `${titleParts[0]}：` : "";
 const titleRest = titleParts.slice(1).join("：");
-const cover = post.data.cover
-  ? getResponsiveImage(post.data.cover, [480, 960, 1440])
+const coverWidths = post.data.cover?.startsWith("/gallery/")
+  ? [480, 960, 1920]
+  : [480, 960, 1440];
+const cover = post.data.cover && !post.data.hideCover
+  ? getResponsiveImage(post.data.cover, coverWidths)
   : null;
 const relatedPosts = allPosts
   .filter((item) => item.id !== post.id)
@@ -43,7 +48,7 @@ const relatedPosts = allPosts
       Number(a.data.category === post.data.category);
     return (
       categoryDifference ||
-      b.data.pubDate.valueOf() - a.data.pubDate.valueOf() ||
+      getPostPublishedAt(b).valueOf() - getPostPublishedAt(a).valueOf() ||
       a.id.localeCompare(b.id)
     );
   })
@@ -53,9 +58,9 @@ const relatedPosts = allPosts
 <BaseLayout
   title={post.data.title}
   description={post.data.description}
-  image={cover?.variants.at(-1) ?? post.data.cover}
+  image={cover?.variants.at(-1)}
   type="article"
-  publishedTime={post.data.pubDate}
+  publishedTime={publishedAt}
   updatedTime={post.data.updatedDate}
   section={post.data.category}
   keywords={post.data.tags}
@@ -87,8 +92,8 @@ const relatedPosts = allPosts
       <p class="article-deck">{post.data.description}</p>
       <div class="article-meta">
         <span>{SITE.author.name}</span>
-        <time datetime={post.data.pubDate.toISOString()}>
-          {formatDate(post.data.pubDate)}
+        <time datetime={publishedAt.toISOString()}>
+          {formatDate(publishedAt)}
         </time>
         <span>{getReadingTime(post.body)} MIN READ</span>
         {post.data.updatedDate && (
@@ -155,7 +160,7 @@ const relatedPosts = allPosts
               <a href={`/blog/${item.id}/`}>
                 <span>{item.data.category}</span>
                 <strong>{item.data.title}</strong>
-                <small>{formatDate(item.data.pubDate)} · {getReadingTime(item.body)} MIN</small>
+                <small>{formatDate(getPostPublishedAt(item))} · {getReadingTime(item.body)} MIN</small>
               </a>
             ))}
           </div>
@@ -163,6 +168,6 @@ const relatedPosts = allPosts
       )
     }
 
-    <Comments />
+    <Comments postSlug={post.id} />
   </article>
 </BaseLayout>

@@ -4,6 +4,7 @@ import Header from "../components/Header.astro";
 import Footer from "../components/Footer.astro";
 import BackToTop from "../components/BackToTop.astro";
 import SearchIsland from "../components/SearchIsland.astro";
+import AnnouncementBanner from "../components/AnnouncementBanner.astro";
 import { SITE } from "../site.config";
 
 interface Props {
@@ -11,7 +12,14 @@ interface Props {
   description?: string;
   image?: string;
   type?: "website" | "article";
-  schemaType?: "WebSite" | "WebPage" | "AboutPage" | "Blog" | "CollectionPage";
+  schemaType?:
+    | "WebSite"
+    | "WebPage"
+    | "AboutPage"
+    | "Blog"
+    | "CollectionPage"
+    | "SoftwareApplication";
+  schemaExtra?: Record<string, unknown>;
   publishedTime?: Date;
   updatedTime?: Date;
   section?: string;
@@ -26,6 +34,7 @@ const {
   image = "/og-default.png",
   type = "website",
   schemaType = "WebPage",
+  schemaExtra = {},
   publishedTime,
   updatedTime,
   section,
@@ -41,7 +50,11 @@ const canonical = new URL(Astro.url.pathname, siteUrl);
 const socialImage = new URL(image, Astro.site ?? Astro.url);
 const rssUrl = new URL("/rss.xml", Astro.site ?? Astro.url);
 const aboutUrl = new URL("/about/", siteUrl);
-const showSearchIsland = Astro.url.pathname.startsWith("/blog/");
+const showSearchIsland =
+  type !== "article" && Astro.url.pathname.startsWith("/blog/");
+const showAnnouncements =
+  !Astro.url.pathname.startsWith("/admin/") &&
+  !Astro.url.pathname.startsWith("/announcements");
 const websiteId = new URL("/#website", siteUrl).toString();
 
 const websiteEntity = {
@@ -114,11 +127,12 @@ const structuredData = noindex
           url: canonical.toString(),
           inLanguage: "zh-CN",
           isPartOf: websiteEntity,
+          ...schemaExtra,
         };
 ---
 
 <!doctype html>
-<html lang="zh-CN" data-theme="dark">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width" />
@@ -156,13 +170,16 @@ const structuredData = noindex
       )
     }
     <script is:inline>
-      document.documentElement.classList.add("js");
+      (() => {
+        document.documentElement.classList.add("js");
+      })();
     </script>
   </head>
-  <body class={bodyClass}>
+  <body class:list={[bodyClass, { "has-search-island": showSearchIsland }]}>
     <a class="skip-link" href="#main-content">跳到主要内容</a>
     {showSearchIsland && <SearchIsland />}
     <Header />
+    {showAnnouncements && <AnnouncementBanner />}
     <main id="main-content" tabindex="-1">
       <slot />
     </main>

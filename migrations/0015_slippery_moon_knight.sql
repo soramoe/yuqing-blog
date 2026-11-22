@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `image_job_active_source_unique` ON `image_job` (`user_id`,`feature`,`source_id`) WHERE "image_job"."source_id" IS NOT NULL AND "image_job"."status" IN ('pending', 'processing', 'succeeded');

@@ -6,38 +6,288 @@ import AuthLayout from "../components/AuthLayout.astro";
   title="我的账号"
   description="查看当前登录的渔情账号，并安全退出登录。"
   eyebrow="ACCOUNT CENTER"
+  bodyClass="page-auth page-account"
 >
   <p class="account-loading" data-account-loading>正在读取登录状态…</p>
 
   <div data-account-content hidden>
-    <div class="account-profile">
-      <div class="account-avatar" data-account-avatar>
-        <span data-account-initial>渔</span>
+    <div class="account-head">
+      <div class="account-profile">
+        <div class="account-avatar" data-account-avatar>
+          <span data-account-initial>渔</span>
+        </div>
+        <div>
+          <strong class="account-name" data-account-name></strong>
+          <span class="account-email" data-account-email></span>
+        </div>
       </div>
-      <div>
-        <strong class="account-name" data-account-name></strong>
-        <span class="account-email" data-account-email></span>
+
+      <div class="account-actions">
+        <a class="auth-button" href="/points/">签到与积分</a>
+        <a class="auth-button auth-button-secondary" href="/shop/">兑换商城</a>
+        <button class="auth-button auth-button-secondary" type="button" data-sign-out>
+          退出登录
+        </button>
       </div>
     </div>
 
-    <dl class="account-meta">
-      <div>
-        <dt>账号来源</dt>
-        <dd>GitHub</dd>
-      </div>
-      <div>
-        <dt>加入时间</dt>
-        <dd data-account-created></dd>
-      </div>
-      <div>
-        <dt>后续功能</dt>
-        <dd>评论、签到与积分</dd>
-      </div>
-    </dl>
+    <div class="account-tabs" role="tablist" aria-label="账户功能">
+      <button
+        class="account-tab is-active"
+        type="button"
+        role="tab"
+        id="account-tab-overview"
+        aria-controls="account-panel-overview"
+        aria-selected="true"
+        data-account-tab="overview"
+      >
+        <span>01</span>概览
+      </button>
+      <button
+        class="account-tab"
+        type="button"
+        role="tab"
+        id="account-tab-methods"
+        aria-controls="account-panel-methods"
+        aria-selected="false"
+        data-account-tab="methods"
+      >
+        <span>02</span>登录方式
+      </button>
+      <button
+        class="account-tab"
+        type="button"
+        role="tab"
+        id="account-tab-images"
+        aria-controls="account-panel-images"
+        aria-selected="false"
+        data-account-tab="images"
+      >
+        <span>03</span>我的图片
+      </button>
+      <button
+        class="account-tab"
+        type="button"
+        role="tab"
+        id="account-tab-admin"
+        aria-controls="account-panel-admin"
+        aria-selected="false"
+        data-account-tab="admin"
+        data-account-admin-tab
+        hidden
+      >
+        <span>04</span>站长工具
+      </button>
+    </div>
 
-    <button class="auth-button auth-button-secondary" type="button" data-sign-out>
-      退出登录
-    </button>
+    <div class="account-panels">
+      <section
+        class="account-panel"
+        id="account-panel-overview"
+        role="tabpanel"
+        aria-labelledby="account-tab-overview"
+        data-account-panel="overview"
+      >
+        <dl class="account-meta">
+          <div>
+            <dt>账号来源</dt>
+            <dd data-account-provider>读取中</dd>
+          </div>
+          <div>
+            <dt>加入时间</dt>
+            <dd data-account-created></dd>
+          </div>
+          <div>
+            <dt>积分中心</dt>
+            <dd><a href="/points/">查看积分与签到</a></dd>
+          </div>
+          <div>
+            <dt>兑换商城</dt>
+            <dd><a href="/shop/">兑换物品与积分码</a></dd>
+          </div>
+        </dl>
+        <p class="account-panel-note">
+          登录方式决定评论身份；绑定 GitHub 或已验证邮箱后，可获得对应奖励。
+        </p>
+      </section>
+
+      <section
+        class="account-panel account-gallery-panel"
+        id="account-panel-images"
+        role="tabpanel"
+        aria-labelledby="account-tab-images"
+        data-account-panel="images"
+        hidden
+      >
+        <div class="account-admin-heading">
+          <div>
+            <p class="eyebrow">MY UPLOADS</p>
+            <h2>我的图片</h2>
+          </div>
+          <span data-account-gallery-count>正在读取…</span>
+        </div>
+        <p class="account-gallery-status" data-account-gallery-status aria-live="polite"></p>
+        <div class="account-gallery-list" data-account-gallery-list></div>
+      </section>
+
+      <section
+        class="account-panel"
+        id="account-panel-methods"
+        role="tabpanel"
+        aria-labelledby="account-tab-methods"
+        data-account-panel="methods"
+        hidden
+      >
+        <div class="account-login-methods" data-account-methods>
+          <div class="account-admin-heading">
+            <div>
+              <p class="eyebrow">SIGN-IN METHODS</p>
+              <h2>登录方式</h2>
+            </div>
+            <span>绑定另一种方式奖励 5 积分</span>
+          </div>
+
+          <div class="account-method-row">
+            <div>
+              <strong>GitHub</strong>
+              <span data-github-method-status>正在读取…</span>
+            </div>
+            <button type="button" data-link-github hidden>绑定 GitHub</button>
+          </div>
+
+          <div class="account-method-row">
+            <div>
+              <strong>邮箱</strong>
+              <span data-email-method-status>正在读取…</span>
+            </div>
+            <button type="button" data-show-email-bind hidden>绑定邮箱</button>
+          </div>
+
+          <form class="account-email-bind-form" data-email-bind-form hidden>
+            <label>
+              <span>邮箱地址</span>
+              <input
+                type="email"
+                maxlength="254"
+                autocomplete="email"
+                placeholder="name@example.com"
+                data-bind-email
+                required
+              />
+            </label>
+            <button type="button" data-bind-send-code>发送验证码</button>
+            <div data-bind-code-wrap hidden>
+              <label>
+                <span>6 位验证码</span>
+                <input
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="6"
+                  pattern="[0-9]{6}"
+                  placeholder="000000"
+                  data-bind-code
+                />
+              </label>
+              <button type="button" data-bind-verify-code>验证并领取积分</button>
+            </div>
+          </form>
+
+          <div class="account-method-row">
+            <div>
+              <strong>登录密码</strong>
+              <span data-password-method-status>正在读取…</span>
+            </div>
+            <button type="button" data-password-action hidden>设置密码</button>
+          </div>
+
+          <form class="account-password-form" data-account-password-form hidden>
+            <label data-current-password-wrap hidden>
+              <span>当前密码</span>
+              <input
+                type="password"
+                maxlength="128"
+                autocomplete="current-password"
+                placeholder="修改密码时需要填写"
+                data-current-password
+              />
+            </label>
+            <label>
+              <span>新密码</span>
+              <input
+                type="password"
+                minlength="10"
+                maxlength="128"
+                autocomplete="new-password"
+                placeholder="至少 10 个字符"
+                data-new-password
+              />
+            </label>
+            <label>
+              <span>确认新密码</span>
+              <input
+                type="password"
+                minlength="10"
+                maxlength="128"
+                autocomplete="new-password"
+                placeholder="再次输入新密码"
+                data-confirm-password
+              />
+            </label>
+            <div class="account-password-actions">
+              <button type="submit" data-submit-password>保存密码</button>
+              <a href="/forgot-password/">通过邮箱验证码重置</a>
+              <button type="button" data-skip-password hidden>稍后设置</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section
+        class="account-panel account-admin-tools"
+        id="account-panel-admin"
+        role="tabpanel"
+        aria-labelledby="account-tab-admin"
+        data-account-panel="admin"
+        data-account-admin
+        hidden
+      >
+        <div class="account-admin-heading">
+          <div>
+            <p class="eyebrow">OWNER TOOLS</p>
+            <h2>站长工具</h2>
+          </div>
+          <span>仅管理员可见</span>
+        </div>
+        <div class="account-admin-grid">
+          <a href="/admin/comments/">
+            <span>01</span>
+            <strong>评论审核</strong>
+            <small>查看、隐藏、恢复或永久删除评论</small>
+          </a>
+          <a href="/admin/points/">
+            <span>02</span>
+            <strong>积分管理</strong>
+            <small>搜索用户并手动增加或扣减积分</small>
+          </a>
+          <a href="/admin/gallery/">
+            <span>03</span>
+            <strong>图库管理</strong>
+            <small>上传发布图片并审核公共投稿</small>
+          </a>
+          <a href="/admin/shop/">
+            <span>04</span>
+            <strong>商城管理</strong>
+            <small>管理商品、兑换订单与积分码</small>
+          </a>
+          <a href="/admin/stories/">
+            <span>05</span>
+            <strong>互动小说</strong>
+            <small>调整剧情价格、上下文和生成参数</small>
+          </a>
+        </div>
+      </section>
+    </div>
   </div>
 
   <p class="auth-status" data-account-status aria-live="polite"></p>
@@ -46,6 +296,10 @@ import AuthLayout from "../components/AuthLayout.astro";
 
 <script>
   import { authClient } from "../lib/auth-client";
+  import type {
+    GalleryUploadStatus,
+    OwnedGalleryItem,
+  } from "../lib/gallery-upload";
 
   const loading = document.querySelector<HTMLElement>("[data-account-loading]");
   const content = document.querySelector<HTMLElement>("[data-account-content]");
@@ -56,12 +310,462 @@ import AuthLayout from "../components/AuthLayout.astro";
   const created = document.querySelector<HTMLElement>("[data-account-created]");
   const status = document.querySelector<HTMLElement>("[data-account-status]");
   const signOut = document.querySelector<HTMLButtonElement>("[data-sign-out]");
+  const adminTab = document.querySelector<HTMLButtonElement>(
+    "[data-account-admin-tab]",
+  );
+  const provider = document.querySelector<HTMLElement>("[data-account-provider]");
+  const githubMethodStatus = document.querySelector<HTMLElement>(
+    "[data-github-method-status]",
+  );
+  const emailMethodStatus = document.querySelector<HTMLElement>(
+    "[data-email-method-status]",
+  );
+  const linkGitHub = document.querySelector<HTMLButtonElement>(
+    "[data-link-github]",
+  );
+  const showEmailBind = document.querySelector<HTMLButtonElement>(
+    "[data-show-email-bind]",
+  );
+  const emailBindForm = document.querySelector<HTMLFormElement>(
+    "[data-email-bind-form]",
+  );
+  const bindEmail = document.querySelector<HTMLInputElement>(
+    "[data-bind-email]",
+  );
+  const bindSendCode = document.querySelector<HTMLButtonElement>(
+    "[data-bind-send-code]",
+  );
+  const bindCodeWrap = document.querySelector<HTMLElement>(
+    "[data-bind-code-wrap]",
+  );
+  const bindCode = document.querySelector<HTMLInputElement>(
+    "[data-bind-code]",
+  );
+  const bindVerifyCode = document.querySelector<HTMLButtonElement>(
+    "[data-bind-verify-code]",
+  );
+  const passwordMethodStatus = document.querySelector<HTMLElement>(
+    "[data-password-method-status]",
+  );
+  const passwordAction = document.querySelector<HTMLButtonElement>(
+    "[data-password-action]",
+  );
+  const passwordForm = document.querySelector<HTMLFormElement>(
+    "[data-account-password-form]",
+  );
+  const currentPasswordWrap = document.querySelector<HTMLElement>(
+    "[data-current-password-wrap]",
+  );
+  const currentPassword = document.querySelector<HTMLInputElement>(
+    "[data-current-password]",
+  );
+  const newPassword = document.querySelector<HTMLInputElement>(
+    "[data-new-password]",
+  );
+  const confirmPassword = document.querySelector<HTMLInputElement>(
+    "[data-confirm-password]",
+  );
+  const submitPassword = document.querySelector<HTMLButtonElement>(
+    "[data-submit-password]",
+  );
+  const skipPassword = document.querySelector<HTMLButtonElement>(
+    "[data-skip-password]",
+  );
+  const accountGalleryList = document.querySelector<HTMLElement>(
+    "[data-account-gallery-list]",
+  );
+  const accountGalleryCount = document.querySelector<HTMLElement>(
+    "[data-account-gallery-count]",
+  );
+  const accountGalleryStatus = document.querySelector<HTMLElement>(
+    "[data-account-gallery-status]",
+  );
+  const accountQuery = new URLSearchParams(window.location.search);
+  const setupPasswordRequested =
+    accountQuery.get("setupPassword") === "1";
+  const requestedNext = accountQuery.get("next");
+  const passwordNext =
+    requestedNext?.startsWith("/") && !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/account/";
+  let passwordConfigured: boolean | null = null;
+  let passwordEmailVerified = false;
+
+  const galleryStatusLabels: Record<GalleryUploadStatus, string> = {
+    pending: "待审核",
+    approved: "已发布",
+    rejected: "未通过",
+    deleted: "已删除",
+  };
+
+  const setGalleryStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!accountGalleryStatus) return;
+    accountGalleryStatus.textContent = message;
+    accountGalleryStatus.dataset.state = state;
+  };
+
+  const copyText = async (text: string) => {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    if (!copied) throw new Error("浏览器不允许复制，请手动打开原图后复制。");
+  };
+
+  const originalLink = (image: OwnedGalleryItem) => {
+    if (image.visibility === "public") {
+      return new URL(image.href, window.location.origin).href;
+    }
+    const url = new URL(image.reviewHref, window.location.origin);
+    url.searchParams.set("variant", "1920");
+    return url.href;
+  };
+
+  const loadOwnedGallery = async () => {
+    if (!accountGalleryList) return;
+    setGalleryStatus("正在读取你的图片…");
+    const response = await fetch("/api/gallery/mine", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as {
+      images?: OwnedGalleryItem[];
+      error?: string;
+    };
+    if (!response.ok) {
+      throw new Error(payload.error || "图片记录读取失败。");
+    }
+
+    const images = payload.images ?? [];
+    if (accountGalleryCount) {
+      accountGalleryCount.textContent = `${images.length} 张图片`;
+    }
+    accountGalleryList.replaceChildren();
+    if (images.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "account-gallery-empty";
+      empty.textContent = "还没有上传过图片。";
+      accountGalleryList.append(empty);
+      setGalleryStatus("");
+      return;
+    }
+
+    for (const image of images) {
+      const card = document.createElement("article");
+      card.className = "account-gallery-card";
+      if (image.locked) card.classList.add("is-private");
+
+      const thumbnail = document.createElement("img");
+      thumbnail.src = image.locked ? image.src : image.reviewHref;
+      thumbnail.alt = image.locked ? "私密图片的马赛克预览" : image.title;
+      thumbnail.loading = "lazy";
+      thumbnail.decoding = "async";
+
+      const body = document.createElement("div");
+      const heading = document.createElement("header");
+      const title = document.createElement("strong");
+      title.textContent = image.title;
+      const state = document.createElement("span");
+      state.textContent = `${galleryStatusLabels[image.status]} · ${image.locked ? "私密" : "公开"}`;
+      heading.append(title, state);
+
+      const meta = document.createElement("small");
+      meta.textContent = `${image.width} × ${image.height} · ${new Intl.DateTimeFormat("zh-CN", { dateStyle: "medium" }).format(new Date(image.createdAt))}`;
+
+      const actions = document.createElement("div");
+      actions.className = "account-gallery-actions";
+      const view = document.createElement("a");
+      view.href = image.reviewHref;
+      view.target = "_blank";
+      view.rel = "noopener";
+      view.textContent = "查看原图";
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.dataset.ownedGalleryCopy = originalLink(image);
+      copy.textContent = "复制链接";
+      copy.title = image.locked
+        ? "打开链接时需要登录你的账号"
+        : "复制 1920 宽度的高清图片地址";
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.dataset.ownedGalleryVisibility =
+        image.visibility === "private" ? "public" : "private";
+      toggle.dataset.ownedGalleryId = image.id;
+      toggle.textContent =
+        image.visibility === "private" ? "设为公开" : "设为私密";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "is-danger";
+      remove.dataset.ownedGalleryDelete = image.id;
+      remove.dataset.ownedGalleryTitle = image.title;
+      remove.textContent = "删除图片";
+      actions.append(view, copy, toggle, remove);
+
+      body.append(heading, meta, actions);
+      card.append(thumbnail, body);
+      accountGalleryList.append(card);
+    }
+    setGalleryStatus("");
+  };
+
+  accountGalleryList?.addEventListener("click", async (event) => {
+    const deleteButton = (
+      event.target as HTMLElement
+    ).closest<HTMLButtonElement>("[data-owned-gallery-delete]");
+    if (deleteButton) {
+      const id = deleteButton.dataset.ownedGalleryDelete ?? "";
+      const title = deleteButton.dataset.ownedGalleryTitle ?? "这张图片";
+      if (
+        !id ||
+        !window.confirm(
+          `确定永久删除“${title}”吗？公开与私密文件都会被删除，且无法恢复。`,
+        )
+      ) {
+        return;
+      }
+      deleteButton.disabled = true;
+      setGalleryStatus("正在删除图片…");
+      try {
+        const response = await fetch("/api/gallery/visibility", {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id }),
+        });
+        if (!response.ok) {
+          const payload = (await response.json()) as { error?: string };
+          throw new Error(payload.error || "图片删除失败。");
+        }
+        await loadOwnedGallery();
+        setGalleryStatus("图片已永久删除。", "success");
+      } catch (error) {
+        deleteButton.disabled = false;
+        setGalleryStatus(
+          error instanceof Error ? error.message : "图片删除失败。",
+          "error",
+        );
+      }
+      return;
+    }
+
+    const copyButton = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-owned-gallery-copy]",
+    );
+    if (copyButton) {
+      copyButton.disabled = true;
+      try {
+        await copyText(copyButton.dataset.ownedGalleryCopy ?? "");
+        const message = copyButton.title.includes("登录")
+          ? "链接已复制，需登录你的账号才能打开。"
+          : "链接已复制。";
+        setGalleryStatus(message, "success");
+        window.setTimeout(() => {
+          if (accountGalleryStatus?.textContent === message) {
+            setGalleryStatus("");
+          }
+        }, 2600);
+      } catch (error) {
+        setGalleryStatus(
+          error instanceof Error ? error.message : "链接复制失败。",
+          "error",
+        );
+      } finally {
+        copyButton.disabled = false;
+      }
+      return;
+    }
+
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-owned-gallery-visibility]",
+    );
+    if (!button) return;
+    const visibility = button.dataset.ownedGalleryVisibility;
+    const id = button.dataset.ownedGalleryId;
+    if (!id || (visibility !== "public" && visibility !== "private")) return;
+    if (
+      visibility === "private" &&
+      !window.confirm(
+        "设为私密后，公开图库只显示马赛克预览，原图会从公开存储移入私有 R2。确定继续吗？",
+      )
+    ) {
+      return;
+    }
+
+    button.disabled = true;
+    setGalleryStatus(
+      visibility === "private" ? "正在移入私有存储…" : "正在公开原图…",
+    );
+    try {
+      const response = await fetch("/api/gallery/visibility", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, visibility }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "可见性更新失败。");
+      }
+      await loadOwnedGallery();
+      setGalleryStatus(
+        visibility === "private"
+          ? "已设为私密，原图仅你和管理员可查看。"
+          : "已设为公开，原图已移入公开图库。",
+        "success",
+      );
+    } catch (error) {
+      button.disabled = false;
+      setGalleryStatus(
+        error instanceof Error ? error.message : "可见性更新失败。",
+        "error",
+      );
+    }
+  });
+
+  const setAccountStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!status) return;
+    status.textContent = message;
+    status.dataset.state = state;
+  };
+
+  const updatePasswordUi = () => {
+    if (passwordConfigured === null) return;
+    if (passwordMethodStatus) {
+      passwordMethodStatus.textContent = !passwordEmailVerified
+        ? "绑定并验证邮箱后可以设置"
+        : passwordConfigured
+          ? "已设置 · 可使用邮箱密码登录"
+          : "尚未设置 · 当前使用验证码登录";
+    }
+    if (passwordAction) {
+      passwordAction.hidden = !passwordEmailVerified;
+      passwordAction.textContent = passwordConfigured ? "修改密码" : "设置密码";
+    }
+    if (currentPasswordWrap) {
+      currentPasswordWrap.hidden = !passwordConfigured;
+    }
+    if (currentPassword) currentPassword.required = passwordConfigured;
+    if (submitPassword) {
+      submitPassword.textContent = passwordConfigured ? "修改密码" : "设置密码";
+    }
+    if (skipPassword) {
+      skipPassword.hidden = !(
+        setupPasswordRequested && passwordConfigured === false
+      );
+    }
+  };
+
+  const openPasswordForm = () => {
+    if (!passwordEmailVerified) {
+      setAccountStatus("请先绑定并验证邮箱，再设置登录密码。", "error");
+      return;
+    }
+    if (passwordForm) passwordForm.hidden = false;
+    updatePasswordUi();
+    (passwordConfigured ? currentPassword : newPassword)?.focus();
+  };
+
+  passwordAction?.addEventListener("click", openPasswordForm);
+
+  passwordForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const nextPassword = newPassword?.value ?? "";
+    const confirmation = confirmPassword?.value ?? "";
+    if (nextPassword.length < 10) {
+      setAccountStatus("新密码至少需要 10 个字符。", "error");
+      return;
+    }
+    if (nextPassword !== confirmation) {
+      setAccountStatus("两次输入的新密码不一致。", "error");
+      return;
+    }
+    if (passwordConfigured && !currentPassword?.value) {
+      setAccountStatus("请输入当前密码。", "error");
+      return;
+    }
+
+    if (submitPassword) submitPassword.disabled = true;
+    setAccountStatus(passwordConfigured ? "正在修改密码…" : "正在设置密码…");
+    try {
+      const response = await fetch(
+        passwordConfigured
+          ? "/api/auth/change-password"
+          : "/api/account/password",
+        {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          newPassword: nextPassword,
+          ...(passwordConfigured
+            ? {
+                currentPassword: currentPassword?.value ?? "",
+                revokeOtherSessions: true,
+              }
+            : {}),
+        }),
+        },
+      );
+      const payload = (await response.json()) as {
+        error?: string;
+        hasPassword?: boolean;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "登录密码保存失败。");
+      }
+
+      passwordConfigured = true;
+      localStorage.setItem("yq-login-method", "password");
+      passwordForm.reset();
+      if (passwordForm) passwordForm.hidden = true;
+      updatePasswordUi();
+      setAccountStatus("登录密码已保存，下次可以使用邮箱和密码登录。", "success");
+      if (setupPasswordRequested && passwordNext !== "/account/") {
+        window.setTimeout(() => window.location.replace(passwordNext), 900);
+      }
+    } catch (error) {
+      setAccountStatus(
+        error instanceof Error ? error.message : "登录密码保存失败。",
+        "error",
+      );
+    } finally {
+      if (submitPassword) submitPassword.disabled = false;
+    }
+  });
+
+  skipPassword?.addEventListener("click", () => {
+    window.location.replace(passwordNext);
+  });
 
   const { data, error } = await authClient.getSession();
 
   if (error || !data?.user) {
-    const next = `${window.location.pathname}${window.location.search}`;
-    window.location.replace(`/login/?next=${encodeURIComponent(next)}`);
+    window.location.replace("/login/?next=/account/");
   } else {
     const user = data.user;
     loading?.setAttribute("hidden", "");
@@ -70,13 +774,9 @@ import AuthLayout from "../components/AuthLayout.astro";
     if (name) name.textContent = user.name;
     if (email) email.textContent = user.email;
     if (created) {
-      // getSession 已经是 Date，但服务端 JSON 传输后可能回退成字符串
-      const createdAt = new Date(user.createdAt);
-      created.textContent = Number.isNaN(createdAt.getTime())
-        ? "未知"
-        : new Intl.DateTimeFormat("zh-CN", {
-            dateStyle: "medium",
-          }).format(createdAt);
+      created.textContent = new Intl.DateTimeFormat("zh-CN", {
+        dateStyle: "medium",
+      }).format(new Date(user.createdAt));
     }
 
     if (avatar && user.image) {
@@ -88,7 +788,149 @@ import AuthLayout from "../components/AuthLayout.astro";
     } else if (initial) {
       initial.textContent = user.name.slice(0, 1);
     }
+
+    void fetch("/api/admin/status", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) =>
+        response.ok ? response.json() : { isAdmin: false },
+      )
+      .then((result: { isAdmin?: boolean }) => {
+        if (result.isAdmin && adminTab) adminTab.hidden = false;
+      })
+      .catch(() => undefined);
+
+    const loadSignInMethods = async () => {
+      const response = await fetch("/api/account/logins", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) return;
+      const methods = (await response.json()) as {
+        email: string;
+        emailVerified: boolean;
+        hasPassword: boolean;
+        hasGitHub: boolean;
+        githubLinkedLater: boolean;
+        emailBindingRewardClaimed: boolean;
+        githubBindingRewardClaimed: boolean;
+        canBindEmail: boolean;
+        canLinkGitHub: boolean;
+      };
+
+      if (provider) {
+        provider.textContent = methods.hasGitHub
+          ? methods.emailVerified
+            ? "GitHub + 邮箱"
+            : "GitHub"
+          : "邮箱";
+      }
+      if (githubMethodStatus) {
+        githubMethodStatus.textContent = methods.hasGitHub
+          ? methods.githubBindingRewardClaimed
+            ? "已绑定，绑定奖励已领取"
+            : "已绑定"
+          : "尚未绑定，绑定后奖励 5 积分";
+      }
+      if (emailMethodStatus) {
+        emailMethodStatus.textContent = methods.emailVerified
+          ? `${methods.email} · 已验证`
+          : `${methods.email} · 等待邮箱绑定`;
+      }
+      if (linkGitHub) linkGitHub.hidden = !methods.canLinkGitHub;
+      if (showEmailBind) showEmailBind.hidden = !methods.canBindEmail;
+      if (bindEmail) bindEmail.value = methods.email;
+      passwordConfigured = methods.hasPassword;
+      passwordEmailVerified = methods.emailVerified;
+      updatePasswordUi();
+      if (setupPasswordRequested && !methods.hasPassword) {
+        openPasswordForm();
+      }
+
+      if (
+        methods.hasGitHub &&
+        methods.githubLinkedLater &&
+        !methods.githubBindingRewardClaimed
+      ) {
+        const claim = await fetch("/api/account/claim-github-binding", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        });
+        if (claim.ok) {
+          const result = (await claim.json()) as {
+            awarded?: boolean;
+            amount?: number;
+          };
+          if (result.awarded && status) {
+            status.textContent = `GitHub 绑定成功，获得 ${result.amount ?? 5} 积分。`;
+            status.dataset.state = "success";
+          }
+        }
+      }
+    };
+
+    void loadSignInMethods().catch(() => undefined);
+    void loadOwnedGallery().catch((galleryError) => {
+      setGalleryStatus(
+        galleryError instanceof Error
+          ? galleryError.message
+          : "你的图片暂时无法读取。",
+        "error",
+      );
+    });
   }
+
+  const accountTabs = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("[data-account-tab]"),
+  );
+  const accountPanels = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-account-panel]"),
+  );
+
+  const activateAccountTab = (name: string) => {
+    accountTabs.forEach((tab) => {
+      const active = tab.dataset.accountTab === name;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+    });
+    accountPanels.forEach((panel) => {
+      panel.hidden = panel.dataset.accountPanel !== name;
+    });
+  };
+
+  accountTabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => {
+      activateAccountTab(tab.dataset.accountTab ?? "overview");
+    });
+    tab.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+        return;
+      }
+
+      event.preventDefault();
+      const visibleTabs = accountTabs.filter((item) => !item.hidden);
+      const currentIndex = visibleTabs.indexOf(tab);
+      const nextIndex =
+        event.key === "Home"
+          ? 0
+          : event.key === "End"
+            ? visibleTabs.length - 1
+            : (currentIndex +
+                (event.key === "ArrowRight" ? 1 : -1) +
+                visibleTabs.length) %
+              visibleTabs.length;
+      const nextTab = visibleTabs[nextIndex];
+      nextTab?.focus();
+      if (nextTab) {
+        activateAccountTab(nextTab.dataset.accountTab ?? "overview");
+      }
+    });
+  });
+
+  activateAccountTab(setupPasswordRequested ? "methods" : "overview");
 
   signOut?.addEventListener("click", async () => {
     signOut.disabled = true;
@@ -102,5 +944,143 @@ import AuthLayout from "../components/AuthLayout.astro";
       return;
     }
     window.location.replace("/");
+  });
+
+  linkGitHub?.addEventListener("click", async () => {
+    linkGitHub.disabled = true;
+    if (status) status.textContent = "正在跳转到 GitHub…";
+    try {
+      const response = await fetch("/api/auth/link-social", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          provider: "github",
+          callbackURL: "/account/",
+        }),
+      });
+      const payload = (await response.json()) as {
+        url?: string;
+        error?: string;
+        message?: string;
+      };
+      if (!response.ok || !payload.url) {
+        throw new Error(
+          payload.message || payload.error || "无法开始 GitHub 绑定。",
+        );
+      }
+      window.location.assign(payload.url);
+    } catch (error) {
+      linkGitHub.disabled = false;
+      if (status) {
+        status.textContent =
+          error instanceof Error ? error.message : "GitHub 绑定失败。";
+        status.dataset.state = "error";
+      }
+    }
+  });
+
+  showEmailBind?.addEventListener("click", () => {
+    if (emailBindForm) emailBindForm.hidden = false;
+    bindEmail?.focus();
+  });
+
+  bindCode?.addEventListener("input", () => {
+    bindCode.value = bindCode.value.replace(/\D/g, "").slice(0, 6);
+  });
+
+  bindSendCode?.addEventListener("click", async () => {
+    const targetEmail = bindEmail?.value.trim().toLowerCase() ?? "";
+    if (!targetEmail) {
+      if (status) status.textContent = "请输入邮箱地址。";
+      return;
+    }
+    bindSendCode.disabled = true;
+    if (status) {
+      status.textContent = "正在发送验证码…";
+      status.dataset.state = "idle";
+    }
+    try {
+      const response = await fetch("/api/account/bind-email/request", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "验证码发送失败。");
+      }
+      if (bindCodeWrap) bindCodeWrap.hidden = false;
+      if (bindCode) {
+        bindCode.value = "";
+        bindCode.focus();
+      }
+      if (status) {
+        status.textContent = "验证码已发送，请检查邮箱和垃圾箱。";
+        status.dataset.state = "idle";
+      }
+    } catch (error) {
+      if (status) {
+        status.textContent =
+          error instanceof Error ? error.message : "验证码发送失败。";
+        status.dataset.state = "error";
+      }
+    } finally {
+      bindSendCode.disabled = false;
+    }
+  });
+
+  bindVerifyCode?.addEventListener("click", async () => {
+    const targetEmail = bindEmail?.value.trim().toLowerCase() ?? "";
+    const otp = bindCode?.value.trim() ?? "";
+    if (!/^\d{6}$/.test(otp)) {
+      if (status) {
+        status.textContent = "请输入 6 位数字验证码。";
+        status.dataset.state = "error";
+      }
+      return;
+    }
+    bindVerifyCode.disabled = true;
+    if (status) {
+      status.textContent = "正在验证并绑定邮箱…";
+      status.dataset.state = "idle";
+    }
+    try {
+      const response = await fetch("/api/account/bind-email/verify", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: targetEmail, otp }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        amount?: number;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "邮箱绑定失败。");
+      }
+      if (status) {
+        status.textContent = `邮箱绑定成功，获得 ${payload.amount ?? 5} 积分。`;
+        status.dataset.state = "success";
+      }
+      window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) {
+      bindVerifyCode.disabled = false;
+      if (status) {
+        status.textContent =
+          error instanceof Error ? error.message : "邮箱绑定失败。";
+        status.dataset.state = "error";
+      }
+    }
   });
 </script>

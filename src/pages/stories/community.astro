@@ -1,0 +1,14 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="互动小说书库" noindex>
+  <meta http-equiv="refresh" content="0;url=/stories/?view=library" />
+  <section class="container" style="padding-block: 80px;">
+    <p>小说书库已经并入互动小说页面。</p>
+    <p><a href="/stories/?view=library">进入小说书库 →</a></p>
+  </section>
+  <script is:inline>
+    location.replace("/stories/?view=library");
+  </script>
+</BaseLayout>

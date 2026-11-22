@@ -1,0 +1,1176 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/admin-points.css";
+---
+
+<BaseLayout
+  title="积分管理"
+  description="管理渔情用户的积分余额。"
+  bodyClass="page-admin-points"
+  noindex
+>
+  <div class="container admin-points-shell">
+    <header class="admin-points-header">
+      <div>
+        <p class="eyebrow">POINT OPERATIONS</p>
+        <h1>积分管理</h1>
+        <p>手动增加或扣减用户积分，每次操作都会写入独立流水。</p>
+      </div>
+      <div class="admin-points-nav">
+        <a href="/admin/comments/">评论审核</a>
+        <a href="/admin/gallery/">图库管理</a>
+        <a href="/admin/shop/">商城管理</a>
+        <a href="/admin/stories/">互动小说</a>
+        <a href="/account/">返回账户</a>
+      </div>
+    </header>
+
+    <p class="admin-points-status" data-admin-points-status aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-points-denied" data-admin-points-denied hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-admin-points-gate-title>请先登录</strong>
+      <p data-admin-points-gate-copy>登录后才能进入积分管理。</p>
+      <div class="admin-points-gate-actions">
+        <a href="/login/?next=%2Fadmin%2Fpoints%2F" data-admin-points-gate-link>
+          使用 GitHub 登录
+        </a>
+        <button type="button" data-admin-points-gate-retry hidden>
+          重新加载
+        </button>
+      </div>
+    </div>
+
+    <div data-admin-points-content hidden>
+      <form class="admin-points-search" data-points-user-search>
+        <label>
+          <span>查找用户</span>
+          <input
+            type="search"
+            name="q"
+            maxlength="100"
+            placeholder="输入昵称或邮箱"
+            data-points-user-query
+          />
+        </label>
+        <button type="submit">搜索</button>
+      </form>
+
+      <section class="admin-points-users" aria-labelledby="points-users-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">USERS</p>
+            <h2 id="points-users-title">用户账户</h2>
+          </div>
+          <span data-points-user-count>0 位用户</span>
+        </div>
+        <div class="admin-points-user-list" data-points-user-list></div>
+      </section>
+
+      <section class="admin-points-editor" data-points-editor hidden>
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">ADJUST BALANCE</p>
+            <h2>调整 <span data-selected-user-name></span></h2>
+          </div>
+          <span>当前余额 <strong data-selected-user-balance>0</strong> 积分</span>
+        </div>
+
+        <form data-points-adjust-form>
+          <label>
+            <span>调整积分数量</span>
+            <input
+              type="number"
+              min="1"
+              max="100000"
+              step="1"
+              inputmode="numeric"
+              placeholder="例如 20"
+              data-points-amount
+              required
+            />
+          </label>
+          <label class="admin-adjust-reason">
+            <span>调整原因</span>
+            <input
+              type="text"
+              minlength="2"
+              maxlength="120"
+              placeholder="例如：活动奖励、撤销误发积分"
+              data-points-reason
+              required
+            />
+          </label>
+          <div class="admin-adjust-actions">
+            <button type="submit" data-adjust-mode="credit">增加积分</button>
+            <button type="button" data-adjust-mode="debit">扣减积分</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="admin-operations-panel" aria-labelledby="campaign-codes-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">CAMPAIGN CODES</p>
+            <h2 id="campaign-codes-title">活动兑换码</h2>
+            <p class="admin-operations-copy">
+              支持英文、数字和中文混合；一个活动码可供多人领取，每个账号限领一次。
+            </p>
+          </div>
+        </div>
+
+        <form class="admin-operation-form" data-campaign-form>
+          <label>
+            <span>活动名称</span>
+            <input
+              type="text"
+              maxlength="60"
+              placeholder="例如：满月活动"
+              data-campaign-name
+              required
+            />
+          </label>
+          <label>
+            <span>活动码</span>
+            <input
+              type="text"
+              minlength="2"
+              maxlength="40"
+              autocomplete="off"
+              placeholder="例如：Moon渔渔"
+              data-campaign-code
+              required
+            />
+          </label>
+          <label>
+            <span>赠送积分</span>
+            <input
+              type="number"
+              min="1"
+              max="100000"
+              step="1"
+              inputmode="numeric"
+              placeholder="例如：50"
+              data-campaign-amount
+              required
+            />
+          </label>
+          <label>
+            <span>领取上限</span>
+            <input
+              type="number"
+              min="1"
+              max="100000"
+              step="1"
+              inputmode="numeric"
+              placeholder="留空表示不限"
+              data-campaign-limit
+            />
+          </label>
+          <label>
+            <span>开始时间</span>
+            <input type="datetime-local" data-campaign-starts />
+          </label>
+          <label>
+            <span>结束时间</span>
+            <input type="datetime-local" data-campaign-expires />
+          </label>
+          <button type="submit">发布活动码</button>
+        </form>
+
+        <div class="admin-operation-list" data-campaign-list></div>
+      </section>
+
+      <section class="admin-operations-panel" aria-labelledby="announcements-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">SITE ANNOUNCEMENTS</p>
+            <h2 id="announcements-title">站点公告</h2>
+            <p class="admin-operations-copy">
+              公告到时间后自动隐藏；用户关闭某个公告后，本机不会再次显示。
+            </p>
+          </div>
+        </div>
+
+        <form class="admin-operation-form admin-announcement-form" data-announcement-form>
+          <label>
+            <span>公告标题</span>
+            <input
+              type="text"
+              minlength="2"
+              maxlength="80"
+              placeholder="例如：积分充值说明"
+              data-announcement-title-input
+              required
+            />
+          </label>
+          <label class="admin-operation-wide">
+            <span>公告内容</span>
+            <textarea
+              rows="3"
+              minlength="2"
+              maxlength="500"
+              placeholder="用简短文字说明当前状态或活动内容"
+              data-announcement-body
+              required
+            ></textarea>
+          </label>
+          <label>
+            <span>类型</span>
+            <select data-announcement-type>
+              <option value="info">普通公告</option>
+              <option value="success">活动</option>
+              <option value="warning">提醒</option>
+              <option value="maintenance">维护</option>
+            </select>
+          </label>
+          <label>
+            <span>显示位置</span>
+            <select data-announcement-placement>
+              <option value="site">全站</option>
+              <option value="points">积分页</option>
+              <option value="shop">兑换页</option>
+              <option value="custom">指定页面</option>
+            </select>
+          </label>
+          <label data-announcement-path-wrap hidden>
+            <span>站内路径</span>
+            <input
+              type="text"
+              maxlength="200"
+              list="announcement-page-locations"
+              placeholder="/stories/"
+              data-announcement-path
+            />
+          </label>
+          <label>
+            <span>优先级（0–100）</span>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="1"
+              inputmode="numeric"
+              value="0"
+              data-announcement-priority
+            />
+          </label>
+          <label>
+            <span>链接地址（可选）</span>
+            <input
+              type="text"
+              maxlength="500"
+              placeholder="/shop/ 或 https://…"
+              data-announcement-link-url
+            />
+          </label>
+          <label>
+            <span>链接文字（可选）</span>
+            <input
+              type="text"
+              maxlength="40"
+              placeholder="查看详情"
+              data-announcement-link-text
+            />
+          </label>
+          <label>
+            <span>开始时间</span>
+            <input type="datetime-local" data-announcement-starts />
+          </label>
+          <label>
+            <span>结束时间</span>
+            <input type="datetime-local" data-announcement-ends />
+          </label>
+          <button type="submit">发布公告</button>
+        </form>
+        <datalist id="announcement-page-locations">
+          <option value="/"></option>
+          <option value="/account/"></option>
+          <option value="/blog/"></option>
+          <option value="/gallery/"></option>
+          <option value="/stories/"></option>
+          <option value="/games/"></option>
+          <option value="/shop/"></option>
+          <option value="/points/"></option>
+        </datalist>
+
+        <div class="admin-operation-list" data-announcement-list></div>
+      </section>
+
+      <section class="admin-point-actions" aria-labelledby="recent-actions-title">
+        <div class="admin-points-section-heading">
+          <div>
+            <p class="eyebrow">AUDIT LOG</p>
+            <h2 id="recent-actions-title">最近管理员调整</h2>
+          </div>
+        </div>
+        <ol data-point-actions-list></ol>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+  import type {
+    AdminPointAction,
+    AdminPointUser,
+    AdminPointsResponse,
+  } from "../../lib/admin-points";
+  import type { CampaignCode } from "../../lib/campaign-codes";
+  import type {
+    Announcement,
+    AnnouncementPlacement,
+    AnnouncementType,
+  } from "../../lib/announcements";
+
+  class AdminRequestError extends Error {
+    constructor(
+      message: string,
+      readonly status: number,
+    ) {
+      super(message);
+    }
+  }
+
+  const denied = document.querySelector<HTMLElement>(
+    "[data-admin-points-denied]",
+  );
+  const content = document.querySelector<HTMLElement>(
+    "[data-admin-points-content]",
+  );
+  const status = document.querySelector<HTMLElement>(
+    "[data-admin-points-status]",
+  );
+  const gateTitle = document.querySelector<HTMLElement>(
+    "[data-admin-points-gate-title]",
+  );
+  const gateCopy = document.querySelector<HTMLElement>(
+    "[data-admin-points-gate-copy]",
+  );
+  const gateLink = document.querySelector<HTMLAnchorElement>(
+    "[data-admin-points-gate-link]",
+  );
+  const gateRetry = document.querySelector<HTMLButtonElement>(
+    "[data-admin-points-gate-retry]",
+  );
+  const searchForm = document.querySelector<HTMLFormElement>(
+    "[data-points-user-search]",
+  );
+  const search = document.querySelector<HTMLInputElement>(
+    "[data-points-user-query]",
+  );
+  const usersList = document.querySelector<HTMLElement>(
+    "[data-points-user-list]",
+  );
+  const userCount = document.querySelector<HTMLElement>(
+    "[data-points-user-count]",
+  );
+  const editor = document.querySelector<HTMLElement>("[data-points-editor]");
+  const selectedName = document.querySelector<HTMLElement>(
+    "[data-selected-user-name]",
+  );
+  const selectedBalance = document.querySelector<HTMLElement>(
+    "[data-selected-user-balance]",
+  );
+  const adjustForm = document.querySelector<HTMLFormElement>(
+    "[data-points-adjust-form]",
+  );
+  const amountInput = document.querySelector<HTMLInputElement>(
+    "[data-points-amount]",
+  );
+  const reasonInput = document.querySelector<HTMLInputElement>(
+    "[data-points-reason]",
+  );
+  const recentActions = document.querySelector<HTMLElement>(
+    "[data-point-actions-list]",
+  );
+  const campaignForm = document.querySelector<HTMLFormElement>(
+    "[data-campaign-form]",
+  );
+  const campaignName = document.querySelector<HTMLInputElement>(
+    "[data-campaign-name]",
+  );
+  const campaignCode = document.querySelector<HTMLInputElement>(
+    "[data-campaign-code]",
+  );
+  const campaignAmount = document.querySelector<HTMLInputElement>(
+    "[data-campaign-amount]",
+  );
+  const campaignLimit = document.querySelector<HTMLInputElement>(
+    "[data-campaign-limit]",
+  );
+  const campaignStarts = document.querySelector<HTMLInputElement>(
+    "[data-campaign-starts]",
+  );
+  const campaignExpires = document.querySelector<HTMLInputElement>(
+    "[data-campaign-expires]",
+  );
+  const campaignList = document.querySelector<HTMLElement>(
+    "[data-campaign-list]",
+  );
+  const announcementForm = document.querySelector<HTMLFormElement>(
+    "[data-announcement-form]",
+  );
+  const announcementTitle = document.querySelector<HTMLInputElement>(
+    "[data-announcement-title-input]",
+  );
+  const announcementBody = document.querySelector<HTMLTextAreaElement>(
+    "[data-announcement-body]",
+  );
+  const announcementType = document.querySelector<HTMLSelectElement>(
+    "[data-announcement-type]",
+  );
+  const announcementPlacement = document.querySelector<HTMLSelectElement>(
+    "[data-announcement-placement]",
+  );
+  const announcementPathWrap = document.querySelector<HTMLElement>(
+    "[data-announcement-path-wrap]",
+  );
+  const announcementPath = document.querySelector<HTMLInputElement>(
+    "[data-announcement-path]",
+  );
+  const announcementPriority = document.querySelector<HTMLInputElement>(
+    "[data-announcement-priority]",
+  );
+  const announcementLinkUrl = document.querySelector<HTMLInputElement>(
+    "[data-announcement-link-url]",
+  );
+  const announcementLinkText = document.querySelector<HTMLInputElement>(
+    "[data-announcement-link-text]",
+  );
+  const announcementStarts = document.querySelector<HTMLInputElement>(
+    "[data-announcement-starts]",
+  );
+  const announcementEnds = document.querySelector<HTMLInputElement>(
+    "[data-announcement-ends]",
+  );
+  const announcementList = document.querySelector<HTMLElement>(
+    "[data-announcement-list]",
+  );
+
+  let selectedUser: AdminPointUser | null = null;
+  const usersById = new Map<string, AdminPointUser>();
+  let campaignCodes: CampaignCode[] = [];
+  let announcements: Announcement[] = [];
+
+  const setStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.state = state;
+  };
+
+  const showGate = (
+    title: string,
+    copy: string,
+    action: "login" | "retry" = "login",
+  ) => {
+    if (content) content.hidden = true;
+    if (denied) denied.hidden = false;
+    if (gateTitle) gateTitle.textContent = title;
+    if (gateCopy) gateCopy.textContent = copy;
+    if (gateLink) gateLink.hidden = action !== "login";
+    if (gateRetry) gateRetry.hidden = action !== "retry";
+    setStatus("");
+  };
+
+  const formatDate = (timestamp: number) =>
+    new Intl.DateTimeFormat("zh-CN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(timestamp));
+
+  const avatarElement = (name: string, image: string | null) => {
+    if (image && /^https:\/\//i.test(image)) {
+      const img = document.createElement("img");
+      img.src = image;
+      img.alt = "";
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.referrerPolicy = "no-referrer";
+      return img;
+    }
+    return document.createTextNode(name.slice(0, 1) || "渔");
+  };
+
+  const renderUser = (user: AdminPointUser) => {
+    const card = document.createElement("article");
+    card.className = "admin-point-user";
+    if (selectedUser?.id === user.id) card.classList.add("is-selected");
+
+    const avatar = document.createElement("div");
+    avatar.className = "admin-point-user-avatar";
+    avatar.append(avatarElement(user.name, user.image));
+
+    const info = document.createElement("div");
+    info.className = "admin-point-user-info";
+    const name = document.createElement("strong");
+    name.textContent = user.name;
+    const email = document.createElement("span");
+    email.textContent = user.email;
+    info.append(name, email);
+
+    const metrics = document.createElement("div");
+    metrics.className = "admin-point-user-metrics";
+    const balance = document.createElement("strong");
+    balance.textContent = `${user.balance} 积分`;
+    const earned = document.createElement("span");
+    earned.textContent = `累计获得 ${user.totalEarned}`;
+    metrics.append(balance, earned);
+
+    const select = document.createElement("button");
+    select.type = "button";
+    select.textContent = selectedUser?.id === user.id ? "已选择" : "管理";
+    select.dataset.userId = user.id;
+
+    card.append(avatar, info, metrics, select);
+    return card;
+  };
+
+  const renderRecentAction = (action: AdminPointAction) => {
+    const row = document.createElement("li");
+    const main = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${action.targetName} · ${action.description}`;
+    const meta = document.createElement("span");
+    meta.textContent = `${action.operatorName ?? "已删除管理员"} / ${formatDate(action.createdAt)}`;
+    main.append(title, meta);
+
+    const amount = document.createElement("strong");
+    amount.className = action.amount > 0 ? "is-positive" : "is-negative";
+    amount.textContent = `${action.amount > 0 ? "+" : ""}${action.amount}`;
+
+    const balance = document.createElement("small");
+    balance.textContent = `余额 ${action.balanceAfter}`;
+    row.append(main, amount, balance);
+    return row;
+  };
+
+  const parseDateTime = (input: HTMLInputElement | null) => {
+    if (!input?.value) return null;
+    const value = new Date(input.value).getTime();
+    return Number.isFinite(value) ? value : null;
+  };
+
+  const operationRequest = async <T,>(
+    url: string,
+    options?: RequestInit,
+  ): Promise<T> => {
+    const response = await fetch(url, {
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        ...(options?.body ? { "Content-Type": "application/json" } : {}),
+      },
+      ...options,
+    });
+    const payload = (await response.json()) as T & { error?: string };
+    if (!response.ok) {
+      throw new AdminRequestError(
+        payload.error || "管理操作失败。",
+        response.status,
+      );
+    }
+    return payload;
+  };
+
+  const campaignState = (code: CampaignCode) => {
+    const now = Date.now();
+    if (!code.active) return { label: "已停用", className: "is-muted" };
+    if (code.expiresAt && code.expiresAt <= now) {
+      return { label: "已结束", className: "is-muted" };
+    }
+    if (code.startsAt && code.startsAt > now) {
+      return { label: "未开始", className: "is-pending" };
+    }
+    if (
+      code.maxRedemptions !== null &&
+      code.redeemedCount >= code.maxRedemptions
+    ) {
+      return { label: "已领完", className: "is-muted" };
+    }
+    return { label: "进行中", className: "is-active" };
+  };
+
+  const renderCampaignCode = (code: CampaignCode) => {
+    const card = document.createElement("article");
+    card.className = "admin-operation-item";
+    const main = document.createElement("div");
+    main.className = "admin-operation-item-main";
+    const heading = document.createElement("div");
+    heading.className = "admin-operation-item-heading";
+    const name = document.createElement("strong");
+    name.textContent = code.name;
+    const state = campaignState(code);
+    const badge = document.createElement("span");
+    badge.className = `admin-operation-state ${state.className}`;
+    badge.textContent = state.label;
+    heading.append(name, badge);
+
+    const codeValue = document.createElement("code");
+    codeValue.textContent = code.code;
+    const meta = document.createElement("p");
+    const limit =
+      code.maxRedemptions === null ? "不限人数" : `上限 ${code.maxRedemptions} 人`;
+    meta.textContent = `${code.amount} 积分 · 已领 ${code.redeemedCount} 人 · ${limit}`;
+    const time = document.createElement("small");
+    const starts = code.startsAt
+      ? `开始 ${formatDate(code.startsAt)}`
+      : "立即开始";
+    const expires = code.expiresAt
+      ? `结束 ${formatDate(code.expiresAt)}`
+      : "长期有效";
+    time.textContent = `${starts} · ${expires}`;
+    main.append(heading, codeValue, meta, time);
+
+    const actions = document.createElement("div");
+    actions.className = "admin-operation-actions";
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.dataset.campaignToggle = code.id;
+    toggle.dataset.active = String(code.active);
+    toggle.textContent = code.active ? "停用" : "启用";
+    actions.append(toggle);
+    if (code.redeemedCount === 0) {
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "is-danger";
+      remove.dataset.campaignDelete = code.id;
+      remove.textContent = "删除";
+      actions.append(remove);
+    }
+    card.append(main, actions);
+    return card;
+  };
+
+  const renderAnnouncement = (announcement: Announcement) => {
+    const card = document.createElement("article");
+    card.className = "admin-operation-item";
+    const main = document.createElement("div");
+    main.className = "admin-operation-item-main";
+    const heading = document.createElement("div");
+    heading.className = "admin-operation-item-heading";
+    const title = document.createElement("strong");
+    title.textContent = announcement.title;
+    const badge = document.createElement("span");
+    badge.className = `admin-operation-state ${
+      announcement.active ? "is-active" : "is-muted"
+    }`;
+    badge.textContent = announcement.active ? "显示中" : "已停用";
+    heading.append(title, badge);
+    const body = document.createElement("p");
+    body.textContent = announcement.body;
+    const meta = document.createElement("small");
+    const placements: Record<AnnouncementPlacement, string> = {
+      site: "全站",
+      points: "积分页",
+      shop: "兑换页",
+      custom: "指定页面",
+    };
+    const types: Record<AnnouncementType, string> = {
+      info: "普通",
+      success: "活动",
+      warning: "提醒",
+      maintenance: "维护",
+    };
+    const time = announcement.startsAt
+      ? `开始 ${formatDate(announcement.startsAt)}`
+      : "立即开始";
+    const end = announcement.endsAt
+      ? `结束 ${formatDate(announcement.endsAt)}`
+      : "长期有效";
+    const location =
+      announcement.targetPath ??
+      placements[announcement.placement];
+    meta.textContent = `${location} · ${types[announcement.type]} · 优先级 ${announcement.priority} · ${time} · ${end}`;
+    main.append(heading, body, meta);
+
+    const actions = document.createElement("div");
+    actions.className = "admin-operation-actions";
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.dataset.announcementToggle = announcement.id;
+    toggle.dataset.active = String(announcement.active);
+    toggle.textContent = announcement.active ? "停用" : "启用";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "is-danger";
+    remove.dataset.announcementDelete = announcement.id;
+    remove.textContent = "删除";
+    actions.append(toggle, remove);
+    card.append(main, actions);
+    return card;
+  };
+
+  const renderOperations = () => {
+    if (campaignList) {
+      campaignList.replaceChildren();
+      if (campaignCodes.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "admin-points-empty";
+        empty.textContent = "还没有活动兑换码。";
+        campaignList.append(empty);
+      } else {
+        campaignCodes.forEach((code) =>
+          campaignList.append(renderCampaignCode(code)),
+        );
+      }
+    }
+    if (announcementList) {
+      announcementList.replaceChildren();
+      if (announcements.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "admin-points-empty";
+        empty.textContent = "还没有站点公告。";
+        announcementList.append(empty);
+      } else {
+        announcements.forEach((announcement) =>
+          announcementList.append(renderAnnouncement(announcement)),
+        );
+      }
+    }
+  };
+
+  const loadOperations = async () => {
+    const [campaignPayload, announcementPayload] = await Promise.all([
+      operationRequest<{ campaignCodes: CampaignCode[] }>(
+        "/api/admin/points/campaign-codes",
+      ),
+      operationRequest<{ announcements: Announcement[] }>(
+        "/api/admin/announcements",
+      ),
+    ]);
+    campaignCodes = campaignPayload.campaignCodes;
+    announcements = announcementPayload.announcements;
+    renderOperations();
+  };
+
+  const loadUsers = async () => {
+    const params = new URLSearchParams();
+    const query = search?.value.trim();
+    if (query) params.set("q", query);
+
+    setStatus("正在读取用户积分…");
+    const response = await fetch(`/api/admin/points?${params}`, {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    const payload = (await response.json()) as AdminPointsResponse & {
+      error?: string;
+    };
+    if (!response.ok) {
+      throw new AdminRequestError(
+        payload.error || "用户积分读取失败。",
+        response.status,
+      );
+    }
+
+    if (usersList) {
+      usersList.replaceChildren();
+      usersById.clear();
+      if (payload.users.length === 0) {
+        const empty = document.createElement("p");
+        empty.className = "admin-points-empty";
+        empty.textContent = "没有找到匹配的用户。";
+        usersList.append(empty);
+      } else {
+        payload.users.forEach((user) => {
+          usersById.set(user.id, user);
+          usersList.append(renderUser(user));
+        });
+      }
+    }
+    if (userCount) userCount.textContent = `${payload.users.length} 位用户`;
+
+    if (selectedUser) {
+      selectedUser =
+        payload.users.find((user) => user.id === selectedUser?.id) ?? null;
+    }
+    if (selectedUser) {
+      if (selectedName) selectedName.textContent = selectedUser.name;
+      if (selectedBalance) {
+        selectedBalance.textContent = String(selectedUser.balance);
+      }
+      if (editor) editor.hidden = false;
+    } else if (editor) {
+      editor.hidden = true;
+    }
+
+    if (recentActions) {
+      recentActions.replaceChildren();
+      if (payload.recentActions.length === 0) {
+        const empty = document.createElement("li");
+        empty.className = "admin-points-empty";
+        empty.textContent = "还没有管理员调整记录。";
+        recentActions.append(empty);
+      } else {
+        payload.recentActions.forEach((action) =>
+          recentActions.append(renderRecentAction(action)),
+        );
+      }
+    }
+    setStatus("");
+  };
+
+  const submitAdjustment = async (mode: "credit" | "debit") => {
+    if (!selectedUser || !amountInput || !reasonInput) return;
+    const rawAmount = Number(amountInput.value);
+    const reason = reasonInput.value.trim();
+    if (!Number.isInteger(rawAmount) || rawAmount <= 0) {
+      setStatus("请输入大于 0 的整数积分。", "error");
+      return;
+    }
+    if (reason.length < 2) {
+      setStatus("请填写至少 2 个字符的调整原因。", "error");
+      return;
+    }
+    if (
+      mode === "debit" &&
+      !window.confirm(
+        `确定从“${selectedUser.name}”扣减 ${rawAmount} 积分吗？`,
+      )
+    ) {
+      return;
+    }
+
+    const amount = mode === "credit" ? rawAmount : -rawAmount;
+    const buttons = adjustForm?.querySelectorAll<HTMLButtonElement>(
+      "[data-adjust-mode]",
+    );
+    buttons?.forEach((button) => {
+      button.disabled = true;
+    });
+    setStatus("正在更新积分…");
+
+    try {
+      const response = await fetch("/api/admin/points/adjust", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          amount,
+          reason,
+          requestId: crypto.randomUUID(),
+        }),
+      });
+      const payload = (await response.json()) as {
+        error?: string;
+        balance?: number;
+      };
+      if (!response.ok) {
+        throw new AdminRequestError(
+          payload.error || "积分调整失败。",
+          response.status,
+        );
+      }
+
+      amountInput.value = "";
+      reasonInput.value = "";
+      await loadUsers();
+      setStatus(`${mode === "credit" ? "增加" : "扣减"}积分成功。`);
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "积分调整失败。",
+        "error",
+      );
+    } finally {
+      buttons?.forEach((button) => {
+        button.disabled = false;
+      });
+    }
+  };
+
+  searchForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void loadUsers().catch((error) =>
+      setStatus(
+        error instanceof Error ? error.message : "用户读取失败。",
+        "error",
+      ),
+    );
+  });
+
+  usersList?.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-user-id]",
+    );
+    if (!button) return;
+    const userId = button.dataset.userId ?? "";
+    const selected = usersById.get(userId);
+    if (!selected) return;
+    selectedUser = selected;
+
+    const cards = usersList.querySelectorAll<HTMLElement>(
+      ".admin-point-user",
+    );
+    cards.forEach((item) => {
+      item.classList.remove("is-selected");
+      const cardButton = item.querySelector<HTMLButtonElement>("[data-user-id]");
+      if (cardButton) cardButton.textContent = "管理";
+    });
+    const card = button.closest<HTMLElement>(".admin-point-user");
+    if (!card) return;
+    card.classList.add("is-selected");
+    button.textContent = "已选择";
+    if (selectedName) selectedName.textContent = selectedUser.name;
+    if (selectedBalance) {
+      selectedBalance.textContent = String(selectedUser.balance);
+    }
+    if (editor) editor.hidden = false;
+    editor?.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  adjustForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void submitAdjustment("credit");
+  });
+
+  adjustForm
+    ?.querySelector<HTMLButtonElement>('[data-adjust-mode="debit"]')
+    ?.addEventListener("click", () => void submitAdjustment("debit"));
+
+  campaignForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (
+      !campaignName ||
+      !campaignCode ||
+      !campaignAmount ||
+      !campaignLimit
+    ) {
+      return;
+    }
+    const startsAt = parseDateTime(campaignStarts);
+    const expiresAt = parseDateTime(campaignExpires);
+    if (startsAt && expiresAt && expiresAt <= startsAt) {
+      setStatus("活动结束时间必须晚于开始时间。", "error");
+      return;
+    }
+    const submit = campaignForm.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    if (submit) submit.disabled = true;
+    setStatus("正在发布活动码…");
+    try {
+      const payload = await operationRequest<{
+        campaignCodes: CampaignCode[];
+      }>("/api/admin/points/campaign-codes", {
+        method: "POST",
+        body: JSON.stringify({
+          name: campaignName.value.trim(),
+          code: campaignCode.value.trim(),
+          amount: Number(campaignAmount.value),
+          maxRedemptions: campaignLimit.value
+            ? Number(campaignLimit.value)
+            : null,
+          startsAt,
+          expiresAt,
+        }),
+      });
+      campaignCodes = payload.campaignCodes;
+      renderOperations();
+      campaignForm.reset();
+      setStatus("活动兑换码已发布。", "success");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "活动码发布失败。",
+        "error",
+      );
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+
+  const syncAnnouncementLocation = () => {
+    const custom = announcementPlacement?.value === "custom";
+    if (announcementPathWrap) announcementPathWrap.hidden = !custom;
+    if (announcementPath) announcementPath.required = custom;
+  };
+  announcementPlacement?.addEventListener(
+    "change",
+    syncAnnouncementLocation,
+  );
+  syncAnnouncementLocation();
+
+  announcementForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (
+      !announcementTitle ||
+      !announcementBody ||
+      !announcementType ||
+      !announcementPlacement ||
+      !announcementPath ||
+      !announcementPriority ||
+      !announcementLinkUrl ||
+      !announcementLinkText
+    ) {
+      return;
+    }
+    const startsAt = parseDateTime(announcementStarts);
+    const endsAt = parseDateTime(announcementEnds);
+    if (startsAt && endsAt && endsAt <= startsAt) {
+      setStatus("公告结束时间必须晚于开始时间。", "error");
+      return;
+    }
+    const submit = announcementForm.querySelector<HTMLButtonElement>(
+      'button[type="submit"]',
+    );
+    if (submit) submit.disabled = true;
+    setStatus("正在发布公告…");
+    try {
+      const payload = await operationRequest<{
+        announcements: Announcement[];
+      }>("/api/admin/announcements", {
+        method: "POST",
+        body: JSON.stringify({
+          title: announcementTitle.value.trim(),
+          body: announcementBody.value.trim(),
+          type: announcementType.value,
+          placement: announcementPlacement.value,
+          targetPath: announcementPath.value.trim(),
+          priority: Number(announcementPriority.value || 0),
+          linkUrl: announcementLinkUrl.value.trim(),
+          linkText: announcementLinkText.value.trim(),
+          startsAt,
+          endsAt,
+        }),
+      });
+      announcements = payload.announcements;
+      renderOperations();
+      announcementForm.reset();
+      syncAnnouncementLocation();
+      setStatus("站点公告已发布。", "success");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "公告发布失败。",
+        "error",
+      );
+    } finally {
+      if (submit) submit.disabled = false;
+    }
+  });
+
+  campaignList?.addEventListener("click", async (event) => {
+    const target = event.target as HTMLElement;
+    const toggle = target.closest<HTMLButtonElement>("[data-campaign-toggle]");
+    const remove = target.closest<HTMLButtonElement>("[data-campaign-delete]");
+    if (!toggle && !remove) return;
+    const id = toggle?.dataset.campaignToggle ?? remove?.dataset.campaignDelete;
+    if (!id) return;
+    if (remove && !window.confirm("确定删除这个尚未被领取的活动码吗？")) {
+      return;
+    }
+    setStatus(toggle ? "正在更新活动码状态…" : "正在删除活动码…");
+    try {
+      const payload = await operationRequest<{
+        campaignCodes: CampaignCode[];
+      }>("/api/admin/points/campaign-codes", {
+        method: toggle ? "PATCH" : "DELETE",
+        body: JSON.stringify(
+          toggle ? { id, active: toggle.dataset.active !== "true" } : { id },
+        ),
+      });
+      campaignCodes = payload.campaignCodes;
+      renderOperations();
+      setStatus(toggle ? "活动码状态已更新。" : "活动码已删除。", "success");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "活动码操作失败。",
+        "error",
+      );
+    }
+  });
+
+  announcementList?.addEventListener("click", async (event) => {
+    const target = event.target as HTMLElement;
+    const toggle = target.closest<HTMLButtonElement>(
+      "[data-announcement-toggle]",
+    );
+    const remove = target.closest<HTMLButtonElement>(
+      "[data-announcement-delete]",
+    );
+    if (!toggle && !remove) return;
+    const id =
+      toggle?.dataset.announcementToggle ?? remove?.dataset.announcementDelete;
+    if (!id) return;
+    if (remove && !window.confirm("确定永久删除这条公告吗？")) return;
+    setStatus(toggle ? "正在更新公告状态…" : "正在删除公告…");
+    try {
+      const payload = await operationRequest<{
+        announcements: Announcement[];
+      }>("/api/admin/announcements", {
+        method: toggle ? "PATCH" : "DELETE",
+        body: JSON.stringify(
+          toggle ? { id, active: toggle.dataset.active !== "true" } : { id },
+        ),
+      });
+      announcements = payload.announcements;
+      renderOperations();
+      setStatus(toggle ? "公告状态已更新。" : "公告已删除。", "success");
+    } catch (error) {
+      setStatus(
+        error instanceof Error ? error.message : "公告操作失败。",
+        "error",
+      );
+    }
+  });
+
+  gateRetry?.addEventListener("click", () => window.location.reload());
+
+  void authClient
+    .getSession()
+    .then(async ({ data }) => {
+      if (!data?.user) {
+        showGate(
+          "请先登录",
+          "登录后才能进入积分管理，登录成功会自动返回这里。",
+        );
+        return;
+      }
+
+      try {
+        await Promise.all([loadUsers(), loadOperations()]);
+        if (denied) denied.hidden = true;
+        if (content) content.hidden = false;
+      } catch (error) {
+        if (error instanceof AdminRequestError && error.status === 403) {
+          showGate(
+            "没有积分管理权限",
+            "当前账号不是站长。可以切换为绑定管理员权限的 GitHub 账号。",
+          );
+        } else if (
+          error instanceof AdminRequestError &&
+          error.status === 401
+        ) {
+          showGate(
+            "登录已过期",
+            "请重新登录，完成后会自动回到积分管理页。",
+          );
+        } else {
+          showGate(
+            "暂时无法读取管理数据",
+            error instanceof Error
+              ? error.message
+              : "连接服务器失败，请稍后重试。",
+            "retry",
+          );
+        }
+      }
+    })
+    .catch(() => {
+      showGate(
+        "无法验证登录状态",
+        "浏览器没有取得登录状态。请检查网络后重新加载。",
+        "retry",
+      );
+    });
+</script>

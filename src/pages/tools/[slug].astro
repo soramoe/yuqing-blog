@@ -1,0 +1,418 @@
+---
+import {
+  getCollection,
+  type CollectionEntry,
+} from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import "../../styles/tools.css";
+
+export async function getStaticPaths() {
+  const tools = await getCollection("tools", ({ data }) => !data.draft);
+  return tools.map((tool) => ({
+    params: { slug: tool.id },
+    props: { tool },
+  }));
+}
+
+interface Props {
+  tool: CollectionEntry<"tools">;
+}
+
+const { tool } = Astro.props;
+const data = tool.data;
+const isAvailable = data.status === "available";
+const formatDate = (date: Date) =>
+  new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    timeZone: "Asia/Shanghai",
+  }).format(date);
+const formatBytes = (bytes: number) =>
+  `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+const externalLink = (url: string) =>
+  /^https?:\/\//i.test(url)
+    ? { href: url, target: "_blank", rel: "noopener noreferrer" }
+    : { href: url };
+const statusLabel =
+  data.status === "available"
+    ? "正式版"
+    : data.status === "coming-soon"
+      ? "即将推出"
+      : "已停止更新";
+const previewTags = data.features.slice(0, 6).map((feature) => feature.title);
+const featureIcons: Record<string, string[]> = {
+  chat: [
+    "M7.5 5.5h9A2.5 2.5 0 0 1 19 8v6a2.5 2.5 0 0 1-2.5 2.5H12l-4.5 3v-3h-.5A2.5 2.5 0 0 1 4.5 14V8A2.5 2.5 0 0 1 7 5.5Z",
+    "M8 10h8",
+    "M8 13h5",
+  ],
+  music: [
+    "M10 18V7.5l8-1.5V16",
+    "M10 9l8-1.5",
+    "M7.5 18A2.5 2.5 0 1 0 10 15.5 2.5 2.5 0 0 0 7.5 18Z",
+    "M15.5 16a2.5 2.5 0 1 0 2.5-2.5 2.5 2.5 0 0 0-2.5 2.5Z",
+  ],
+  support: [
+    "M12 3.8 14.5 9l5.7.8-4.1 4 1 5.7-5.1-2.7-5.1 2.7 1-5.7-4.1-4L9.5 9 12 3.8Z",
+    "M9 12h6",
+  ],
+  report: [
+    "M5 19V5",
+    "M5 19h15",
+    "M8 16v-4",
+    "M12 16V8",
+    "M16 16v-2",
+    "M20 16V6",
+  ],
+  obs: [
+    "M4.5 6.5h15v10h-15z",
+    "M9 20h6",
+    "M12 16.5V20",
+    "M8 10.5h3l1.2-2 1.6 4 1.2-2H16",
+  ],
+  pk: [
+    "m7 5 5 5-5 5",
+    "m17 5-5 5 5 5",
+    "M12 3v18",
+  ],
+};
+const hasExternalManual = /^https?:\/\//i.test(data.manualUrl);
+const manualLink = externalLink(data.manualUrl);
+const schemaExtra = {
+  applicationCategory: "MultimediaApplication",
+  applicationSubCategory: "直播辅助工具",
+  operatingSystem: data.platforms.join(", "),
+  softwareVersion: data.version,
+  fileSize: `${data.sizeBytes} B`,
+  datePublished: data.releasedAt.toISOString(),
+  ...(data.updatedAt
+    ? { dateModified: data.updatedAt.toISOString() }
+    : {}),
+  downloadUrl: data.downloadUrl,
+  softwareRequirements: data.requirements.join("；"),
+  author: {
+    "@type": "Organization",
+    name: "渔情",
+    url: "https://xhz6.com/",
+  },
+};
+---
+
+<BaseLayout
+  title={data.title}
+  description={data.description}
+  image={data.coverImage}
+  schemaType="SoftwareApplication"
+  schemaExtra={schemaExtra}
+  keywords={[data.name, "B站直播助手", "直播工具", "Windows", "弹幕机器人"]}
+  bodyClass="page-tools page-tool-detail"
+>
+  <div class="tool-page">
+    <nav class="tool-breadcrumb" aria-label="面包屑">
+      <a href="/tools/">工具</a>
+      <span aria-hidden="true">/</span>
+      <span>{data.name}</span>
+    </nav>
+
+    <section class="tool-hero" aria-labelledby="tool-title">
+      <div class="tool-hero-copy">
+        <div class="tool-status-line">
+          <span class="tool-status-dot" aria-hidden="true"></span>
+          <span>{statusLabel}</span>
+          <span>v{data.version}</span>
+          <span>{data.platforms[0]}</span>
+        </div>
+        <p class="tool-eyebrow">{data.eyebrow}</p>
+        <h1 id="tool-title">你负责发光，<br />杂事交给它。</h1>
+        <p class="tool-lead">{data.summary}</p>
+        <p class="tool-local-note">本地运行，数据留在自己电脑。</p>
+
+        <div class="tool-actions">
+          {
+            isAvailable ? (
+              <a
+                class="tool-button tool-button-primary"
+                href={data.downloadUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                download
+              >
+                <span>下载 Windows 版</span>
+                <small>v{data.version}</small>
+              </a>
+            ) : (
+              <span class="tool-button tool-button-disabled">
+                {statusLabel}
+              </span>
+            )
+          }
+          <a class="tool-button tool-button-secondary" {...manualLink}>
+            先看使用手册
+          </a>
+        </div>
+
+        <p class="tool-download-meta">
+          v{data.version} · Windows 10/11 · {formatBytes(data.sizeBytes)} · 内置 Node，解压即用
+        </p>
+
+        <div class="tool-checksum">
+          <span>SHA256</span>
+          <code>{data.sha256.slice(0, 20)}…</code>
+          <button type="button" data-copy-sha data-sha={data.sha256}>
+            复制校验值
+          </button>
+          <span class="tool-copy-status" data-copy-status aria-live="polite"></span>
+        </div>
+      </div>
+
+      <aside class="tool-release-panel" aria-label={`${data.name}版本概览`}>
+        <div class="tool-release-head">
+          <div class="tool-release-mark" aria-hidden="true">渔</div>
+          <div>
+            <span>LIVE CONTROL DESK</span>
+            <strong>{data.name}</strong>
+          </div>
+          <span class="tool-release-version">v{data.version}</span>
+        </div>
+        <div class="tool-release-screen">
+          <div class="tool-release-bar">
+            <span></span><span></span><span></span>
+            <small>LOCAL · 127.0.0.1:8900</small>
+          </div>
+          <div class="tool-release-body">
+            <div class="tool-release-pulse" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <p>一个窗口，接住直播里的每件小事。</p>
+            <div class="tool-release-tags">
+              {previewTags.map((tag) => <span>{tag}</span>)}
+            </div>
+          </div>
+        </div>
+        <dl class="tool-release-facts">
+          <div>
+            <dt>安装包</dt>
+            <dd>{formatBytes(data.sizeBytes)}</dd>
+          </div>
+          <div>
+            <dt>文件</dt>
+            <dd>{data.packageCount ?? "—"} 个</dd>
+          </div>
+          <div>
+            <dt>更新</dt>
+            <dd>{formatDate(data.updatedAt ?? data.releasedAt)}</dd>
+          </div>
+        </dl>
+      </aside>
+    </section>
+
+    {
+      data.steps.length > 0 && (
+        <section class="tool-section tool-install" aria-labelledby="install-title">
+          <div class="tool-section-head">
+            <div>
+              <p class="eyebrow">QUICK START / 02</p>
+              <h2 id="install-title">三步就能开播</h2>
+            </div>
+            <p>第一次使用先完成这三步，之后直接启动即可。</p>
+          </div>
+          <ol class="tool-step-grid">
+            {data.steps.map((step, index) => (
+              <li>
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                <h3>{step.title}</h3>
+                <p>{step.description}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )
+    }
+
+    {
+      data.features.length > 0 && (
+        <section class="tool-section tool-features" aria-labelledby="features-title">
+          <div class="tool-section-head">
+            <div>
+              <p class="eyebrow">WHAT IT HANDLES / 03</p>
+              <h2 id="features-title">直播时最费手的几件事，它都替你盯着</h2>
+            </div>
+          </div>
+          <div class="tool-feature-grid">
+            {data.features.map((feature) => (
+              <article class="tool-feature-card">
+                <span class="tool-feature-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none">
+                    {(featureIcons[feature.icon] ?? []).map((path) => (
+                      <path
+                        d={path}
+                        stroke="currentColor"
+                        stroke-width="1.6"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    ))}
+                  </svg>
+                </span>
+                <h3>{feature.title}</h3>
+                <p>{feature.description}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    {
+      data.screenshots.length > 0 && (
+        <section class="tool-section tool-screenshots" aria-labelledby="screenshots-title">
+          <div class="tool-section-head">
+            <div>
+              <p class="eyebrow">IN THE WINDOW / 04</p>
+              <h2 id="screenshots-title">实际界面</h2>
+            </div>
+          </div>
+          <div class="tool-screenshot-grid">
+            {data.screenshots.map((screenshot, index) => (
+              <figure>
+                <img
+                  src={screenshot.src}
+                  alt={screenshot.alt}
+                  width={screenshot.width}
+                  height={screenshot.height}
+                  loading={index === 0 ? "eager" : "lazy"}
+                  fetchpriority={index === 0 ? "high" : "auto"}
+                  decoding="async"
+                />
+              </figure>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    <section class="tool-dark-band" aria-labelledby="requirements-title">
+      <div>
+        <p class="eyebrow">SYSTEM CHECK / 05</p>
+        <h2 id="requirements-title">运行之前</h2>
+        <ul class="tool-requirement-list">
+          {data.requirements.map((requirement) => <li>{requirement}</li>)}
+        </ul>
+      </div>
+      <div>
+        <p class="eyebrow">LICENSE / 06</p>
+        <h2>{data.trialDays ? `先试用，合适再授权` : "授权说明"}</h2>
+        {data.trialDays && <p>下载后可试用 {data.trialDays} 天。</p>}
+        {data.priceNote && <p>{data.priceNote}</p>}
+        <ul class="tool-license-list">
+          {data.licenseNotes.map((note) => <li>{note}</li>)}
+        </ul>
+      </div>
+    </section>
+
+    {
+      data.faqs.length > 0 && (
+        <section class="tool-section tool-faq" aria-labelledby="faq-title">
+          <div class="tool-section-head">
+            <div>
+              <p class="eyebrow">QUESTIONS / 07</p>
+              <h2 id="faq-title">常见问题</h2>
+            </div>
+          </div>
+          <div class="tool-faq-list">
+            {data.faqs.map((faq) => (
+              <details>
+                <summary>{faq.question}</summary>
+                <p>{faq.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+      )
+    }
+
+    <section class="tool-final-cta" aria-labelledby="tool-cta-title">
+      <div>
+        <p class="eyebrow">READY WHEN YOU ARE</p>
+        <h2 id="tool-cta-title">下载下来，今晚就能用</h2>
+        <p>支持 Windows 10 / 11，安装包已包含运行环境。</p>
+      </div>
+      {
+        isAvailable && (
+          <a
+            class="tool-button tool-button-primary"
+            href={data.downloadUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            download
+          >
+            下载 {data.name}
+          </a>
+        )
+      }
+    </section>
+
+    <footer class="tool-product-footer">
+      <p>{data.footerNote ?? data.name}</p>
+      <div>
+        <a href={manualLink.href} target={manualLink.target} rel={manualLink.rel}>
+          使用手册
+        </a>
+        {data.repoUrl && (
+          <a href={data.repoUrl} target="_blank" rel="noopener noreferrer">
+            GitHub
+          </a>
+        )}
+        {data.licenseUrl && (
+          <a href={data.licenseUrl} target="_blank" rel="noopener noreferrer">
+            许可说明
+          </a>
+        )}
+        {data.feedbackGroup && <span>BUG 反馈群：{data.feedbackGroup}</span>}
+      </div>
+    </footer>
+  </div>
+</BaseLayout>
+
+<script>
+  const copyButton =
+    document.querySelector<HTMLButtonElement>("[data-copy-sha]");
+  const copyStatus =
+    document.querySelector<HTMLElement>("[data-copy-status]");
+
+  const fallbackCopy = (text: string) => {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.append(textarea);
+    textarea.select();
+    const copied = document.execCommand("copy");
+    textarea.remove();
+    return copied;
+  };
+
+  copyButton?.addEventListener("click", async () => {
+    const value = copyButton.dataset.sha;
+    if (!value) return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+      } else if (!fallbackCopy(value)) {
+        throw new Error("copy failed");
+      }
+      copyButton.textContent = "已复制";
+      if (copyStatus) copyStatus.textContent = "SHA256 已复制到剪贴板";
+      window.setTimeout(() => {
+        copyButton.textContent = "复制校验值";
+        if (copyStatus) copyStatus.textContent = "";
+      }, 2200);
+    } catch {
+      if (copyStatus) {
+        copyStatus.textContent = "复制失败，请手动选择校验值";
+      }
+    }
+  });
+</script>
