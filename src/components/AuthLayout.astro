@@ -1,0 +1,33 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import "../styles/auth.css";
+
+interface Props {
+  title: string;
+  description: string;
+  eyebrow: string;
+}
+
+const { title, description, eyebrow } = Astro.props;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  bodyClass="page-auth"
+  noindex
+>
+  <div class="container auth-shell">
+    <aside class="auth-intro" aria-hidden="true">
+      <span class="auth-index">AUTH / 001</span>
+      <p>一个账号，连接之后的评论、签到与积分。</p>
+      <span class="auth-orbit"></span>
+    </aside>
+
+    <section class="auth-card" aria-labelledby="auth-title">
+      <p class="eyebrow">{eyebrow}</p>
+      <h1 id="auth-title">{title}</h1>
+      <slot />
+    </section>
+  </div>
+</BaseLayout>

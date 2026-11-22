@@ -1,12 +1,15 @@
 node_modules/
 dist/
 .astro/
+.wrangler/
+.functions-build/
 public/media/optimized/
 media-src/
 media-upload/
 .env
 .env.*
 !.env.example
+.dev.vars
 .DS_Store
 Thumbs.db
 pnpm-debug.log*

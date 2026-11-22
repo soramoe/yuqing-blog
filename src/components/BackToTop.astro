@@ -1,0 +1,39 @@
+<button
+  class="back-to-top"
+  type="button"
+  aria-label="返回页面顶部"
+  aria-hidden="true"
+  tabindex="-1"
+  data-back-to-top
+>
+  <span class="back-to-top-arrow" aria-hidden="true">↑</span>
+  <span class="back-to-top-label" aria-hidden="true">TOP</span>
+</button>
+
+<script>
+  const button = document.querySelector<HTMLButtonElement>("[data-back-to-top]");
+  let visible = false;
+
+  const setVisible = (nextVisible: boolean) => {
+    if (!button || visible === nextVisible) return;
+
+    visible = nextVisible;
+    button.classList.toggle("is-visible", nextVisible);
+    button.setAttribute("aria-hidden", String(!nextVisible));
+    button.tabIndex = nextVisible ? 0 : -1;
+  };
+
+  const updateVisibility = () => {
+    setVisible(window.scrollY > 560);
+  };
+
+  button?.addEventListener("click", () => {
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  });
+
+  window.addEventListener("scroll", updateVisibility, { passive: true });
+  updateVisibility();
+</script>
