@@ -51,20 +51,23 @@ const isActive = (href: string) =>
 </header>
 
 <script>
+  import { authClient } from "../lib/auth-client";
+
   const authNav = document.querySelector<HTMLAnchorElement>("[data-auth-nav]");
   const authLabel = authNav?.querySelector<HTMLElement>("[data-auth-label]");
 
   if (authNav && authLabel) {
-    fetch("/api/auth/get-session", {
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((data) => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 4000);
+
+    authClient
+      .getSession({ fetchOptions: { signal: controller.signal } })
+      .then(({ data }) => {
         if (!data?.user) return;
         authNav.href = "/account/";
         authLabel.textContent = "账户";
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => window.clearTimeout(timer));
   }
 </script>

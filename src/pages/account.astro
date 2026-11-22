@@ -60,7 +60,8 @@ import AuthLayout from "../components/AuthLayout.astro";
   const { data, error } = await authClient.getSession();
 
   if (error || !data?.user) {
-    window.location.replace("/login/?next=/account/");
+    const next = `${window.location.pathname}${window.location.search}`;
+    window.location.replace(`/login/?next=${encodeURIComponent(next)}`);
   } else {
     const user = data.user;
     loading?.setAttribute("hidden", "");
@@ -69,9 +70,13 @@ import AuthLayout from "../components/AuthLayout.astro";
     if (name) name.textContent = user.name;
     if (email) email.textContent = user.email;
     if (created) {
-      created.textContent = new Intl.DateTimeFormat("zh-CN", {
-        dateStyle: "medium",
-      }).format(new Date(user.createdAt));
+      // getSession 已经是 Date，但服务端 JSON 传输后可能回退成字符串
+      const createdAt = new Date(user.createdAt);
+      created.textContent = Number.isNaN(createdAt.getTime())
+        ? "未知"
+        : new Intl.DateTimeFormat("zh-CN", {
+            dateStyle: "medium",
+          }).format(createdAt);
     }
 
     if (avatar && user.image) {
