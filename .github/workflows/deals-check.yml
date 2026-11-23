@@ -12,11 +12,12 @@ on:
     # UTC 03:00 = 北京时间 11:00
     - cron: "0 3 * * *"
   workflow_dispatch:
-  # 巡检脚本本身有改动时立刻跑一次，方便验证
+  # 巡检脚本或数据有改动时立刻跑一次，改完来源链接就能马上复检
   push:
     paths:
       - ".github/workflows/deals-check.yml"
       - "scripts/deals-check.mjs"
+      - "src/data/deals.ts"
 
 permissions:
   contents: write
