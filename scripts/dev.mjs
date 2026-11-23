@@ -78,8 +78,33 @@ const rebuild = () => {
     }
   });
   build.on("exit", (code) => {
+    if (code === 0) {
+      runPagefind();
+      return;
+    }
     building = false;
-    if (code !== 0) console.log(`[build] 失败，代码 ${code}`);
+    console.log(`[build] 失败，代码 ${code}`);
+    if (rebuildQueued) {
+      rebuildQueued = false;
+      rebuild();
+    }
+  });
+};
+
+// astro build 不生成搜索索引，必须单独跑 pagefind，否则本地 /pagefind/* 全 404。
+const runPagefind = () => {
+  const pf = runOnce(["node_modules/pagefind/lib/runner/bin.cjs", "--site", "dist"], {
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  pf.stdout.on("data", (chunk) => {
+    for (const line of String(chunk).split("\n")) {
+      if (/Indexed|Finished|error/i.test(line)) {
+        console.log(`[pagefind] ${line.replace(/\x1b\[[0-9;]*m/g, "").trim()}`);
+      }
+    }
+  });
+  pf.on("exit", () => {
+    building = false;
     if (rebuildQueued) {
       rebuildQueued = false;
       rebuild();
@@ -105,6 +130,21 @@ await new Promise((resolve) => {
     }
     resolve();
   });
+});
+
+// 搜索索引也要先生成，否则首屏 /pagefind/* 会 404
+await new Promise((resolve) => {
+  const pf = spawn(node, ["node_modules/pagefind/lib/runner/bin.cjs", "--site", "dist"], {
+    stdio: ["ignore", "pipe", "inherit"],
+  });
+  pf.stdout.on("data", (chunk) => {
+    for (const line of String(chunk).split("\n")) {
+      if (/Indexed|Finished/i.test(line)) {
+        console.log(`[pagefind] ${line.replace(/\x1b\[[0-9;]*m/g, "").trim()}`);
+      }
+    }
+  });
+  pf.on("exit", () => resolve());
 });
 
 // wrangler.jsonc 已在启动前改成本地版本（去掉 ai.remote），Pages 只认根配置，
