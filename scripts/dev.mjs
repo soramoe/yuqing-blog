@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { watch } from "node:fs";
+import { readFileSync, watch, writeFileSync } from "node:fs";
 
 // 本地双进程开发：
 //   astro dev          负责页面与热更新（127.0.0.1:4321）
@@ -31,10 +31,25 @@ let building = false;
 let rebuildQueued = false;
 let debounce = null;
 
+// wrangler.jsonc 的 ai.remote: true 让 pages dev 强制连 Cloudflare 远端代理，
+// 未登录时报 CLOUDFLARE_API_TOKEN 缺失并直接退出。
+// dev 时把整个 ai 段去掉（本地不提供 AI binding，故事配图相关功能降级），
+// 退出时还原原文。
+const WRANGLER_PATH = "wrangler.jsonc";
+const originalWrangler = readFileSync(WRANGLER_PATH, "utf8");
+// 记录改写后的内容，watcher 用它区分「自己写的」和「用户改的」
+const devWrangler = (() => {
+  const cfg = JSON.parse(originalWrangler.replace(/^\s*\/\/.*$/gm, ""));
+  delete cfg.ai;
+  return `${JSON.stringify(cfg, null, 2)}\n`;
+})();
+writeFileSync(WRANGLER_PATH, devWrangler);
+
 const shutdown = (code = 0) => {
   if (closing) return;
   closing = true;
   clearTimeout(debounce);
+  writeFileSync(WRANGLER_PATH, originalWrangler);
   for (const child of children) {
     if (!child.killed) child.kill("SIGTERM");
   }
@@ -92,6 +107,8 @@ await new Promise((resolve) => {
   });
 });
 
+// wrangler.jsonc 已在启动前改成本地版本（去掉 ai.remote），Pages 只认根配置，
+// 所以这里直接跑，不带 --config。
 children.push(
   run("api", [
     "node_modules/wrangler/bin/wrangler.js",
@@ -115,7 +132,16 @@ for (const dir of ["src", "functions", "public"]) {
   }
 }
 watch(".", { recursive: false }, (event, file) => {
-  if (file === "astro.config.mjs" || file === "wrangler.jsonc") queueRebuild();
+  if (file !== "wrangler.jsonc" && file !== "astro.config.mjs") return;
+  // 自己改写 wrangler.jsonc 会触发这个 watcher，内容没变就不重建
+  if (file === "wrangler.jsonc") {
+    try {
+      if (readFileSync(WRANGLER_PATH, "utf8") === devWrangler) return;
+    } catch {
+      // 读失败就当作用户改动处理
+    }
+  }
+  queueRebuild();
 });
 
 console.log("[dev] 已启动：页面 http://127.0.0.1:4321/，API http://127.0.0.1:8788/");
