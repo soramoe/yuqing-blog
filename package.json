@@ -8,6 +8,7 @@
     "dev": "astro dev",
     "dev:api": "astro build && wrangler pages dev dist --port 8788 --ip 127.0.0.1",
     "dev:all": "node scripts/dev.mjs",
+    "deals:check": "node scripts/deals-check.mjs",
     "start": "astro dev",
     "build": "astro build && pagefind --site dist",
     "preview": "astro preview",

@@ -1,0 +1,1344 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import {
+  DEALS,
+  PICKS,
+  TOPUP_RISKS,
+  WATCHLIST,
+  type Cadence,
+  type Deal,
+} from "../data/deals";
+import statusRaw from "../data/deals-status.json";
+import "../styles/deals.css";
+
+const DAY = 86_400_000;
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+
+const isExpired = (deal: Deal) =>
+  deal.endsAt ? new Date(`${deal.endsAt}T23:59:59`) < Date.now() : false;
+
+const daysLeft = (deal: Deal) =>
+  deal.endsAt
+    ? Math.round(
+        (new Date(`${deal.endsAt}T00:00:00`).getTime() - today.getTime()) / DAY,
+      )
+    : null;
+
+const isStale = (deal: Deal) =>
+  (Date.now() - new Date(`${deal.verifiedAt}T00:00:00`).getTime()) / DAY > 30;
+
+const fmtDate = (iso: string) => {
+  const date = new Date(`${iso}T00:00:00`);
+  return `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, "0")}`;
+};
+
+const deadlineLabel = (deal: Deal) => {
+  const left = daysLeft(deal);
+  if (left === null) return "长期有效";
+  if (left < 0) return "已过期";
+  if (left <= 7) return `剩 ${left} 天`;
+  return `${fmtDate(deal.endsAt!)} 截止`;
+};
+
+const deadlineTone = (deal: Deal) => {
+  const left = daysLeft(deal);
+  if (left === null) return "";
+  if (left < 0) return " is-over";
+  if (left <= 7) return " is-urgent";
+  return "";
+};
+
+const SIGNUP_LABEL: Record<string, { label: string; tone: string }> = {
+  email: { label: "邮箱注册", tone: "is-green" },
+  oauth: { label: "OAuth", tone: "is-accent" },
+  none: { label: "免注册", tone: "is-green" },
+  phone: { label: "需手机号", tone: "is-red" },
+  invite: { label: "邀请码", tone: "is-amber" },
+  closed: { label: "已关闭", tone: "is-red" },
+};
+
+const CADENCE_LABEL: Record<Cadence, string> = {
+  daily: "每日刷新",
+  weekly: "每周刷新",
+  monthly: "每月刷新",
+  once: "一次性",
+  ongoing: "长期有效",
+};
+
+const TYPE_TONE: Record<string, string> = {
+  免费额度: "is-green",
+  免费模型: "is-accent",
+  学生: "is-accent",
+  云额度: "is-accent",
+  聚合: "is-accent",
+  工具: "is-accent",
+};
+
+const badgeOf = (deal: Deal) =>
+  deal.kind === "relay"
+    ? (SIGNUP_LABEL[deal.signup] ?? SIGNUP_LABEL.email!)
+    : { label: deal.type, tone: TYPE_TONE[deal.type] ?? "" };
+
+const haystack = (deal: Deal) =>
+  [
+    deal.name,
+    deal.org,
+    deal.title,
+    deal.desc,
+    deal.type,
+    deal.quota ?? "",
+    deal.tags.join(" "),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+// 巡检状态由 scripts/deals-check.mjs 每天写入，这里只做展示
+const STATUS = statusRaw as {
+  checkedAt: string | null;
+  entries: Record<string, { status?: string; http?: number }>;
+};
+const sourceStatusOf = (id: string): "dead" | "changed" | null => {
+  const status = STATUS.entries?.[id]?.status;
+  if (status === "dead") return "dead";
+  if (status === "changed") return "changed";
+  return null;
+};
+
+const pickOf = (deal: Deal) => PICKS[deal.id];
+const pickRank = (deal: Deal) => {
+  const pick = pickOf(deal);
+  return pick ? (pick.tier === "top" ? 0 : 1) : 2;
+};
+
+// 默认按「最新验证」排，过期的沉到末尾
+const sorted = [...DEALS].sort((a, b) => {
+  const ae = isExpired(a);
+  const be = isExpired(b);
+  if (ae !== be) return ae ? 1 : -1;
+  return new Date(b.verifiedAt).getTime() - new Date(a.verifiedAt).getTime();
+});
+
+const byKind = (kind: Deal["kind"]) => DEALS.filter((deal) => deal.kind === kind);
+const liveCount = (kind: Deal["kind"]) =>
+  byKind(kind).filter((deal) => !isExpired(deal)).length;
+
+const livePromos = liveCount("promo");
+const liveRelays = liveCount("relay");
+const liveCn = liveCount("cn");
+
+// 筛选按钮按实际数据生成，避免写了筛不到东西的空选项
+const TYPE_ORDER = ["免费模型", "免费额度", "云额度", "活动", "学生", "工具"];
+const typeChips = (kind: Deal["kind"]) => {
+  const present = [...new Set(byKind(kind).map((deal) => deal.type))];
+  const ordered = TYPE_ORDER.filter((type) => present.includes(type)).concat(
+    present.filter((type) => !TYPE_ORDER.includes(type)),
+  );
+  return [["all", "全部"] as [string, string], ...ordered.map((type) => [type, type] as [string, string])];
+};
+
+const SIGNUP_ORDER = ["none", "email", "oauth", "phone"] as const;
+const relayChips = () => {
+  const present = [...new Set(byKind("relay").map((deal) => deal.signup))];
+  const ordered = SIGNUP_ORDER.filter((signup) => present.includes(signup));
+  return [
+    ["all", "全部"] as [string, string],
+    ...ordered.map((signup) => [signup, SIGNUP_LABEL[signup]!.label] as [string, string]),
+  ];
+};
+
+const CHIPS = [
+  { kind: "promo", label: "厂商活动", options: typeChips("promo") },
+  { kind: "relay", label: "可注册中转", options: relayChips() },
+  { kind: "cn", label: "国内厂商", options: typeChips("cn") },
+];
+
+const lastSync = new Intl.DateTimeFormat("zh-CN", {
+  month: "long",
+  day: "numeric",
+  timeZone: "Asia/Shanghai",
+}).format(new Date());
+
+// 详情弹窗用的数据，一次性内联，点开时不再请求
+const DETAILS = Object.fromEntries(
+  DEALS.map((deal) => [
+    deal.id,
+    {
+      id: deal.id,
+      kind: deal.kind,
+      name: deal.name,
+      org: deal.org,
+      type: deal.type,
+      title: deal.title,
+      desc: deal.desc,
+      detail: deal.detail ?? "",
+      quota: deal.quota ?? "",
+      cadence: deal.cadence ? CADENCE_LABEL[deal.cadence] : "",
+      cadenceRaw: deal.cadence ?? "",
+      steps: deal.steps ?? [],
+      url: deal.url,
+      source: deal.source,
+      signup: SIGNUP_LABEL[deal.signup] ?? { label: "未知", tone: "" },
+      badge: badgeOf(deal),
+      pick: pickOf(deal) ?? null,
+      topUpNote: TOPUP_RISKS[deal.id] ?? "",
+      sourceStatus: sourceStatusOf(deal.id),
+      tags: deal.tags,
+      risk: deal.risk ?? [],
+      endsAt: deal.endsAt,
+      endsLabel: deadlineLabel(deal),
+      verifiedAt: deal.verifiedAt,
+      verifiedLabel: fmtDate(deal.verifiedAt),
+      stale: isStale(deal),
+      expired: isExpired(deal),
+    },
+  ]),
+);
+---
+
+<BaseLayout
+  title="额度雷达"
+  description="AI 厂商免费额度、学生计划、可注册中转与国内厂商活动，逐条标注来源、额度节奏与验证时间。"
+  schemaType="CollectionPage"
+  bodyClass="page-deals"
+  keywords={["AI 免费额度", "免费 API", "学生计划", "中转站", "Gemini", "OpenRouter", "智谱", "通义千问"]}
+>
+  <div class="container deals-shell">
+    <header class="deals-head">
+      <div class="page-topline">
+        <p class="eyebrow">FREE AI CREDITS / VERIFIED LIST</p>
+        <span>LAST SYNC · {lastSync}</span>
+      </div>
+
+      <div class="deals-head-grid">
+        <div>
+          <h1>把免费的 AI 额度，<br />收进一个页面。</h1>
+          <p class="deals-lede">
+            官方活动、学生计划、可注册的中转站，以及需要手机号的国内厂商。
+            每条都标注额度节奏、来源与验证时间，点开卡片能看到完整说明。
+          </p>
+        </div>
+        <div class="deals-side">
+          <div class="deals-side-item">
+            UPDATED<strong>{lastSync}</strong>
+          </div>
+          <div class="deals-side-item">
+            RE-CHECK<strong>30 天未复验降级</strong>
+          </div>
+          <div class="deals-side-item">
+            SPLIT<strong>活动 / 中转 / 国内</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="deals-stats" aria-label="数据概览">
+        <div class="deals-stat">
+          <b data-stat="promo">{livePromos}</b>
+          <span>个厂商活动</span>
+          <small>邮箱 / OAuth / 免注册</small>
+        </div>
+        <div class="deals-stat">
+          <b data-stat="relay">{liveRelays}</b>
+          <span>个可注册中转</span>
+          <small>聚合 / 网关 / 社区算力</small>
+        </div>
+        <div class="deals-stat">
+          <b data-stat="cn">{liveCn}</b>
+          <span>个国内厂商</span>
+          <small>需手机号或实名</small>
+        </div>
+      </div>
+    </header>
+
+    <section class="deals" id="deals" aria-labelledby="deals-list-title">
+      <h2 class="sr-only" id="deals-list-title">额度列表</h2>
+
+      <div class="deals-toolbar">
+        <div class="deals-tabs" role="group" aria-label="数据分类">
+          {
+            CHIPS.map(({ kind, label }, index) => (
+              <button
+                class="deals-tab"
+                type="button"
+                id={`tab-${kind}`}
+                aria-controls="grid"
+                aria-pressed={kind === "promo" ? "true" : "false"}
+                data-tab={kind}
+              >
+                <span class="deals-tab-index" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                {label}
+                <span class="deals-count" data-tab-count={kind}>
+                  {liveCount(kind)}
+                </span>
+              </button>
+            ))
+          }
+        </div>
+
+        <div class="deals-tools">
+          <label class="deals-search">
+            <span class="sr-only">搜索</span>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.9"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="6.5"></circle>
+              <path d="M16 16l4.2 4.2" stroke-linecap="round"></path>
+            </svg>
+            <input
+              type="search"
+              id="q"
+              placeholder="搜索厂商、模型、额度…"
+              autocomplete="off"
+            />
+            <kbd>/</kbd>
+          </label>
+
+          <div class="deals-select">
+            <label class="sr-only" for="sort">排序</label>
+            <select id="sort">
+              <option value="verified">最新验证</option>
+              <option value="pick">性价比优先</option>
+              <option value="ending">即将截止</option>
+              <option value="name">名称</option>
+            </select>
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"
+              ></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="deals-filterbar">
+        {
+          CHIPS.map(({ kind, options }) => (
+            <div
+              class="deals-chips"
+              role="group"
+              aria-label="筛选条件"
+              data-chips={kind}
+              hidden={kind !== "promo"}
+            >
+              {options.map(([value, label]) => (
+                <button
+                  class="deals-chip"
+                  type="button"
+                  data-filter={value}
+                  aria-pressed={value === "all" ? "true" : "false"}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ))
+        }
+        <div class="deals-toggles">
+          <label class="deals-switch">
+            <input type="checkbox" id="pickOnly" />
+            <span>只看推荐</span>
+          </label>
+          <label class="deals-switch">
+            <input type="checkbox" id="hideExpired" checked />
+            <span>隐藏已过期</span>
+          </label>
+          <label class="deals-switch" id="riskWrap" hidden>
+            <input type="checkbox" id="hideRisk" />
+            <span>隐藏风险项</span>
+          </label>
+        </div>
+      </div>
+
+      <aside class="deals-relay-warning" id="relayWarning" hidden>
+        <div class="deals-relay-warning-head">
+          <span class="deals-relay-warning-badge">注意</span>
+          <strong>中转站充值前先看这几条</strong>
+        </div>
+        <ul>
+          <li>
+            <b>余额不是存款。</b>站点关停、上游封号、政策调整，都可能让充进去的钱直接拿不回来。
+          </li>
+          <li>
+            <b>先小额测试。</b>第一次只充最低额度，跑通再用；不要一次充半年量。
+          </li>
+          <li>
+            <b>优先按量计费的大厂聚合。</b>Together、Fireworks、DeepInfra 这类官方聚合，风险低于自建中转。
+          </li>
+          <li>
+            <b>请求会经过第三方。</b>敏感内容、公司数据不要发给来路不明或条款不清的站点。
+          </li>
+          <li>
+            <b>留备用通道。</b>重要业务至少准备两个来源，别把 Key 和余额押在同一家。
+          </li>
+          <li>
+            带 <b>! 充值预警</b> 标记的站点风险更高，余额兑付没有保障，尽量只用免费额度。
+          </li>
+        </ul>
+      </aside>
+
+      <div class="deals-result-meta">
+        <span id="resultText" role="status" aria-live="polite">
+          共 <b>{livePromos}</b> 条在有效期
+        </span>
+        <span class="deals-hint">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.2"
+            aria-hidden="true"
+          >
+            <path d="M5 12.5l4.5 4.5L19 7" stroke-linecap="round" stroke-linejoin="round"
+            ></path>
+          </svg>
+          点卡片看详情 · 官方来源优先
+        </span>
+      </div>
+
+      <section class="deals-grid" id="grid" aria-label="额度条目">
+        {
+          sorted.map((deal) => {
+            const expired = isExpired(deal);
+            const stale = isStale(deal);
+            const badge = badgeOf(deal);
+            const pick = pickOf(deal);
+            const topUp = TOPUP_RISKS[deal.id];
+            const sourceStatus = sourceStatusOf(deal.id);
+            return (
+              <article
+                class:list={[
+                  "deal-card",
+                  { "is-expired": expired, "is-pick": Boolean(pick) },
+                ]}
+                data-id={deal.id}
+                data-kind={deal.kind}
+                data-type={deal.type}
+                data-signup={deal.signup}
+                data-name={deal.name}
+                data-ends={deal.endsAt ?? ""}
+                data-verified={deal.verifiedAt}
+                data-search={haystack(deal)}
+                data-risk={deal.risk && deal.risk.length > 0 ? "1" : "0"}
+                data-expired={expired ? "1" : "0"}
+                data-pick={pick ? "1" : "0"}
+                data-pick-tier={pick?.tier ?? ""}
+                data-topup={topUp ? "1" : "0"}
+                data-source-status={sourceStatus ?? ""}
+              >
+                <div class="deal-card-top">
+                  <div class="deal-logo" aria-hidden="true">
+                    {Array.from(deal.name)[0] || "?"}
+                  </div>
+                  <div class="deal-id">
+                    <h3>{deal.name}</h3>
+                    <p>{deal.org}</p>
+                  </div>
+                  <span class:list={["deal-badge", badge.tone]}>{badge.label}</span>
+                </div>
+
+                <h4 class="deal-title">{deal.title}</h4>
+                <p class="deal-desc">{deal.desc}</p>
+
+                {deal.quota && (
+                  <p class="deal-quota">
+                    <span>额度</span>
+                    {deal.quota}
+                  </p>
+                )}
+
+                <div class="deal-tags">
+                  {deal.tags.map((tag) => (
+                    <span class="deal-tag">{tag}</span>
+                  ))}
+                  {(deal.risk ?? []).map((risk) => (
+                    <span class="deal-tag is-risk">{risk}</span>
+                  ))}
+                </div>
+
+                <div class="deal-foot">
+                  <div class="deal-foot-meta">
+                    {sourceStatus === "dead" && (
+                      <span class="deal-status is-dead" title="巡检发现来源页已下线">
+                        来源失效
+                      </span>
+                    )}
+                    {sourceStatus === "changed" && (
+                      <span class="deal-status is-changed" title="来源页内容有变化，等待复验">
+                        来源有更新
+                      </span>
+                    )}
+                    {topUp && (
+                      <span class="deal-topup" title={topUp}>
+                        ! 充值预警
+                      </span>
+                    )}
+                    {pick && (
+                      <span
+                        class:list={[
+                          "deal-pick",
+                          { "is-good": pick.tier === "good" },
+                        ]}
+                        title={pick.note}
+                      >
+                        ★ {pick.tier === "top" ? "首推" : "划算"}
+                      </span>
+                    )}
+                    <span
+                      class:list={["deal-deadline", deadlineTone(deal)]}
+                      data-deadline
+                    >
+                      {deadlineLabel(deal)}
+                    </span>
+                    <span
+                      class:list={["deal-verified", { "is-stale": stale }]}
+                      data-verified-label
+                    >
+                      ✓ {fmtDate(deal.verifiedAt)}{stale ? " 待复验" : " 验证"}
+                    </span>
+                  </div>
+                  <div class="deal-foot-actions">
+                    <button
+                      class="deal-detail"
+                      type="button"
+                      data-detail={deal.id}
+                      aria-haspopup="dialog"
+                    >
+                      详情
+                    </button>
+                    <a
+                      class="deal-src"
+                      href={deal.source}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      来源
+                    </a>
+                    <a
+                      class="deal-cta"
+                      href={deal.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {deal.kind === "relay" ? "注册" : "领取"} ↗
+                    </a>
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        }
+      </section>
+
+      <div class="deals-empty" id="empty" hidden>
+        <p class="deals-empty-code">NO MATCH / 404</p>
+        <h2>没有匹配的结果</h2>
+        <p>换个关键词，或者清除筛选条件再试。</p>
+        <button class="deals-btn" type="button" id="resetFilters">清除筛选</button>
+      </div>
+
+      <noscript>
+        <p class="deals-note">
+          <span class="deals-note-label">NOSCRIPT</span>
+          <span>
+            卡片已由构建期直接输出，不依赖 JS 也能浏览；筛选、排序和详情弹窗需要脚本支持。
+          </span>
+        </p>
+      </noscript>
+    </section>
+
+    <details class="deals-observe" id="observe" open>
+      <summary>
+        <div class="deals-observe-title">
+          <p class="eyebrow">WATCHLIST / NOT IN MAIN LIST</p>
+          <h2>
+            观察区 <span class="deals-pill">{WATCHLIST.length} 条</span>
+          </h2>
+          <p>没有免费额度、活动窗口不稳、邀请制或已无法注册的站点。</p>
+        </div>
+        <svg
+          class="deals-chev"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          aria-hidden="true"
+        >
+          <path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"></path>
+        </svg>
+      </summary>
+      <div class="deals-observe-body">
+        <div class="deals-obs-row is-head" aria-hidden="true">
+          <span>站点</span><span>排除原因</span><span>最后确认</span><span>说明</span>
+        </div>
+        {
+          WATCHLIST.map((site) => (
+            <div class="deals-obs-row">
+              <span class="deals-obs-name">{site.name}</span>
+              <span
+                class:list={[
+                  "deals-obs-reason",
+                  { "is-warn": site.tone === "amber" },
+                ]}
+              >
+                {site.reason}
+              </span>
+              <span class="deals-obs-when">{fmtDate(site.when)}</span>
+              <span class="deals-obs-note">{site.note}</span>
+            </div>
+          ))
+        }
+      </div>
+    </details>
+
+    <section class="deals-method" id="method">
+      <div class="deals-method-head">
+        <p class="eyebrow">METHOD / HOW WE CHECK</p>
+        <h2>这些数据是怎么来的</h2>
+        <p>
+          不追求收录最多，只追求你点进去时还能用。推荐标记按额度规模、领取门槛、持续性和通用性人工挑，不打分排名。
+        </p>
+      </div>
+      <div class="deals-method-grid">
+        <div class="deals-method-card">
+          <div class="deals-num">01 / 注册</div>
+          <h3>只读检查 + 实际走通</h3>
+          <p>
+            先看注册页是否出现手机号、短信验证码字段，再用测试邮箱完整走一遍。主列表只放真正注册成功的站点。
+          </p>
+        </div>
+        <div class="deals-method-card">
+          <div class="deals-num">02 / 额度</div>
+          <h3>官方来源优先</h3>
+          <p>
+            以官方定价页、公告和文档为准，保留来源链接与截图。社区反馈会触发复验，不把“听说”当事实。
+          </p>
+        </div>
+        <div class="deals-method-card">
+          <div class="deals-num">03 / 时效</div>
+          <h3>过期自动降级</h3>
+          <p>
+            30 天未复验标记“待复验”，连续失效则移入观察区。不做付费置顶，也不给单一总分排名。
+          </p>
+        </div>
+      </div>
+
+      <div class="deals-note">
+        <span class="deals-note-label">NOTE</span>
+        <p>
+          本站为非官方信息聚合，与所列厂商无隶属关系。额度、价格与注册政策可能随时调整，请以官网为准。
+          中转站多为第三方转售，充值余额随时可能因站点关停或上游封号而失效，请先小额测试；
+          部分服务可能违反上游条款，账号与余额存在被连带封禁的风险。本站不托管、不分发任何 API Key。
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <dialog class="deal-dialog" id="dealDialog" aria-labelledby="dealDialogTitle">
+    <div class="deal-dialog-panel">
+      <header class="deal-dialog-head">
+        <div class="deal-dialog-id">
+          <span class="deal-dialog-logo" data-dialog-logo aria-hidden="true"></span>
+          <div>
+            <h2 id="dealDialogTitle" data-dialog-name></h2>
+            <p data-dialog-org></p>
+          </div>
+        </div>
+        <button
+          class="deal-dialog-close"
+          type="button"
+          data-dialog-close
+          aria-label="关闭详情"
+        >
+          ×
+        </button>
+      </header>
+
+      <div class="deal-dialog-badges" data-dialog-badges></div>
+
+      <p class="deal-dialog-pick" data-dialog-pick hidden></p>
+
+      <p class="deal-dialog-relay-note" data-dialog-relay-note hidden>
+        中转站提示：余额随时可能因站点关停或上游封号而失效，充值前先小额测试；敏感内容不要发给来路不明的站点。
+      </p>
+
+      <p class="deal-dialog-topup" data-dialog-topup hidden></p>
+
+      <p class="deal-dialog-source-status" data-dialog-source-status hidden></p>
+
+      <p class="deal-dialog-title" data-dialog-title></p>
+      <p class="deal-dialog-desc" data-dialog-desc></p>
+
+      <dl class="deal-dialog-facts">
+        <div>
+          <dt>额度</dt>
+          <dd data-dialog-quota></dd>
+        </div>
+        <div>
+          <dt>发放</dt>
+          <dd data-dialog-cadence></dd>
+        </div>
+        <div>
+          <dt>截止</dt>
+          <dd data-dialog-ends></dd>
+        </div>
+        <div>
+          <dt>注册</dt>
+          <dd data-dialog-signup></dd>
+        </div>
+        <div>
+          <dt>核对</dt>
+          <dd data-dialog-verified></dd>
+        </div>
+      </dl>
+
+      <div class="deal-dialog-steps-wrap" data-dialog-steps-wrap hidden>
+        <p class="deal-dialog-label">领取步骤</p>
+        <ol class="deal-dialog-steps" data-dialog-steps></ol>
+      </div>
+
+      <p class="deal-dialog-detail" data-dialog-detail hidden></p>
+
+      <div class="deal-dialog-tags" data-dialog-tags></div>
+
+      <footer class="deal-dialog-actions">
+        <a
+          class="deal-dialog-source"
+          data-dialog-source
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          查看来源
+        </a>
+        <a
+          class="deal-dialog-cta"
+          data-dialog-url
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          去领取 ↗
+        </a>
+      </footer>
+    </div>
+  </dialog>
+
+  <script type="application/json" id="deals-data" set:html={JSON.stringify(DETAILS)}></script>
+</BaseLayout>
+
+<script>
+  const DAY = 86_400_000;
+
+  interface DealCard extends HTMLElement {
+    dataset: DOMStringMap & {
+      id: string;
+      kind: string;
+      type: string;
+      signup: string;
+      name: string;
+      ends: string;
+      verified: string;
+      search: string;
+      risk: string;
+      expired: string;
+      pick: string;
+      pickTier: string;
+    };
+  }
+
+  interface DealDetail {
+    id: string;
+    kind: string;
+    name: string;
+    org: string;
+    type: string;
+    title: string;
+    desc: string;
+    detail: string;
+    quota: string;
+    cadence: string;
+    cadenceRaw: string;
+    steps: string[];
+    url: string;
+    source: string;
+    signup: { label: string; tone: string };
+    badge: { label: string; tone: string };
+    pick: { tier: "top" | "good"; note: string } | null;
+    topUpNote: string;
+    sourceStatus: "dead" | "changed" | null;
+    tags: string[];
+    risk: string[];
+    endsAt: string | null;
+    endsLabel: string;
+    verifiedAt: string;
+    verifiedLabel: string;
+    stale: boolean;
+    expired: boolean;
+  }
+
+  const $ = <T extends Element>(sel: string) =>
+    document.querySelector<T>(sel);
+  const $$ = <T extends Element>(sel: string) =>
+    Array.from(document.querySelectorAll<T>(sel));
+
+  const grid = $("#grid");
+  const empty = $("#empty");
+  const resultText = $("#resultText");
+  const searchInput = $<HTMLInputElement>("#q");
+  const sortSelect = $<HTMLSelectElement>("#sort");
+  const hideExpired = $<HTMLInputElement>("#hideExpired");
+  const hideRisk = $<HTMLInputElement>("#hideRisk");
+  const pickOnly = $<HTMLInputElement>("#pickOnly");
+  const relayWarning = $("#relayWarning");
+  const riskWrap = $("#riskWrap");
+  const tabs = $$<HTMLButtonElement>(".deals-tab");
+  const chipGroups = $$<HTMLElement>("[data-chips]");
+  const cards = $$<DealCard>(".deal-card");
+
+  if (grid && cards.length) {
+    const state = {
+      tab: "promo",
+      q: "",
+      filter: "all",
+      sort: "verified",
+      hideExpired: true,
+      hideRisk: false,
+      pickOnly: false,
+    };
+
+    const startOfToday = () => {
+      const date = new Date();
+      date.setHours(0, 0, 0, 0);
+      return date;
+    };
+
+    const endsAt = (card: DealCard) =>
+      card.dataset.ends ? new Date(`${card.dataset.ends}T23:59:59`) : null;
+
+    const isExpired = (card: DealCard) => {
+      const ends = endsAt(card);
+      return ends !== null && ends.getTime() < Date.now();
+    };
+
+    const daysLeft = (card: DealCard) => {
+      if (!card.dataset.ends) return null;
+      const target = new Date(`${card.dataset.ends}T00:00:00`);
+      return Math.round((target.getTime() - startOfToday().getTime()) / DAY);
+    };
+
+    const isStale = (card: DealCard) =>
+      (Date.now() - new Date(`${card.dataset.verified}T00:00:00`).getTime()) /
+        DAY >
+      30;
+
+    const fmtDate = (iso: string) => {
+      const date = new Date(`${iso}T00:00:00`);
+      return `${date.getMonth() + 1}/${String(date.getDate()).padStart(2, "0")}`;
+    };
+
+    // 构建期写死的时限会随日期漂移，进页面后用真实时间刷一遍
+    const refreshMeta = (card: DealCard) => {
+      const deadline = card.querySelector<HTMLElement>("[data-deadline]");
+      if (deadline) {
+        const left = daysLeft(card);
+        deadline.classList.toggle("is-over", left !== null && left < 0);
+        deadline.classList.toggle(
+          "is-urgent",
+          left !== null && left >= 0 && left <= 7,
+        );
+        deadline.textContent =
+          left === null
+            ? "长期有效"
+            : left < 0
+              ? "已过期"
+              : left <= 7
+                ? `剩 ${left} 天`
+                : `${fmtDate(card.dataset.ends)} 截止`;
+      }
+
+      const verified = card.querySelector<HTMLElement>(
+        "[data-verified-label]",
+      );
+      if (verified) {
+        const stale = isStale(card);
+        verified.classList.toggle("is-stale", stale);
+        verified.textContent = `✓ ${fmtDate(card.dataset.verified)}${
+          stale ? " 待复验" : " 验证"
+        }`;
+      }
+
+      card.classList.toggle("is-expired", isExpired(card));
+    };
+
+    const matchesFilter = (card: DealCard) => {
+      if (state.filter === "all") return true;
+      return card.dataset.kind === "relay"
+        ? card.dataset.signup === state.filter
+        : card.dataset.type === state.filter;
+    };
+
+    const sortLabel = () =>
+      ({
+        ending: "即将截止",
+        verified: "最新验证",
+        name: "名称",
+        pick: "性价比优先",
+      })[state.sort] ?? "最新验证";
+
+    const visible = () => {
+      const q = state.q.trim().toLowerCase();
+      return cards.filter((card) => {
+        if (card.dataset.kind !== state.tab) return false;
+        if (state.pickOnly && card.dataset.pick !== "1") return false;
+        if (state.hideExpired && isExpired(card)) return false;
+        if (
+          state.tab === "relay" &&
+          state.hideRisk &&
+          card.dataset.risk === "1"
+        )
+          return false;
+        if (!matchesFilter(card)) return false;
+        if (q && !card.dataset.search.includes(q)) return false;
+        return true;
+      });
+    };
+
+    const render = () => {
+      const shown = visible();
+      const total = cards.filter(
+        (card) =>
+          card.dataset.kind === state.tab &&
+          !(state.hideExpired && isExpired(card)),
+      ).length;
+
+      const ordered = [...shown].sort((a, b) => {
+        const ae = isExpired(a);
+        const be = isExpired(b);
+        if (ae !== be) return ae ? 1 : -1;
+
+        if (state.sort === "pick") {
+          const rank = (card: DealCard) =>
+            card.dataset.pickTier === "top"
+              ? 0
+              : card.dataset.pickTier === "good"
+                ? 1
+                : 2;
+          const diff = rank(a) - rank(b);
+          if (diff !== 0) return diff;
+          return (
+            new Date(b.dataset.verified).getTime() -
+            new Date(a.dataset.verified).getTime()
+          );
+        }
+
+        if (state.sort === "name")
+          return a.dataset.name.localeCompare(b.dataset.name, "zh-Hans-CN");
+
+        if (state.sort === "verified")
+          return (
+            new Date(b.dataset.verified).getTime() -
+            new Date(a.dataset.verified).getTime()
+          );
+
+        const av = a.dataset.ends
+          ? new Date(a.dataset.ends).getTime()
+          : Infinity;
+        const bv = b.dataset.ends
+          ? new Date(b.dataset.ends).getTime()
+          : Infinity;
+        if (av !== bv) return av - bv;
+        return (
+          new Date(b.dataset.verified).getTime() -
+          new Date(a.dataset.verified).getTime()
+        );
+      });
+
+      const shownSet = new Set(ordered);
+      for (const card of cards) card.hidden = !shownSet.has(card);
+      // grid 里用 order 重排，不搬 DOM 节点
+      ordered.forEach((card, index) => {
+        card.style.order = String(index);
+      });
+
+      grid.hidden = shown.length === 0;
+      if (empty) empty.hidden = shown.length !== 0;
+
+      if (resultText) {
+        let text = state.hideExpired
+          ? `共 <b>${total}</b> 条在有效期`
+          : `共 <b>${total}</b> 条（含已过期）`;
+        if (shown.length !== total) text += ` · 显示 <b>${shown.length}</b> 条`;
+        text += ` · ${sortLabel()}`;
+        resultText.innerHTML = text;
+      }
+
+      for (const tab of tabs) {
+        tab.setAttribute(
+          "aria-pressed",
+          String(tab.dataset.tab === state.tab),
+        );
+      }
+
+      for (const group of chipGroups) {
+        group.hidden = group.dataset.chips !== state.tab;
+        for (const chip of group.querySelectorAll<HTMLButtonElement>(
+          ".deals-chip",
+        )) {
+          chip.setAttribute(
+            "aria-pressed",
+            String(chip.dataset.filter === state.filter),
+          );
+        }
+      }
+
+      if (riskWrap) riskWrap.hidden = state.tab !== "relay";
+      if (relayWarning) relayWarning.hidden = state.tab !== "relay";
+      hideExpired.checked = state.hideExpired;
+      hideRisk.checked = state.hideRisk;
+      if (pickOnly) pickOnly.checked = state.pickOnly;
+
+      tally();
+    };
+
+    // 页头统计与 tab 上的数字都跟着真实日期走
+    const tally = () => {
+      const live = (kind: string) =>
+        cards.filter(
+          (card) => card.dataset.kind === kind && !isExpired(card),
+        ).length;
+
+      for (const kind of ["promo", "relay", "cn"]) {
+        const count = live(kind);
+        const badge = document.querySelector(`[data-tab-count="${kind}"]`);
+        const stat = document.querySelector(`[data-stat="${kind}"]`);
+        if (badge) badge.textContent = String(count);
+        if (stat) stat.textContent = String(count);
+      }
+    };
+
+    const syncUrl = () => {
+      const params = new URLSearchParams();
+      if (state.tab !== "promo") params.set("tab", state.tab);
+      if (state.q) params.set("q", state.q);
+      if (state.filter !== "all") params.set("f", state.filter);
+      if (state.sort !== "verified") params.set("sort", state.sort);
+      if (!state.hideExpired) params.set("hide", "0");
+      if (state.hideRisk) params.set("risk", "1");
+      if (state.pickOnly) params.set("pick", "1");
+      const query = params.toString();
+      try {
+        history.replaceState(
+          null,
+          "",
+          query ? `?${query}` : location.pathname,
+        );
+      } catch {
+        // 某些预览环境禁止改写地址栏，筛选照常工作
+      }
+    };
+
+    // 只接受当前分类里真实存在的筛选项，其余一律回落到「全部」
+    const validFilter = () => {
+      if (state.filter === "all") return "all";
+      const chip = document.querySelector(
+        `[data-chips="${state.tab}"] .deals-chip[data-filter="${CSS.escape(state.filter)}"]`,
+      );
+      return chip ? state.filter : "all";
+    };
+
+    const readUrl = () => {
+      const params = new URLSearchParams(location.search);
+      const tab = params.get("tab");
+      state.tab = tab === "relay" || tab === "cn" ? tab : "promo";
+      state.q = params.get("q") ?? "";
+      state.filter = params.get("f") ?? "all";
+      const sort = params.get("sort");
+      state.sort =
+        sort === "ending" || sort === "name" || sort === "verified" || sort === "pick"
+          ? sort
+          : "verified";
+      state.hideExpired = params.get("hide") !== "0";
+      state.hideRisk = params.get("risk") === "1";
+      state.pickOnly = params.get("pick") === "1";
+      state.filter = validFilter();
+      searchInput.value = state.q;
+      sortSelect.value = state.sort;
+    };
+
+    for (const tab of tabs) {
+      tab.addEventListener("click", () => {
+        const next = tab.dataset.tab;
+        if (!next || next === state.tab) return;
+        state.tab = next;
+        state.filter = "all";
+        render();
+        syncUrl();
+      });
+    }
+
+    for (const group of chipGroups) {
+      group.addEventListener("click", (event) => {
+        const chip = (event.target as HTMLElement).closest<HTMLButtonElement>(
+          ".deals-chip",
+        );
+        if (!chip) return;
+        state.filter = chip.dataset.filter ?? "all";
+        render();
+        syncUrl();
+      });
+    }
+
+    let searchTimer: number | undefined;
+    searchInput.addEventListener("input", () => {
+      clearTimeout(searchTimer);
+      const value = searchInput.value;
+      searchTimer = window.setTimeout(() => {
+        state.q = value.trim();
+        render();
+        syncUrl();
+      }, 120);
+    });
+
+    sortSelect.addEventListener("change", () => {
+      state.sort = sortSelect.value;
+      render();
+      syncUrl();
+    });
+
+    hideExpired.addEventListener("change", () => {
+      state.hideExpired = hideExpired.checked;
+      render();
+      syncUrl();
+    });
+
+    hideRisk.addEventListener("change", () => {
+      state.hideRisk = hideRisk.checked;
+      render();
+      syncUrl();
+    });
+
+    pickOnly?.addEventListener("change", () => {
+      state.pickOnly = pickOnly.checked;
+      render();
+      syncUrl();
+    });
+
+    $("#resetFilters")?.addEventListener("click", () => {
+      state.q = "";
+      state.filter = "all";
+      state.hideExpired = true;
+      state.hideRisk = false;
+      state.pickOnly = false;
+      searchInput.value = "";
+      render();
+      syncUrl();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      const tag = (document.activeElement?.tagName ?? "").toUpperCase();
+      const typing = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+      if (event.key === "/" && !typing) {
+        event.preventDefault();
+        searchInput.focus();
+        return;
+      }
+
+      if (event.key === "Escape" && document.activeElement === searchInput) {
+        if (searchInput.value) {
+          searchInput.value = "";
+          state.q = "";
+          render();
+          syncUrl();
+        } else {
+          searchInput.blur();
+        }
+      }
+    });
+
+    /* ---------------- 详情弹窗 ---------------- */
+    const dialog = $<HTMLDialogElement>("#dealDialog");
+    let details: Record<string, DealDetail> = {};
+
+    try {
+      const raw = $("#deals-data")?.textContent;
+      if (raw) details = JSON.parse(raw) as Record<string, DealDetail>;
+    } catch {
+      details = {};
+    }
+
+    const setText = (selector: string, value: string) => {
+      const node = dialog?.querySelector<HTMLElement>(selector);
+      if (node) node.textContent = value;
+    };
+
+    const openDetail = (id: string) => {
+      const deal = details[id];
+      if (!dialog || !deal) return;
+
+      setText("[data-dialog-name]", deal.name);
+      setText("[data-dialog-org]", deal.org);
+      setText("[data-dialog-title]", deal.title);
+      setText("[data-dialog-desc]", deal.desc);
+      setText("[data-dialog-quota]", deal.quota || "见官网");
+      setText("[data-dialog-cadence]", deal.cadence || "以官网为准");
+      setText("[data-dialog-ends]", deal.endsLabel);
+      setText("[data-dialog-signup]", deal.signup.label);
+      setText("[data-dialog-verified]", `${deal.verifiedLabel} 核对`);
+
+      const logo = dialog.querySelector<HTMLElement>("[data-dialog-logo]");
+      if (logo) logo.textContent = Array.from(deal.name)[0] ?? "?";
+
+      const badges = dialog.querySelector<HTMLElement>("[data-dialog-badges]");
+      if (badges) {
+        badges.replaceChildren();
+        const append = (label: string, tone: string) => {
+          const span = document.createElement("span");
+          span.className = `deal-badge ${tone}`.trim();
+          span.textContent = label;
+          badges.append(span);
+        };
+        append(deal.badge.label, deal.badge.tone);
+        if (deal.expired) append("已过期", "is-red");
+        if (deal.stale) append("待复验", "is-amber");
+      }
+
+      const pickNode = dialog.querySelector<HTMLElement>("[data-dialog-pick]");
+      if (pickNode) {
+        pickNode.textContent = deal.pick
+          ? `★ ${deal.pick.tier === "top" ? "首推" : "划算"} — ${deal.pick.note}`
+          : "";
+        pickNode.hidden = !deal.pick;
+      }
+
+      const stepsWrap = dialog.querySelector<HTMLElement>(
+        "[data-dialog-steps-wrap]",
+      );
+      const stepsList = dialog.querySelector<HTMLElement>(
+        "[data-dialog-steps]",
+      );
+      if (stepsWrap && stepsList) {
+        stepsList.replaceChildren();
+        deal.steps.forEach((step) => {
+          const li = document.createElement("li");
+          li.textContent = step;
+          stepsList.append(li);
+        });
+        stepsWrap.hidden = deal.steps.length === 0;
+      }
+
+      const relayNote = dialog.querySelector<HTMLElement>(
+        "[data-dialog-relay-note]",
+      );
+      if (relayNote) relayNote.hidden = deal.kind !== "relay";
+
+      const topUpNode = dialog.querySelector<HTMLElement>(
+        "[data-dialog-topup]",
+      );
+      if (topUpNode) {
+        topUpNode.textContent = deal.topUpNote
+          ? `充值预警：${deal.topUpNote}。建议只充最低额度，或先用免费额度。`
+          : "";
+        topUpNode.hidden = !deal.topUpNote;
+      }
+
+      const sourceStatusNode = dialog.querySelector<HTMLElement>(
+        "[data-dialog-source-status]",
+      );
+      if (sourceStatusNode) {
+        sourceStatusNode.textContent =
+          deal.sourceStatus === "dead"
+            ? "巡检提示：来源页已经打不开（404 / 410），这条可能已下线，请以厂商公告为准。"
+            : deal.sourceStatus === "changed"
+              ? "巡检提示：来源页内容有变化，额度或条款可能已经调整，这条等待人工复验。"
+              : "";
+        sourceStatusNode.classList.toggle("is-dead", deal.sourceStatus === "dead");
+        sourceStatusNode.hidden = !deal.sourceStatus;
+      }
+
+      const detailNode = dialog.querySelector<HTMLElement>(
+        "[data-dialog-detail]",
+      );
+      if (detailNode) {
+        detailNode.textContent = deal.detail;
+        detailNode.hidden = !deal.detail;
+      }
+
+      const tags = dialog.querySelector<HTMLElement>("[data-dialog-tags]");
+      if (tags) {
+        tags.replaceChildren();
+        for (const tag of deal.tags) {
+          const span = document.createElement("span");
+          span.className = "deal-tag";
+          span.textContent = tag;
+          tags.append(span);
+        }
+        for (const risk of deal.risk) {
+          const span = document.createElement("span");
+          span.className = "deal-tag is-risk";
+          span.textContent = risk;
+          tags.append(span);
+        }
+      }
+
+      const sourceLink = dialog.querySelector<HTMLAnchorElement>(
+        "[data-dialog-source]",
+      );
+      if (sourceLink) sourceLink.href = deal.source;
+
+      const urlLink = dialog.querySelector<HTMLAnchorElement>(
+        "[data-dialog-url]",
+      );
+      if (urlLink) {
+        urlLink.href = deal.url;
+        urlLink.textContent = `${deal.kind === "relay" ? "去注册" : "去领取"} ↗`;
+      }
+
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute("open", "");
+      }
+    };
+
+    const closeDetail = () => {
+      if (!dialog) return;
+      if (typeof dialog.close === "function") dialog.close();
+      else dialog.removeAttribute("open");
+    };
+
+    grid.addEventListener("click", (event) => {
+      const trigger = (event.target as HTMLElement).closest<HTMLElement>(
+        "[data-detail]",
+      );
+      if (!trigger) return;
+      const id = trigger.dataset.detail;
+      if (id) openDetail(id);
+    });
+
+    dialog?.addEventListener("click", (event) => {
+      if (event.target === dialog) closeDetail();
+    });
+
+    dialog
+      ?.querySelector("[data-dialog-close]")
+      ?.addEventListener("click", closeDetail);
+
+    for (const card of cards) refreshMeta(card);
+    readUrl();
+    render();
+    // 把非法参数（比如失效的 f）从地址栏清掉
+    syncUrl();
+    // 脚本已接管，解除首屏的 CSS 兜底隐藏，之后完全由 hidden 属性控制
+    grid.setAttribute("data-ready", "1");
+  }
+</script>

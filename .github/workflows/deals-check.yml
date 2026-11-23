@@ -1,0 +1,52 @@
+name: deals-check
+
+# 每天巡检一次额度雷达的来源页：
+#   1. 404 / 410 → 标记「来源失效」
+#   2. 正文连续两次出现同一份新内容 → 标记「来源有更新，待复验」
+# 结果写回 src/data/deals-status.json，提交后由 Cloudflare Pages 自动重建。
+#
+# 不会修改额度数字，也不会动 verifiedAt —— 那属于人工判断。
+
+on:
+  schedule:
+    # UTC 03:00 = 北京时间 11:00
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+  # 巡检脚本本身有改动时立刻跑一次，方便验证
+  push:
+    paths:
+      - ".github/workflows/deals-check.yml"
+      - "scripts/deals-check.mjs"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deals-check
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: 巡检来源页
+        run: node scripts/deals-check.mjs
+
+      - name: 提交状态
+        run: |
+          git config user.name "deals-check[bot]"
+          git config user.email "deals-check@users.noreply.github.com"
+          git add src/data/deals-status.json
+          if git diff --cached --quiet; then
+            echo "巡检状态没有变化，跳过提交"
+          else
+            git commit -m "chore(deals): 更新来源巡检状态"
+            git push
+          fi
