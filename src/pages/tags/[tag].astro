@@ -28,14 +28,23 @@ const { tag, posts } = Astro.props;
   title={`#${tag}`}
   description={`标签 #${tag} 下的全部文章。`}
   schemaType="CollectionPage"
+  bodyClass="page-blog"
 >
-  <section class="container page-heading">
-    <p class="eyebrow">TOPIC</p>
-    <h1>#{tag}</h1>
-    <p>共 {posts.length} 篇文章</p>
-  </section>
+  <div class="blog-page">
+    <header class="blog-heading category-heading">
+      <div class="blog-heading-title">
+        <p class="eyebrow">TOPIC</p>
+        <h1>#{tag}</h1>
+        <p>共 {posts.length} 篇文章</p>
+      </div>
+      <a class="text-link" href="/blog/">← 返回全部文章</a>
+    </header>
 
-  <section class="container post-grid archive-grid">
-    {posts.map((post, index) => <PostCard post={post} index={index} />)}
-  </section>
+    <section
+      class="blog-card-grid post-grid"
+      aria-label={`标签 #${tag} 下的文章`}
+    >
+      {posts.map((post, index) => <PostCard post={post} index={index} />)}
+    </section>
+  </div>
 </BaseLayout>
