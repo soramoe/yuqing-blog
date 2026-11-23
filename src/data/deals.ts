@@ -274,7 +274,7 @@ export const DEALS: Deal[] = [
     quota: "约 1 次/秒，试用额度按模型",
     cadence: "ongoing",
     url: "https://console.mistral.ai/",
-    source: "https://docs.mistral.ai/deployment/laplateforme/tier/",
+    source: "https://docs.mistral.ai/",
     signup: "email",
     tags: ["欧洲", "API", "实验"],
     endsAt: null,
