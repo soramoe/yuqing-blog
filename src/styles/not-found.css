@@ -1,0 +1,26 @@
+/* 404 页面 */
+
+.not-found {
+  display: grid;
+  min-height: 60vh;
+  place-content: center;
+  gap: 8px;
+}
+
+.not-found-code {
+  margin: 18px 0;
+  color: var(--accent);
+  font-family: Consolas, monospace;
+  font-size: var(--text-sm);
+  line-height: 1;
+}
+
+.not-found h1 {
+  margin: 0;
+  font-size: var(--text-4xl);
+}
+
+.not-found > p:not(.eyebrow, .not-found-code) {
+  margin: 0 0 20px;
+  color: var(--muted);
+}

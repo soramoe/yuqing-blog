@@ -335,7 +335,7 @@
   }
 }
 
-@media (max-width: 620px) {
+@media (max-width: 600px) {
   .page-points main {
     padding-block: var(--space-8) var(--space-10);
   }

@@ -1,0 +1,465 @@
+/* about.css - 由 about.astro 内联 <style> 迁入 */
+
+.page-about main {
+  padding-block: 42px 88px;
+}
+
+.page-about .about-shell {
+  --about-gutter: clamp(20px, 4vw, 56px);
+}
+
+.page-about .about-hero {
+  display: grid;
+  align-items: stretch;
+  gap: clamp(28px, 4vw, 56px);
+  padding-block: 58px 48px;
+  grid-template-columns: minmax(0, 1.12fr) minmax(310px, 0.68fr);
+}
+
+.page-about .about-hero-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.page-about .about-hero h1 {
+  display: grid;
+  margin: 22px 0 26px;
+  font-size: var(--text-page-title);
+  font-weight: 800;
+  letter-spacing: -0.075em;
+  line-height: 0.82;
+}
+
+.page-about .about-hero h1 span,
+.page-about .about-hero h1 em {
+  display: block;
+  white-space: nowrap;
+}
+
+.page-about .about-hero h1 em {
+  color: var(--accent);
+  font-style: normal;
+}
+
+.page-about .about-lead {
+  max-width: 720px;
+  margin: 0;
+  font-size: var(--text-lg);
+  line-height: 1.75;
+}
+
+.page-about .about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 18px 24px;
+  margin-top: 32px;
+}
+
+.page-about .about-actions .button {
+  font-size: var(--text-xs);
+}
+
+.page-about .about-signal-card {
+  position: relative;
+  display: flex;
+  min-height: 390px;
+  overflow: hidden;
+  flex-direction: column;
+  padding: 14px;
+  border: 1px solid var(--border);
+  background:
+    linear-gradient(color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 55%, transparent) 1px, transparent 1px),
+    color-mix(in srgb, var(--surface) 80%, transparent);
+  background-size: 34px 34px, 34px 34px, auto;
+}
+
+.page-about .about-signal-card::after {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  content: "";
+  pointer-events: none;
+}
+
+.page-about .about-signal-top,
+.page-about .about-signal-foot {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+}
+
+.page-about .about-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--text);
+}
+
+.page-about .about-live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.page-about .about-orbit {
+  position: relative;
+  display: grid;
+  width: min(100%, 270px);
+  aspect-ratio: 1;
+  margin: auto;
+  place-items: center;
+}
+
+.page-about .about-orbit::before,
+.page-about .about-orbit::after {
+  position: absolute;
+  border: 1px solid var(--strong-border);
+  border-radius: 50%;
+  content: "";
+}
+
+.page-about .about-orbit::before {
+  inset: 11%;
+}
+
+.page-about .about-orbit::after {
+  inset: 25%;
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--border));
+}
+
+.page-about .about-orbit-core {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 104px;
+  height: 104px;
+  place-content: center;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  background: var(--background);
+  color: var(--accent);
+  text-align: center;
+}
+
+.page-about .about-orbit-core strong {
+  font-size: var(--text-4xl);
+  line-height: 0.9;
+}
+
+.page-about .about-orbit-core small {
+  margin-top: 7px;
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+}
+
+.page-about .about-orbit-label {
+  position: absolute;
+  z-index: 1;
+  padding: 3px 7px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+}
+
+.page-about .orbit-make {
+  top: 5%;
+  left: 47%;
+}
+
+.page-about .orbit-learn {
+  right: 0;
+  bottom: 27%;
+}
+
+.page-about .orbit-share {
+  bottom: 8%;
+  left: 5%;
+}
+
+.page-about .about-metrics {
+  display: grid;
+  margin: 0;
+  border-top: 1px solid var(--strong-border);
+  border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--strong-border);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.page-about .about-metrics > div {
+  display: grid;
+  gap: 6px;
+  padding: 16px 18px;
+  border-right: 1px solid var(--border);
+  grid-template-columns: 1fr auto;
+}
+
+.page-about .about-metrics dt {
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+}
+
+.page-about .about-metrics dd {
+  margin: 0;
+  font-family: Consolas, monospace;
+  font-size: var(--text-2xl);
+  line-height: 1;
+  grid-row: span 2;
+}
+
+.page-about .about-metrics span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.page-about .about-story {
+  display: grid;
+  gap: clamp(36px, 6vw, 86px);
+  padding-block: 78px 70px;
+  grid-template-columns: minmax(150px, 0.26fr) minmax(0, 1fr);
+}
+
+.page-about .about-side-label {
+  padding-top: 7px;
+  border-top: 1px solid var(--strong-border);
+}
+
+.page-about .about-side-label span {
+  color: var(--accent);
+  font-family: Consolas, monospace;
+  font-size: var(--text-xs);
+  letter-spacing: 0.08em;
+}
+
+.page-about .about-side-label p {
+  max-width: 160px;
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+}
+
+.page-about .about-story-content h2 {
+  margin: 0;
+  font-size: var(--text-page-title);
+  letter-spacing: -0.06em;
+  line-height: 1.05;
+}
+
+.page-about .about-story-content h2 span {
+  color: var(--accent);
+}
+
+.page-about .about-statement {
+  max-width: 720px;
+  margin: 28px 0 44px;
+  color: var(--muted);
+  font-family: Georgia, "Songti SC", serif;
+  font-size: var(--text-lg);
+  line-height: 1.9;
+}
+
+.page-about .about-principles {
+  display: grid;
+  border-top: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.page-about .about-principles article {
+  min-height: 190px;
+  padding: 18px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-about .about-principles article > span {
+  color: var(--accent);
+  font-family: Consolas, monospace;
+  font-size: var(--text-xs);
+  letter-spacing: 0.06em;
+}
+
+.page-about .about-principles h3 {
+  margin: 35px 0 9px;
+  font-size: var(--text-base);
+  letter-spacing: -0.02em;
+}
+
+.page-about .about-principles p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.75;
+}
+
+.page-about .about-author {
+  display: grid;
+  align-items: center;
+  gap: 22px;
+  padding-block: 26px;
+  border-top: 1px solid var(--strong-border);
+  border-bottom: 1px solid var(--strong-border);
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+}
+
+.page-about .about-author-mark {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  background: var(--accent);
+  color: #fff;
+  font-size: var(--text-2xl);
+  font-weight: 800;
+}
+
+.page-about .about-author-copy h2 {
+  margin: 5px 0 5px;
+  font-size: var(--text-2xl);
+  letter-spacing: -0.035em;
+}
+
+.page-about .about-author-copy > p:last-child {
+  max-width: 600px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.page-about .about-author-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.page-about .about-author-links a {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+}
+
+.page-about .about-author-links a:hover {
+  border-color: var(--strong-border);
+  color: var(--text);
+}
+
+.page-about .about-author-links span {
+  color: var(--accent);
+}
+
+@media (max-width: 980px) {
+  .page-about .about-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .page-about .about-signal-card {
+    min-height: 340px;
+  }
+
+  .page-about .about-orbit {
+    width: min(100%, 240px);
+  }
+
+  .page-about .about-story {
+    gap: 26px;
+    grid-template-columns: 1fr;
+  }
+
+  .page-about .about-side-label {
+    max-width: 520px;
+  }
+
+  .page-about .about-side-label p {
+    max-width: none;
+  }
+
+  .page-about .about-author {
+    align-items: start;
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+
+  .page-about .about-author-links {
+    justify-content: flex-start;
+    grid-column: 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .page-about main {
+    padding-top: 30px;
+  }
+
+  .page-about .about-hero {
+    gap: 30px;
+    padding-block: 40px 36px;
+  }
+
+  .page-about .about-hero h1 {
+    margin-block: 18px 22px;
+    font-size: var(--text-page-title);
+  }
+
+  .page-about .about-signal-card {
+    min-height: 310px;
+  }
+
+  .page-about .about-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .page-about .about-metrics > div {
+    grid-template-columns: 1fr auto;
+  }
+
+  .page-about .about-story {
+    padding-block: 48px;
+  }
+
+  .page-about .about-story-content h2 {
+    font-size: var(--text-2xl);
+  }
+
+  .page-about .about-principles {
+    grid-template-columns: 1fr;
+  }
+
+  .page-about .about-principles article {
+    min-height: 0;
+  }
+
+  .page-about .about-author {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+
+  .page-about .about-author-mark {
+    width: 52px;
+    height: 52px;
+  }
+
+  .page-about .about-author-links {
+    grid-column: 1 / -1;
+  }
+}

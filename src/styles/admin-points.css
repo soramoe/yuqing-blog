@@ -182,7 +182,7 @@
 }
 
 .admin-operations-copy {
-  max-width: 650px;
+  max-width: 720px;
   margin: var(--space-1) 0 0;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);

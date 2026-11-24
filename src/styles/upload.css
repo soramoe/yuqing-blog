@@ -183,8 +183,8 @@
   top: 8px;
   right: 8px;
   padding: 4px 7px;
-  border: 1px solid rgba(255, 255, 255, 0.48);
-  background: rgba(8, 10, 8, 0.72);
+  border: 1px solid color-mix(in srgb, var(--on-accent) 48%, transparent);
+  background: color-mix(in srgb, var(--color-bg) 72%, #000);
   color: #fff;
   content: "私密";
   font-size: var(--text-xs);
@@ -261,7 +261,7 @@
 }
 
 .upload-page-header p:not(.eyebrow) {
-  max-width: 560px;
+  max-width: 600px;
   margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
@@ -280,7 +280,7 @@
   font-size: var(--text-xs);
 }
 
-@media (max-width: 620px) {
+@media (max-width: 600px) {
   .page-upload main {
     padding-block: var(--space-8) var(--space-12);
   }

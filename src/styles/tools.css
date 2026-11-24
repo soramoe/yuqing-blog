@@ -16,6 +16,8 @@ body.page-tools {
   --ok: #1f8f5f;
   --warn: #b57614;
   --bad: #c23b3b;
+  /* 仅本页使用的天蓝强调，不进全局调色板 */
+  --color-info: #58c8ff;
 
   /* 深色展示面板（封面、发布窗口、深色条带） */
   --panel-deep: #0b1220;
@@ -84,7 +86,7 @@ body.page-tools .site-footer {
 }
 
 .tools-index-intro > p {
-  max-width: 470px;
+  max-width: 520px;
   margin: 0;
   color: var(--text-2);
   font-size: var(--text-base);
@@ -254,7 +256,7 @@ body.page-tools .site-footer {
 }
 
 .tool-index-body > p {
-  max-width: 650px;
+  max-width: 720px;
   margin: 0;
   color: var(--text-2);
   line-height: 1.8;
@@ -355,7 +357,7 @@ body.page-tools .site-footer {
 }
 
 .tool-lead {
-  max-width: 650px;
+  max-width: 720px;
   margin: 0;
   color: var(--text-2);
   font-size: var(--text-sm);
@@ -378,15 +380,11 @@ body.page-tools .site-footer {
 }
 
 .tool-button {
-  display: inline-flex;
   min-height: 48px;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 0 20px;
-  border: 1px solid var(--border);
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+  border-color: var(--border);
   border-radius: 10px;
-  font-size: var(--text-sm);
   font-weight: 650;
   transition:
     border-color 160ms ease,
@@ -1105,7 +1103,7 @@ body.page-tools .site-footer {
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 520px) {
   .tools-index-intro dl {
     grid-template-columns: 1fr;
   }

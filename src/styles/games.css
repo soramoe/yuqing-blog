@@ -1,0 +1,113 @@
+/* games.css - 由 games.astro 内联 <style> 迁入 */
+
+.page-games main {
+  padding-block: 52px 96px;
+}
+
+.page-games .games-shell {
+  min-height: calc(100vh - 148px);
+}
+
+.page-games .games-intro {
+  padding-bottom: 34px;
+  border-bottom: 1px solid var(--strong-border);
+}
+
+.page-games .games-title-row {
+  display: grid;
+  align-items: end;
+  gap: 40px;
+  padding-top: 44px;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.38fr);
+}
+
+.page-games .games-title-row h1 {
+  margin: 0;
+  font-size: var(--text-page-title);
+  font-weight: 800;
+  letter-spacing: -0.075em;
+  line-height: 0.82;
+}
+
+.page-games .games-title-row > p {
+  margin: 0;
+  padding-top: 17px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.8;
+}
+
+.page-games .games-library {
+  padding-top: 34px;
+}
+
+.page-games .games-list-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-games .games-list-heading h2 {
+  margin: 8px 0 0;
+  font-size: var(--text-2xl);
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+
+.page-games .games-list-heading > span {
+  padding-bottom: 2px;
+  color: var(--muted);
+  font-family: Consolas, monospace;
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 820px) {
+  .page-games main {
+    padding-block: 38px 72px;
+  }
+
+  .page-games .games-shell {
+    min-height: 0;
+  }
+
+  .page-games .games-title-row {
+    gap: 26px;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .page-games main {
+    padding-block: 30px 60px;
+  }
+
+  .page-games .games-intro {
+    padding-bottom: 26px;
+  }
+
+  .page-games .games-title-row {
+    padding-top: 34px;
+  }
+
+  .page-games .games-title-row h1 {
+    font-size: var(--text-page-title);
+  }
+
+  .page-games .games-library {
+    padding-top: 26px;
+  }
+
+  .page-games .games-list-heading {
+    display: grid;
+    gap: 10px;
+  }
+
+  .page-games .games-list-heading > span {
+    line-height: 1.5;
+  }
+}

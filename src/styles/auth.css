@@ -124,7 +124,7 @@
 }
 
 .auth-description {
-  max-width: 500px;
+  max-width: 520px;
   margin: 0 0 34px;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
@@ -132,18 +132,12 @@
 }
 
 .auth-button {
-  display: inline-flex;
   min-height: 50px;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 0 22px;
-  border: 1px solid var(--color-text);
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+  border-color: var(--color-text);
   background: var(--color-text);
   color: var(--color-bg);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--text-sm);
   font-weight: 650;
 }
 
@@ -1016,7 +1010,7 @@
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 520px) {
   .account-actions,
   .account-meta {
     grid-template-columns: minmax(0, 1fr);
