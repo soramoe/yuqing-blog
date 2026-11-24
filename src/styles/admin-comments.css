@@ -17,7 +17,7 @@
 
 .admin-comments-header h1 {
   margin: var(--space-2) 0 var(--space-2);
-  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-size: var(--text-page-title);
   letter-spacing: -0.06em;
 }
 
@@ -62,7 +62,7 @@
 
 .admin-access > strong {
   display: block;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
 }
 
 .admin-access p {

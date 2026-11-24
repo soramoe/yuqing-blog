@@ -17,7 +17,7 @@
 
 .admin-gallery-header h1 {
   margin: var(--space-2) 0 var(--space-2);
-  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-size: var(--text-page-title);
   letter-spacing: -0.06em;
 }
 
@@ -62,7 +62,7 @@
 
 .admin-gallery-denied > strong {
   display: block;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
 }
 
 .admin-gallery-denied > p:not(.eyebrow) {
@@ -113,7 +113,7 @@
 
 .admin-gallery-section-heading h2 {
   margin: var(--space-1) 0 0;
-  font-size: 1.35rem;
+  font-size: var(--text-2xl);
 }
 
 .admin-gallery-section-heading select {

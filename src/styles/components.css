@@ -102,7 +102,7 @@
 
 .tag-sm {
   padding: var(--space-1) var(--space-2);
-  font-size: 0.65rem;
+  font-size: var(--text-xs);
 }
 
 /* ---- BADGES ---- */

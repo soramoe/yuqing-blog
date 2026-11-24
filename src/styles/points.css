@@ -8,7 +8,7 @@
 
 .page-points .auth-card h1 {
   margin: var(--space-2) 0 var(--space-5);
-  font-size: clamp(2.15rem, 4.2vw, 3.35rem);
+  font-size: var(--text-sm);
   letter-spacing: -0.055em;
   line-height: 1;
 }
@@ -80,7 +80,7 @@
 .points-balance-card > strong {
   color: var(--color-primary);
   font-family: var(--font-family-mono);
-  font-size: clamp(3.2rem, 7vw, 5.2rem);
+  font-size: clamp(3rem, 7vw, 5rem);
   letter-spacing: -0.075em;
   line-height: 0.95;
 }
@@ -115,7 +115,7 @@
 
 .points-checkin-head h2 {
   margin: var(--space-1) 0 0;
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
   letter-spacing: -0.025em;
 }
 
@@ -239,7 +239,7 @@
 
 .points-history-heading h2 {
   margin: var(--space-1) 0 0;
-  font-size: 1.15rem;
+  font-size: var(--text-lg);
   letter-spacing: -0.025em;
 }
 

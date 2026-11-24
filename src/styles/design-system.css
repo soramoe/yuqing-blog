@@ -45,6 +45,9 @@
   --text-3xl: 1.875rem;  /* 30px */
   --text-4xl: 2.5rem;    /* 40px */
 
+  /* Page Title — 全站页面级 h1 统一使用，基准取自额度页 */
+  --text-page-title: clamp(2.2rem, 4.2vw, 3.4rem);
+
   /* Line Heights */
   --line-height-tight: 1.2;
   --line-height-normal: 1.5;

@@ -401,7 +401,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
 
   .home-column-head h2 {
     margin: 5px 0 0;
-    font-size: clamp(1.25rem, 2vw, 1.6rem);
+    font-size: var(--text-2xl);
     letter-spacing: -0.035em;
     line-height: 1.15;
   }
@@ -411,7 +411,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     padding-top: 2px;
     border-bottom: 1px solid var(--border);
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: var(--text-xs);
   }
 
   .column-link:hover {
@@ -508,14 +508,14 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     gap: 12px;
     color: rgba(255, 255, 255, 0.82);
     font-family: Consolas, monospace;
-    font-size: 0.58rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.04em;
     text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
   }
 
   .home-gallery-caption span:last-child {
     color: #fff;
-    font-size: 0.7rem;
+    font-size: var(--text-xs);
   }
 
   .home-post-list {
@@ -541,7 +541,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     padding-top: 2px;
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.58rem;
+    font-size: var(--text-xs);
   }
 
   .home-post-copy {
@@ -557,7 +557,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     gap: 12px;
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.57rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.035em;
   }
 
@@ -570,7 +570,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     display: block;
     min-width: 0;
     overflow: hidden;
-    font-size: 0.98rem;
+    font-size: var(--text-base);
     font-weight: 650;
     letter-spacing: -0.018em;
     line-height: 1.42;
@@ -582,7 +582,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     display: -webkit-box;
     overflow: hidden;
     color: var(--muted);
-    font-size: 0.74rem;
+    font-size: var(--text-xs);
     line-height: 1.6;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -597,7 +597,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--accent);
-    font-size: 1.3rem;
+    font-size: var(--text-xl);
     font-weight: 800;
   }
 
@@ -615,7 +615,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
 
   .home-post-arrow {
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: var(--text-xs);
     transition:
       color 160ms ease,
       transform 160ms ease;
@@ -639,7 +639,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     background: color-mix(in srgb, var(--surface) 58%, transparent);
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.58rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.035em;
   }
 
@@ -661,7 +661,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
   .home-connection-state small {
     margin-left: auto;
     color: var(--muted);
-    font-size: 0.52rem;
+    font-size: var(--text-xs);
   }
 
   .home-connection-monitor {
@@ -746,7 +746,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
   .home-empty {
     margin: 0;
     color: var(--muted);
-    font-size: 0.82rem;
+    font-size: var(--text-sm);
   }
 
   .home-explore {
@@ -765,14 +765,14 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
 
   .home-explore h2 {
     margin: 5px 0 0;
-    font-size: clamp(1.3rem, 2vw, 1.65rem);
+    font-size: var(--text-2xl);
     letter-spacing: -0.035em;
   }
 
   .home-explore-head > p {
     margin: 0;
     color: var(--muted);
-    font-size: 0.76rem;
+    font-size: var(--text-xs);
   }
 
   .home-explore-grid {
@@ -805,12 +805,12 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
   .home-explore-grid small {
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.58rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.04em;
   }
 
   .home-explore-grid strong {
-    font-size: 1.05rem;
+    font-size: var(--text-lg);
     letter-spacing: -0.02em;
   }
 
@@ -837,7 +837,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     margin-right: 4px;
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.6rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.06em;
   }
 
@@ -845,7 +845,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     padding: 4px 8px;
     border: 1px solid var(--border);
     color: var(--muted);
-    font-size: 0.66rem;
+    font-size: var(--text-xs);
   }
 
   .home-tag-row a:hover {
@@ -893,7 +893,7 @@ const tags = Array.from(new Set(posts.flatMap((post) => post.data.tags))).slice(
     }
 
     .column-link {
-      font-size: 0.66rem;
+      font-size: var(--text-xs);
     }
 
     .home-post-link {

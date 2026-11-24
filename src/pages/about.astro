@@ -155,7 +155,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
   .about-hero h1 {
     display: grid;
     margin: 22px 0 26px;
-    font-size: clamp(4.6rem, 8vw, 7.4rem);
+    font-size: var(--text-page-title);
     font-weight: 800;
     letter-spacing: -0.075em;
     line-height: 0.82;
@@ -175,7 +175,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
   .about-lead {
     max-width: 660px;
     margin: 0;
-    font-size: clamp(1.05rem, 1.7vw, 1.35rem);
+    font-size: var(--text-lg);
     line-height: 1.75;
   }
 
@@ -188,7 +188,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
   }
 
   .about-actions .button {
-    font-size: 0.74rem;
+    font-size: var(--text-xs);
   }
 
   .about-signal-card {
@@ -224,7 +224,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     gap: 16px;
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.56rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.06em;
   }
 
@@ -284,7 +284,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
   }
 
   .about-orbit-core strong {
-    font-size: 2.8rem;
+    font-size: var(--text-4xl);
     line-height: 0.9;
   }
 
@@ -292,7 +292,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     margin-top: 7px;
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.46rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.05em;
   }
 
@@ -303,7 +303,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     background: var(--surface);
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.5rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.08em;
   }
 
@@ -342,21 +342,21 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
   .about-metrics dt {
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.58rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.06em;
   }
 
   .about-metrics dd {
     margin: 0;
     font-family: Consolas, monospace;
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
     line-height: 1;
     grid-row: span 2;
   }
 
   .about-metrics span {
     color: var(--muted);
-    font-size: 0.68rem;
+    font-size: var(--text-xs);
   }
 
   .about-story {
@@ -374,7 +374,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
   .about-side-label span {
     color: var(--accent);
     font-family: Consolas, monospace;
-    font-size: 0.58rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.08em;
   }
 
@@ -382,13 +382,13 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     max-width: 160px;
     margin: 14px 0 0;
     color: var(--muted);
-    font-size: 0.76rem;
+    font-size: var(--text-xs);
     line-height: 1.7;
   }
 
   .about-story-content h2 {
     margin: 0;
-    font-size: clamp(2.2rem, 4.8vw, 4.4rem);
+    font-size: var(--text-page-title);
     letter-spacing: -0.06em;
     line-height: 1.05;
   }
@@ -402,7 +402,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     margin: 28px 0 44px;
     color: var(--muted);
     font-family: Georgia, "Songti SC", serif;
-    font-size: clamp(1.05rem, 1.6vw, 1.28rem);
+    font-size: var(--text-lg);
     line-height: 1.9;
   }
 
@@ -423,20 +423,20 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
   .about-principles article > span {
     color: var(--accent);
     font-family: Consolas, monospace;
-    font-size: 0.56rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.06em;
   }
 
   .about-principles h3 {
     margin: 35px 0 9px;
-    font-size: 1rem;
+    font-size: var(--text-base);
     letter-spacing: -0.02em;
   }
 
   .about-principles p {
     margin: 0;
     color: var(--muted);
-    font-size: 0.76rem;
+    font-size: var(--text-xs);
     line-height: 1.75;
   }
 
@@ -457,13 +457,13 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     place-items: center;
     background: var(--accent);
     color: #fff;
-    font-size: 1.4rem;
+    font-size: var(--text-2xl);
     font-weight: 800;
   }
 
   .about-author-copy h2 {
     margin: 5px 0 5px;
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
     letter-spacing: -0.035em;
   }
 
@@ -471,7 +471,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     max-width: 580px;
     margin: 0;
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: var(--text-sm);
   }
 
   .about-author-links {
@@ -486,7 +486,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     border: 1px solid var(--border);
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.56rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.05em;
   }
 
@@ -548,7 +548,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
 
     .about-hero h1 {
       margin-block: 18px 22px;
-      font-size: clamp(4rem, 22vw, 5.6rem);
+      font-size: var(--text-page-title);
     }
 
     .about-signal-card {
@@ -568,7 +568,7 @@ const tagCount = new Set(posts.flatMap((post) => post.data.tags)).size;
     }
 
     .about-story-content h2 {
-      font-size: clamp(2.2rem, 11vw, 3.2rem);
+      font-size: var(--text-2xl);
     }
 
     .about-principles {

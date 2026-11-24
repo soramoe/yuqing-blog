@@ -2,7 +2,7 @@
 
 /* global.css 只定义了基底色，这里补齐本页用到的辅助令牌 */
 .page-deals {
-  --surface-2: color-mix(in srgb, var(--color-bg-secondary) 1.4, var(--color-bg));
+  --surface-2: color-mix(in srgb, var(--color-text) 5%, var(--color-bg-secondary));
 }
 
 .page-deals main {
@@ -36,7 +36,7 @@
 
 .deals-head h1 {
   margin: 0;
-  font-size: clamp(2.2rem, 4.2vw, 3.4rem);
+  font-size: var(--text-page-title);
   font-weight: var(--font-weight-extrabold);
   letter-spacing: -0.055em;
   line-height: 0.98;
@@ -93,7 +93,7 @@
 
 .deals-stat b {
   display: block;
-  font-size: 1.45rem;
+  font-size: var(--text-2xl);
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.03em;
   line-height: 1.15;
@@ -616,7 +616,7 @@
 
 .deal-title {
   margin: var(--space-3) 0 0;
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.025em;
   line-height: 1.35;
@@ -797,7 +797,7 @@
 
 .deals-empty h2 {
   margin: var(--space-2) 0 0;
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   letter-spacing: -0.02em;
 }
 
@@ -957,7 +957,7 @@
 
 .deals-method-head h2 {
   margin: var(--space-1) 0 0;
-  font-size: 1.2rem;
+  font-size: var(--text-xl);
   letter-spacing: -0.035em;
 }
 
@@ -1081,13 +1081,13 @@
   background: var(--color-bg);
   color: var(--color-primary);
   font-family: var(--font-family-mono);
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: var(--font-weight-semibold);
 }
 
 .deal-dialog-id h2 {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: var(--text-lg);
   font-weight: var(--font-weight-bold);
   letter-spacing: -0.02em;
   line-height: 1.3;
@@ -1109,7 +1109,7 @@
   background: var(--color-bg);
   color: var(--color-text-secondary);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: var(--text-base);
   line-height: 1;
 }
 
@@ -1185,7 +1185,7 @@
 
 .deal-dialog-title {
   margin: var(--space-3) 0 0;
-  font-size: 1.02rem;
+  font-size: var(--text-base);
   font-weight: 650;
   letter-spacing: -0.02em;
   line-height: 1.4;
@@ -1436,7 +1436,7 @@
   }
 
   .deals-head h1 {
-    font-size: 2.15rem;
+    font-size: var(--text-page-title);
   }
 
   .deals-stat {
@@ -1444,7 +1444,7 @@
   }
 
   .deals-stat b {
-    font-size: 1.15rem;
+    font-size: var(--text-lg);
   }
 
   .deals-stat span {
@@ -1466,7 +1466,7 @@
   }
 
   .deal-title {
-    font-size: 0.96rem;
+    font-size: var(--text-base);
   }
 
   .deals-method-card {
