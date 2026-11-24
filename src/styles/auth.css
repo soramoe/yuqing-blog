@@ -6,14 +6,14 @@
   display: grid;
   max-width: 880px;
   min-height: 520px;
-  border: 1px solid var(--strong-border);
+  border: 1px solid var(--color-border-strong);
   background:
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--accent) 7%, transparent),
+      color-mix(in srgb, var(--color-primary) 7%, transparent),
       transparent 52%
     ),
-    var(--background);
+    var(--color-bg);
   grid-template-columns: minmax(220px, 0.7fr) minmax(0, 1.3fr);
 }
 
@@ -30,11 +30,11 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 26px;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--color-border);
   background:
-    linear-gradient(var(--border) 1px, transparent 1px),
-    linear-gradient(90deg, var(--border) 1px, transparent 1px),
-    var(--surface);
+    linear-gradient(var(--color-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-border) 1px, transparent 1px),
+    var(--color-bg-secondary);
   background-size: 34px 34px;
 }
 
@@ -46,7 +46,7 @@
 }
 
 .auth-index {
-  color: var(--accent);
+  color: var(--color-primary);
   font-size: 0.6rem;
   letter-spacing: 0.08em;
 }
@@ -54,7 +54,7 @@
 .auth-intro p {
   max-width: 190px;
   margin: auto 0 8px;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.76rem;
   line-height: 1.7;
 }
@@ -64,7 +64,7 @@
   z-index: 1;
   width: min(100%, 230px);
   margin: 28px auto 18px;
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .auth-tide-mark svg {
@@ -89,7 +89,7 @@
 }
 
 .auth-tide-mark circle {
-  fill: var(--background);
+  fill: var(--color-bg);
   stroke: currentColor;
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
@@ -98,7 +98,7 @@
 .auth-tide-mark > span {
   display: block;
   margin-top: 10px;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.52rem;
   letter-spacing: 0.12em;
@@ -126,7 +126,7 @@
 .auth-description {
   max-width: 500px;
   margin: 0 0 34px;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.86rem;
   line-height: 1.8;
 }
@@ -138,9 +138,9 @@
   justify-content: center;
   gap: 12px;
   padding: 0 22px;
-  border: 1px solid var(--text);
-  background: var(--text);
-  color: var(--background);
+  border: 1px solid var(--color-text);
+  background: var(--color-text);
+  color: var(--color-bg);
   cursor: pointer;
   font: inherit;
   font-size: 0.82rem;
@@ -148,9 +148,9 @@
 }
 
 .auth-button:hover {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-text);
 }
 
 .auth-button:disabled {
@@ -160,12 +160,12 @@
 
 .auth-button-secondary {
   background: transparent;
-  color: var(--text);
+  color: var(--color-text);
 }
 
 .auth-button-secondary:hover {
   background: transparent;
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .auth-divider {
@@ -173,7 +173,7 @@
   align-items: center;
   gap: 12px;
   margin: 20px 0;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.58rem;
 }
@@ -182,7 +182,7 @@
 .auth-divider::after {
   height: 1px;
   flex: 1;
-  background: var(--border);
+  background: var(--color-border);
   content: "";
 }
 
@@ -191,8 +191,8 @@
   gap: 4px;
   margin-bottom: 14px;
   padding: 4px;
-  border: 1px solid var(--border);
-  background: var(--background);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
   grid-template-columns: 1fr 1fr;
 }
 
@@ -200,7 +200,7 @@
   min-height: 36px;
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font: inherit;
   font-size: 0.68rem;
@@ -209,8 +209,8 @@
 
 .auth-methods button:hover,
 .auth-methods button.is-active {
-  background: var(--surface);
-  color: var(--text);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
 }
 
 .auth-email-form,
@@ -223,7 +223,7 @@
 .auth-code-form label {
   display: grid;
   gap: 6px;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.64rem;
 }
 
@@ -231,26 +231,26 @@
 .auth-code-form input {
   min-height: 44px;
   padding: 0 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   outline: none;
-  background: var(--background);
-  color: var(--text);
+  background: var(--color-bg);
+  color: var(--color-text);
   font: inherit;
   font-size: 0.78rem;
 }
 
 .auth-email-form input:focus,
 .auth-code-form input:focus {
-  border-color: var(--accent);
+  border-color: var(--color-primary);
 }
 
 .auth-email-form button,
 .auth-code-form button {
   min-height: 42px;
   padding: 0 14px;
-  border: 1px solid var(--strong-border);
+  border: 1px solid var(--color-border-strong);
   background: transparent;
-  color: var(--text);
+  color: var(--color-text);
   cursor: pointer;
   font: inherit;
   font-size: 0.72rem;
@@ -259,8 +259,8 @@
 
 .auth-email-form button:hover,
 .auth-code-form button:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .auth-email-form button:disabled,
@@ -286,12 +286,12 @@
 .auth-inline-link {
   justify-self: end;
   border-bottom: 1px solid currentColor;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.64rem;
 }
 
 .auth-inline-link:hover {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .auth-resend-code {
@@ -299,38 +299,38 @@
   border-bottom: 1px solid currentColor !important;
   justify-self: center;
   min-height: 26px !important;
-  color: var(--muted) !important;
+  color: var(--color-text-secondary) !important;
   font-size: 0.64rem !important;
 }
 
 .auth-note,
 .auth-status {
   margin: 18px 0 0;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.6rem;
   line-height: 1.7;
 }
 
 .auth-status[data-state="error"] {
-  color: #e38276;
+  color: var(--color-danger);
 }
 
 .auth-status[data-state="success"] {
-  color: #79bd93;
+  color: var(--color-success);
 }
 
 .auth-back {
   align-self: flex-start;
   margin-top: 28px;
   border-bottom: 1px solid currentColor;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.72rem;
 }
 
 .account-loading {
   margin: 0;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.8rem;
 }
 
@@ -360,7 +360,7 @@
   justify-content: space-between;
   gap: 24px;
   padding-bottom: 20px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .account-profile {
@@ -377,9 +377,9 @@
   height: 56px;
   place-items: center;
   overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--accent);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-primary);
   font-size: 1.5rem;
   font-weight: 800;
 }
@@ -398,7 +398,7 @@
 .account-email {
   display: block;
   margin-top: 4px;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.64rem;
   overflow-wrap: anywhere;
@@ -407,8 +407,8 @@
 .account-meta {
   display: grid;
   margin: 0;
-  border-top: 1px solid var(--border);
-  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -418,14 +418,14 @@
   align-content: space-between;
   gap: 10px;
   padding: 13px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 52%, transparent);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 52%, transparent);
   font-size: 0.7rem;
 }
 
 .account-meta dt {
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.56rem;
 }
@@ -437,12 +437,12 @@
 
 .account-meta a {
   border-bottom: 1px solid currentColor;
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .account-panel-note {
   margin: 14px 0 0;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.68rem;
   line-height: 1.7;
 }
@@ -464,8 +464,8 @@
 .account-tabs {
   display: flex;
   margin-top: 18px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 55%, transparent);
 }
 
 .account-tab {
@@ -477,9 +477,9 @@
   gap: 8px;
   padding: 0 12px;
   border: 0;
-  border-right: 1px solid var(--border);
+  border-right: 1px solid var(--color-border);
   background: transparent;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font: inherit;
   font-size: 0.7rem;
@@ -491,27 +491,27 @@
 }
 
 .account-tab span {
-  color: color-mix(in srgb, var(--muted) 70%, transparent);
+  color: color-mix(in srgb, var(--color-text-secondary) 70%, transparent);
   font-family: Consolas, monospace;
   font-size: 0.54rem;
 }
 
 .account-tab:hover,
 .account-tab.is-active {
-  background: var(--surface);
-  color: var(--text);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
 }
 
 .account-tab.is-active {
-  box-shadow: inset 0 -2px 0 var(--accent);
+  box-shadow: inset 0 -2px 0 var(--color-primary);
 }
 
 .account-tab.is-active span {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .account-tab:focus-visible {
-  outline: 1px solid var(--accent);
+  outline: 1px solid var(--color-primary);
   outline-offset: -2px;
 }
 
@@ -534,7 +534,7 @@
 .account-login-methods {
   margin: 0;
   padding: 16px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
 }
 
 .account-method-row {
@@ -543,7 +543,7 @@
   justify-content: space-between;
   gap: 18px;
   padding-block: 11px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
 }
 
 .account-method-row > div {
@@ -556,7 +556,7 @@
 }
 
 .account-method-row span {
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.58rem;
 }
@@ -566,9 +566,9 @@
 .account-password-form button {
   min-height: 36px;
   padding: 0 12px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: var(--text);
+  color: var(--color-text);
   cursor: pointer;
   font: inherit;
   font-size: 0.66rem;
@@ -577,8 +577,8 @@
 .account-method-row button:hover,
 .account-email-bind-form button:hover:not(:disabled),
 .account-password-form button:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .account-method-row button:disabled,
@@ -593,15 +593,15 @@
   gap: 10px;
   margin-top: 12px;
   padding: 14px;
-  border: 1px dashed var(--strong-border);
-  background: var(--background);
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-bg);
 }
 
 .account-email-bind-form label,
 .account-password-form label {
   display: grid;
   gap: 5px;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.62rem;
 }
 
@@ -609,16 +609,16 @@
 .account-password-form input {
   min-height: 42px;
   padding: 0 11px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--text);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
   font: inherit;
   font-size: 0.74rem;
 }
 
 .account-email-bind-form input:focus,
 .account-password-form input:focus {
-  border-color: var(--accent);
+  border-color: var(--color-primary);
 }
 
 .account-email-bind-form [data-bind-code-wrap] {
@@ -642,8 +642,8 @@
   gap: 10px;
   margin-top: 12px;
   padding: 14px;
-  border: 1px dashed var(--strong-border);
-  background: var(--background);
+  border: 1px dashed var(--color-border-strong);
+  background: var(--color-bg);
 }
 
 .account-password-form[hidden],
@@ -660,38 +660,38 @@
 
 .account-password-actions a {
   border-bottom: 1px solid currentColor;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.64rem;
 }
 
 .account-password-actions a:hover {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .account-admin-tools {
   margin: 0;
   padding: 16px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
   background:
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--accent) 8%, transparent),
+      color-mix(in srgb, var(--color-primary) 8%, transparent),
       transparent 58%
     ),
-    color-mix(in srgb, var(--surface) 72%, transparent);
+    color-mix(in srgb, var(--color-bg-secondary) 72%, transparent);
 }
 
 .account-gallery-panel {
   margin: 0;
   padding: 16px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 62%, transparent);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 62%, transparent);
 }
 
 .account-gallery-status {
   min-height: 1em;
   margin: 0 0 10px;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.58rem;
 }
@@ -701,11 +701,11 @@
 }
 
 .account-gallery-status[data-state="error"] {
-  color: #e38276;
+  color: var(--color-danger);
 }
 
 .account-gallery-status[data-state="success"] {
-  color: #79b98b;
+  color: var(--color-success);
 }
 
 .account-gallery-list {
@@ -717,8 +717,8 @@
 .account-gallery-card {
   display: grid;
   overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--background);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
 }
 
 .account-gallery-card > img {
@@ -754,13 +754,13 @@
 
 .account-gallery-card header span,
 .account-gallery-card small {
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.55rem;
 }
 
 .account-gallery-card header span {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .account-gallery-actions {
@@ -776,7 +776,7 @@
   border: 0;
   border-bottom: 1px solid currentColor;
   background: transparent;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font: inherit;
   font-size: 0.6rem;
@@ -784,12 +784,12 @@
 
 .account-gallery-actions a:hover,
 .account-gallery-actions button:hover:not(:disabled) {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .account-gallery-actions button.is-danger:hover:not(:disabled) {
-  border-color: #d06b62;
-  color: #e38276;
+  border-color: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .account-gallery-actions button:disabled {
@@ -801,8 +801,8 @@
   grid-column: 1 / -1;
   margin: 0;
   padding: 16px 0;
-  border-block: 1px solid var(--border);
-  color: var(--muted);
+  border-block: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
   font-size: 0.68rem;
 }
 
@@ -820,15 +820,15 @@
 }
 
 .account-admin-heading > span {
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-family: Consolas, monospace;
   font-size: 0.56rem;
 }
 
 .account-admin-grid {
   display: grid;
-  border-top: 1px solid var(--border);
-  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
 }
 
@@ -838,17 +838,17 @@
   align-content: space-between;
   gap: 6px;
   padding: 13px;
-  border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--background) 66%, transparent);
+  border-right: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg) 66%, transparent);
 }
 
 .account-admin-grid a:hover {
-  background: color-mix(in srgb, var(--accent) 7%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 7%, transparent);
 }
 
 .account-admin-grid span {
-  color: var(--accent);
+  color: var(--color-primary);
   font-family: Consolas, monospace;
   font-size: 0.56rem;
 }
@@ -858,7 +858,7 @@
 }
 
 .account-admin-grid small {
-  color: var(--muted);
+  color: var(--color-text-secondary);
   font-size: 0.62rem;
   line-height: 1.5;
 }
@@ -880,7 +880,7 @@
   .auth-intro {
     min-height: 150px;
     border-right: 0;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .auth-intro p {
