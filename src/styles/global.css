@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "design-system.css";
+@import "components.css";
+@import "home.css";
 
 :root {
   color-scheme: dark;
