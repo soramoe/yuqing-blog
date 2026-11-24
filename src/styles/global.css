@@ -978,14 +978,23 @@ h3,
   border-top: 1px solid var(--border);
 }
 
-/* 卡片里的标签独占一行，避免与左侧分类链接争宽后被压成省略号 */
+/* 卡片里的标签独占一行，避免与左侧分类链接争宽后被压成省略号。
+   最多显示两排：固定每枚胶囊的行高，第三排整枚被裁掉，不会露出半截。
+   排序时信息量低的通用标签排在最后，被裁掉的通常就是它们。 */
 .post-card-footer .tag-list {
+  --tag-row-height: 24px;
   width: 100%;
+  align-content: flex-start;
   gap: 4px 8px;
+  max-height: calc(var(--tag-row-height) * 2 + 4px);
+  overflow: hidden;
 }
 
 .post-card-footer .tag {
+  height: var(--tag-row-height);
+  padding-block: 0;
   font-size: var(--text-xs);
+  line-height: var(--tag-row-height);
 }
 
 .post-card-footer .tag:hover {
@@ -2493,6 +2502,11 @@ body.has-announcement .site-footer {
     display: inline-flex;
     min-height: 36px;
     align-items: center;
+  }
+
+  /* 触屏胶囊更高，两排的高度跟着一起放大 */
+  .post-card-footer .tag-list {
+    --tag-row-height: 36px;
   }
 }
 

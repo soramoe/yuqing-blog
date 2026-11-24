@@ -13,7 +13,13 @@ const blog = defineCollection({
     publishedAt: z.coerce.date(),
     updatedDate: z.coerce.date().optional(),
     category: z.string(),
-    tags: z.array(z.string()).default([]),
+    // 去掉空白标签并去重，避免空标签生成 /tags// 之类的坏链接
+    tags: z
+      .array(z.string())
+      .default([])
+      .transform((tags) => [
+        ...new Set(tags.map((tag) => tag.trim()).filter(Boolean)),
+      ]),
     draft: z.boolean().default(false),
     cover: z.string().optional(),
     hideCover: z.boolean().default(false),
