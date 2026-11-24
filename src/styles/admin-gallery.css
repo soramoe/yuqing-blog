@@ -1,5 +1,5 @@
 .page-admin-gallery main {
-  padding-block: 58px 100px;
+  padding-block: var(--space-10) var(--space-16);
 }
 
 .admin-gallery-shell {
@@ -10,54 +10,54 @@
   display: flex;
   align-items: end;
   justify-content: space-between;
-  gap: 28px;
-  padding-bottom: 26px;
-  border-bottom: 1px solid var(--strong-border);
+  gap: var(--space-8);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid var(--color-border-strong);
 }
 
 .admin-gallery-header h1 {
-  margin: 8px 0 10px;
+  margin: var(--space-2) 0 var(--space-2);
   font-size: clamp(2.2rem, 5vw, 4rem);
   letter-spacing: -0.06em;
 }
 
 .admin-gallery-header p:not(.eyebrow) {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
 .admin-gallery-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .admin-gallery-nav a,
 .admin-gallery-gate-actions a {
   border-bottom: 1px solid currentColor;
-  color: var(--muted);
-  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .admin-gallery-status {
-  margin: 20px 0;
-  color: var(--muted);
-  font-size: 0.72rem;
+  margin: var(--space-5) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
 .admin-gallery-status[data-state="error"] {
-  color: #e38276;
+  color: var(--color-danger);
 }
 
 .admin-gallery-denied {
-  margin-top: 32px;
-  padding: 26px;
-  border: 1px dashed var(--strong-border);
+  margin-top: var(--space-8);
+  padding: var(--space-6);
+  border: 1px dashed var(--color-border-strong);
 }
 
 .admin-gallery-denied .eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
 }
 
 .admin-gallery-denied > strong {
@@ -66,18 +66,18 @@
 }
 
 .admin-gallery-denied > p:not(.eyebrow) {
-  margin: 8px 0 18px;
-  color: var(--muted);
-  font-size: 0.78rem;
+  margin: var(--space-2) 0 var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
 .admin-gallery-gate-actions {
   display: flex;
-  gap: 18px;
+  gap: var(--space-4);
 }
 
 .admin-gallery-gate-actions a {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .admin-gallery-gate-actions button {
@@ -85,63 +85,63 @@
   border: 0;
   border-bottom: 1px solid currentColor;
   background: transparent;
-  color: var(--accent);
+  color: var(--color-primary);
   cursor: pointer;
   font: inherit;
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
 }
 
 .admin-gallery-moderation {
-  margin-top: 34px;
-  padding-top: 26px;
-  border-top: 1px solid var(--strong-border);
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border-strong);
 }
 
 .admin-static-gallery {
-  margin-top: 34px;
-  padding-top: 26px;
-  border-top: 1px solid var(--strong-border);
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border-strong);
 }
 
 .admin-gallery-section-heading {
   display: flex;
   align-items: end;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 16px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .admin-gallery-section-heading h2 {
-  margin: 5px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: 1.35rem;
 }
 
 .admin-gallery-section-heading select {
   min-height: 38px;
-  padding: 0 11px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
   font: inherit;
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
 }
 
 .admin-gallery-note {
-  color: var(--muted);
-  font-size: 0.62rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .admin-static-gallery-list {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
 .admin-static-gallery-card {
   display: grid;
   overflow: hidden;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 62%, transparent);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 62%, transparent);
 }
 
 .admin-static-gallery-card.is-hidden {
@@ -156,14 +156,14 @@
 
 .admin-static-gallery-card > div {
   display: grid;
-  gap: 4px;
-  padding: 10px;
+  gap: var(--space-1);
+  padding: var(--space-2);
 }
 
 .admin-static-gallery-card strong {
   display: -webkit-box;
   overflow: hidden;
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   line-height: 1.45;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -171,43 +171,43 @@
 
 .admin-static-gallery-card span,
 .admin-static-gallery-card small {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.54rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .admin-static-gallery-card small {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .admin-static-gallery-card button {
   justify-self: start;
-  margin-top: 4px;
+  margin-top: var(--space-1);
   padding: 0;
   border: 0;
   border-bottom: 1px solid currentColor;
   background: transparent;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font: inherit;
-  font-size: 0.6rem;
+  font-size: var(--text-xs);
 }
 
 .admin-static-gallery-card button:hover {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .admin-gallery-list {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .admin-gallery-card {
   display: grid;
-  gap: 16px;
-  padding: 13px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 64%, transparent);
+  gap: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 64%, transparent);
   grid-template-columns: 190px minmax(0, 1fr);
 }
 
@@ -220,7 +220,7 @@
   width: 100%;
   height: 128px;
   object-fit: cover;
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
 }
 
 .admin-gallery-card-body {
@@ -231,59 +231,59 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--space-4);
 }
 
 .admin-gallery-card-body header strong {
-  font-size: 0.82rem;
+  font-size: var(--text-sm);
 }
 
 .admin-gallery-badges {
   display: flex;
   flex: 0 0 auto;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .admin-gallery-badge {
-  padding: 3px 7px;
+  padding: var(--space-1);
   border: 1px solid currentColor;
-  color: var(--muted);
-  font-size: 0.58rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .admin-gallery-badge.is-approved {
-  color: #79b98b;
+  color: var(--color-success);
 }
 
 .admin-gallery-badge.is-pending {
-  color: #d2a95f;
+  color: var(--color-warning);
 }
 
 .admin-gallery-badge.is-private {
-  color: #aebfaa;
+  color: var(--color-primary);
 }
 
 .admin-gallery-badge.is-rejected,
 .admin-gallery-badge.is-deleted {
-  color: #d17870;
+  color: var(--color-danger);
 }
 
 .admin-gallery-card-body p,
 .admin-gallery-card-body small {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.58rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .admin-gallery-card-body p {
-  margin: 8px 0 3px;
+  margin: var(--space-2) 0 var(--space-1);
 }
 
 .admin-gallery-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 15px;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
 }
 
 .admin-gallery-actions button {
@@ -291,31 +291,31 @@
   border: 0;
   border-bottom: 1px solid transparent;
   background: transparent;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font: inherit;
-  font-size: 0.64rem;
+  font-size: var(--text-xs);
 }
 
 .admin-gallery-actions button:hover {
   border-color: currentColor;
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .admin-gallery-actions button:last-child:hover {
-  color: #e38276;
+  color: var(--color-danger);
 }
 
 .admin-gallery-empty {
-  padding-block: 20px;
-  border-block: 1px solid var(--border);
-  color: var(--muted);
-  font-size: 0.72rem;
+  padding-block: var(--space-5);
+  border-block: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
 @media (max-width: 720px) {
   .page-admin-gallery main {
-    padding-block: 34px 72px;
+    padding-block: var(--space-8) var(--space-12);
   }
 
   .admin-gallery-header,

@@ -1,29 +1,29 @@
 .admin-shop-code-panel,
 .admin-shop-items,
 .admin-shop-orders {
-  margin-top: 28px;
-  padding: 20px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 44%, transparent);
+  margin-top: var(--space-8);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 44%, transparent);
 }
 
 .admin-shop-code-panel {
-  border-color: var(--strong-border);
+  border-color: var(--color-border-strong);
 }
 
 .admin-shop-code-form {
   display: grid;
   align-items: end;
-  gap: 12px;
+  gap: var(--space-3);
   grid-template-columns: 170px 120px minmax(220px, 1fr) auto;
 }
 
 .admin-shop-code-form label,
 .admin-shop-item label {
   display: grid;
-  gap: 6px;
-  color: var(--muted);
-  font-size: 0.6rem;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .admin-shop-code-form input,
@@ -31,13 +31,13 @@
 .admin-shop-item textarea {
   width: 100%;
   min-height: 40px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
   outline: none;
-  background: var(--background);
-  color: var(--text);
+  background: var(--color-bg);
+  color: var(--color-text);
   font: inherit;
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
 }
 
 .admin-shop-item textarea {
@@ -48,7 +48,7 @@
 .admin-shop-code-form input:focus,
 .admin-shop-item input:focus,
 .admin-shop-item textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--color-primary);
 }
 
 .admin-shop-code-form button,
@@ -56,22 +56,22 @@
 .admin-shop-item-actions button,
 .admin-shop-orders button {
   min-height: 40px;
-  padding: 0 13px;
-  border: 1px solid var(--text);
-  background: var(--text);
-  color: var(--background);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-text);
+  background: var(--color-text);
+  color: var(--color-bg);
   cursor: pointer;
   font: inherit;
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
 }
 
 .admin-shop-code-form button:hover:not(:disabled),
 .admin-shop-code-result button:hover,
 .admin-shop-item-actions button:hover:not(:disabled),
 .admin-shop-orders button:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -84,11 +84,11 @@
 
 .admin-shop-code-result {
   display: grid;
-  gap: 10px;
-  margin-top: 16px;
-  padding: 14px;
-  border: 1px dashed var(--accent);
-  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px dashed var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 
 .admin-shop-code-result[hidden] {
@@ -97,66 +97,66 @@
 
 .admin-shop-code-result p {
   margin: 0;
-  color: var(--accent);
-  font-size: 0.68rem;
+  color: var(--color-primary);
+  font-size: var(--text-xs);
 }
 
 .admin-shop-code-result textarea {
   width: 100%;
   min-height: 120px;
-  padding: 10px;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--text);
-  font-family: Consolas, monospace;
-  font-size: 0.7rem;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
   line-height: 1.7;
   resize: vertical;
 }
 
 .admin-shop-code-result > div {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .admin-shop-code-history,
 .admin-shop-items {
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 
 .admin-shop-heading-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .admin-shop-heading-actions > span {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.62rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .admin-shop-heading-actions > button {
   min-height: 34px;
-  padding: 0 11px;
-  border: 1px solid var(--border);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border);
   background: transparent;
-  color: var(--accent);
+  color: var(--color-primary);
   cursor: pointer;
   font: inherit;
-  font-size: 0.64rem;
+  font-size: var(--text-xs);
 }
 
 .admin-shop-code-history h3 {
-  margin: 0 0 10px;
-  font-size: 0.8rem;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
 }
 
 .admin-shop-code-history ol {
   display: grid;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
   list-style: none;
 }
 
@@ -164,43 +164,43 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding-block: 9px;
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .admin-shop-code-history li > div {
   display: grid;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .admin-shop-code-history strong {
-  font-family: Consolas, monospace;
-  font-size: 0.68rem;
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .admin-shop-code-history span,
 .admin-shop-code-history small {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.53rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .admin-shop-code-history small.is-used {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .admin-shop-items [data-admin-item-list] {
   display: grid;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .admin-shop-item {
   display: grid;
-  gap: 12px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  background: var(--background);
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
 }
 
 .admin-shop-item-heading,
@@ -208,30 +208,30 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .admin-shop-item-heading small {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.54rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .admin-shop-item-fields {
   display: grid;
-  gap: 10px;
+  gap: var(--space-2);
   grid-template-columns: minmax(180px, 1.6fr) repeat(3, minmax(90px, 0.55fr));
 }
 
 .admin-shop-active {
   display: flex !important;
   align-items: center;
-  gap: 7px !important;
-  color: var(--text) !important;
+  gap: var(--space-1) !important;
+  color: var(--color-text) !important;
 }
 
 .admin-shop-active input {
-  accent-color: var(--accent);
+  accent-color: var(--color-primary);
 }
 
 .admin-shop-item-actions > button {
@@ -242,68 +242,68 @@
   display: grid;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
   list-style: none;
 }
 
 .admin-shop-orders li {
   display: grid;
   align-items: center;
-  gap: 10px 14px;
-  padding-block: 11px;
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-2) var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
   grid-template-columns: minmax(0, 1fr) auto auto auto;
 }
 
 .admin-shop-orders li > div:first-child {
   display: grid;
   min-width: 0;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .admin-shop-orders li strong {
-  font-size: 0.72rem;
+  font-size: var(--text-sm);
 }
 
 .admin-shop-orders li span,
 .admin-shop-orders li time,
 .admin-shop-orders li small {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.53rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .admin-shop-order-points {
-  color: var(--accent) !important;
-  font-size: 0.72rem !important;
-  font-weight: 700;
+  color: var(--color-primary) !important;
+  font-size: var(--text-sm) !important;
+  font-weight: var(--font-weight-bold);
 }
 
 .admin-shop-orders li > div:last-child {
   display: flex;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .admin-shop-orders button {
   min-height: 32px;
-  padding-inline: 9px;
+  padding-inline: var(--space-2);
   background: transparent;
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .admin-shop-orders button[data-cancel-order] {
-  color: #e38276;
+  color: var(--color-danger);
 }
 
 .admin-points-status[data-state="success"] {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 @media (max-width: 760px) {
   .admin-shop-code-panel,
   .admin-shop-items,
   .admin-shop-orders {
-    padding: 14px;
+    padding: var(--space-3);
   }
 
   .admin-shop-code-form,
