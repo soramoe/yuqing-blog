@@ -1,5 +1,5 @@
 .page-points main {
-  padding-block: 48px 76px;
+  padding-block: var(--space-10) var(--space-12);
 }
 
 .page-points .auth-card-compact {
@@ -7,7 +7,7 @@
 }
 
 .page-points .auth-card h1 {
-  margin: 9px 0 22px;
+  margin: var(--space-2) 0 var(--space-5);
   font-size: clamp(2.15rem, 4.2vw, 3.35rem);
   letter-spacing: -0.055em;
   line-height: 1;
@@ -17,38 +17,38 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
 }
 
 .points-topbar a {
-  color: var(--muted);
-  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .points-topbar a:hover {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .points-topbar span {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.56rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
   letter-spacing: 0.045em;
 }
 
 .points-loading {
-  margin: 26px 0 0;
-  color: var(--muted);
-  font-size: 0.8rem;
+  margin: var(--space-6) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
 }
 
 .points-dashboard {
   display: grid;
   align-items: start;
-  gap: 22px;
-  margin-top: 24px;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
   grid-template-columns: minmax(310px, 0.82fr) minmax(0, 1.18fr);
 }
 
@@ -60,26 +60,26 @@
 
 .points-overview {
   display: grid;
-  gap: 14px;
+  gap: var(--space-3);
 }
 
 .points-balance-card {
   display: grid;
-  gap: 5px;
-  padding: 22px;
-  border: 1px solid var(--strong-border);
+  gap: var(--space-1);
+  padding: var(--space-5);
+  border: 1px solid var(--color-border-strong);
   background:
     linear-gradient(
       135deg,
-      color-mix(in srgb, var(--accent) 17%, transparent),
+      color-mix(in srgb, var(--color-primary) 17%, transparent),
       transparent 62%
     ),
-    var(--surface);
+    var(--color-bg-secondary);
 }
 
 .points-balance-card > strong {
-  color: var(--accent);
-  font-family: Consolas, monospace;
+  color: var(--color-primary);
+  font-family: var(--font-family-mono);
   font-size: clamp(3.2rem, 7vw, 5.2rem);
   letter-spacing: -0.075em;
   line-height: 0.95;
@@ -88,55 +88,55 @@
 .points-balance-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 18px;
-  margin-top: 8px;
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.58rem;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-2);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .points-balance-meta b {
-  color: var(--text);
-  font-size: 0.72rem;
+  color: var(--color-text);
+  font-size: var(--text-sm);
 }
 
 .points-checkin-card {
-  padding: 18px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 42%, transparent);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 42%, transparent);
 }
 
 .points-checkin-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: var(--space-4);
 }
 
 .points-checkin-head h2 {
-  margin: 5px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: 1.15rem;
   letter-spacing: -0.025em;
 }
 
 .points-checkin-state {
   flex: 0 0 auto;
-  padding: 5px 8px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.54rem;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .points-checkin-state[data-checked="true"] {
-  border-color: color-mix(in srgb, var(--accent) 46%, var(--border));
-  color: var(--accent);
+  border-color: color-mix(in srgb, var(--color-primary) 46%, var(--color-border));
+  color: var(--color-primary);
 }
 
 .points-week {
   display: grid;
-  gap: 5px;
-  margin-block: 18px;
+  gap: var(--space-1);
+  margin-block: var(--space-4);
   grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
@@ -144,9 +144,9 @@
   display: grid;
   min-width: 0;
   justify-items: center;
-  gap: 5px;
-  color: var(--muted);
-  font-family: Consolas, monospace;
+  gap: var(--space-1);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
 }
 
 .points-week-day i {
@@ -154,66 +154,66 @@
   width: 100%;
   height: 4px;
   border-radius: 999px;
-  background: var(--border);
+  background: var(--color-border);
 }
 
 .points-week-day small {
-  font-size: 0.48rem;
+  font-size: var(--text-xs);
 }
 
 .points-week-day b {
-  font-size: 0.55rem;
-  font-weight: 500;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
 }
 
 .points-week-day.is-active {
-  color: var(--text);
+  color: var(--color-text);
 }
 
 .points-week-day.is-active i {
-  background: var(--accent);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 28%, transparent);
+  background: var(--color-primary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--color-primary) 28%, transparent);
 }
 
 .points-week-day.is-today b {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .points-checkin-action {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
+  gap: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
 }
 
 .points-checkin-action p {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .points-checkin-action p strong {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .points-checkin-action button {
   min-width: 112px;
   min-height: 42px;
-  padding: 0 15px;
-  border: 1px solid var(--text);
-  background: var(--text);
-  color: var(--background);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-text);
+  background: var(--color-text);
+  color: var(--color-bg);
   cursor: pointer;
   font: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-bold);
 }
 
 .points-checkin-action button:hover:not(:disabled) {
-  border-color: var(--accent);
-  background: var(--accent);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
   color: #fff;
 }
 
@@ -224,36 +224,36 @@
 
 .points-history {
   min-width: 0;
-  padding: 18px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface) 30%, transparent);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-secondary) 30%, transparent);
 }
 
 .points-history-heading {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
 }
 
 .points-history-heading h2 {
-  margin: 5px 0 0;
+  margin: var(--space-1) 0 0;
   font-size: 1.15rem;
   letter-spacing: -0.025em;
 }
 
 .points-history-heading > span {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.54rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .points-history ol {
   display: grid;
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
   list-style: none;
 }
 
@@ -261,72 +261,72 @@
   display: grid;
   min-height: 54px;
   align-items: center;
-  gap: 12px;
-  padding-block: 9px;
-  border-bottom: 1px solid var(--border);
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
   grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
 .points-history li > div {
   display: grid;
   min-width: 0;
-  gap: 2px;
+  gap: var(--space-1);
 }
 
 .points-history li strong {
   overflow: hidden;
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .points-history time,
 .points-history small {
-  color: var(--muted);
-  font-family: Consolas, monospace;
-  font-size: 0.53rem;
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
 }
 
 .points-history li > span {
-  color: var(--accent);
-  font-family: Consolas, monospace;
-  font-size: 0.76rem;
-  font-weight: 700;
+  color: var(--color-primary);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
 }
 
 .points-history li > span.is-negative {
-  color: #e38276;
+  color: var(--color-danger);
 }
 
 .points-empty {
   display: block !important;
-  padding-block: 22px !important;
-  color: var(--muted);
-  font-size: 0.7rem;
+  padding-block: var(--space-5) !important;
+  color: var(--color-text-secondary);
+  font-size: var(--text-xs);
 }
 
 .points-history-toggle {
   display: inline-flex;
   min-height: 36px;
   align-items: center;
-  margin-top: 12px;
+  margin-top: var(--space-3);
   padding: 0;
   border: 0;
   border-bottom: 1px solid currentColor;
   background: transparent;
-  color: var(--muted);
+  color: var(--color-text-secondary);
   cursor: pointer;
   font: inherit;
-  font-size: 0.64rem;
+  font-size: var(--text-xs);
 }
 
 .points-history-toggle:hover {
-  color: var(--accent);
+  color: var(--color-primary);
 }
 
 .page-points .auth-status {
-  margin-top: 18px;
+  margin-top: var(--space-4);
 }
 
 @media (max-width: 820px) {
@@ -337,13 +337,13 @@
 
 @media (max-width: 620px) {
   .page-points main {
-    padding-block: 28px 60px;
+    padding-block: var(--space-8) var(--space-10);
   }
 
   .points-balance-card,
   .points-checkin-card,
   .points-history {
-    padding: 16px;
+    padding: var(--space-4);
   }
 
   .points-checkin-action {
@@ -356,7 +356,7 @@
   }
 
   .points-history li {
-    gap: 9px;
+    gap: var(--space-2);
     grid-template-columns: minmax(0, 1fr) auto;
   }
 
