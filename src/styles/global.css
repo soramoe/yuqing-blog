@@ -724,7 +724,7 @@ h3,
 }
 
 .blog-page .post-grid:not(.archive-grid) {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .blog-page .post-grid:not(.archive-grid) .post-body {
@@ -792,13 +792,29 @@ h3,
 
 .tag-list {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-/* 组件库已定义胶囊 .tag；这里只补文章场景的等宽字体 */
+/* 组件库已定义胶囊 .tag；这里只补文章场景的等宽字体与不折行。
+   顶栏的 uppercase/字距会继承下来，标签内还原为正常大小写。 */
 .tag {
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
   font-family: var(--font-family-mono);
+  letter-spacing: normal;
+  text-overflow: ellipsis;
+  text-transform: none;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+/* 文章页顶栏：标签靠右，窄屏时整块换行到分类下方 */
+.article-topline .tag-list {
+  justify-content: flex-end;
 }
 
 .post-card {
@@ -952,6 +968,7 @@ h3,
 
 .post-card-footer {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
@@ -961,7 +978,9 @@ h3,
   border-top: 1px solid var(--border);
 }
 
+/* 卡片里的标签独占一行，避免与左侧分类链接争宽后被压成省略号 */
 .post-card-footer .tag-list {
+  width: 100%;
   gap: 4px 8px;
 }
 
@@ -2356,7 +2375,7 @@ body.has-announcement .site-footer {
   }
 
   .blog-page .post-grid:not(.archive-grid) {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .category-heading .text-link {
@@ -2410,7 +2429,7 @@ body.has-announcement .site-footer {
   }
 
   .blog-page .post-grid:not(.archive-grid) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .blog-heading-title h1 {
