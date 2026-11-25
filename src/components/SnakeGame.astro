@@ -705,7 +705,7 @@
     left: 20px;
     color: rgba(238, 240, 233, 0.54);
     font-family: Consolas, monospace;
-    font-size: 0.58rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.08em;
   }
 
@@ -724,7 +724,7 @@
     gap: 10px;
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.6rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.06em;
   }
 
@@ -746,7 +746,7 @@
   }
 
   .game-entry-title strong {
-    font-size: clamp(2rem, 4vw, 3.8rem);
+    font-size: var(--text-4xl);
     letter-spacing: -0.055em;
     line-height: 1;
   }
@@ -754,13 +754,13 @@
   .game-entry-title > span {
     flex: 0 0 auto;
     color: var(--accent);
-    font-size: 0.76rem;
+    font-size: var(--text-xs);
   }
 
   .game-entry-description {
-    max-width: 640px;
+    max-width: 720px;
     color: var(--muted);
-    font-size: 0.84rem;
+    font-size: var(--text-sm);
     line-height: 1.7;
   }
 
@@ -772,7 +772,7 @@
     padding-top: 24px;
     color: var(--muted);
     font-family: Consolas, monospace;
-    font-size: 0.62rem;
+    font-size: var(--text-xs);
   }
 
   .game-entry.is-open .game-preview {
@@ -805,13 +805,13 @@
     margin: 0;
     color: rgba(238, 240, 233, 0.46);
     font-family: Consolas, monospace;
-    font-size: 0.58rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.08em;
   }
 
   .snake-player-heading h2 {
     margin: 7px 0 0;
-    font-size: clamp(1.8rem, 3vw, 2.7rem);
+    font-size: var(--text-3xl);
     letter-spacing: -0.045em;
     line-height: 1;
   }
@@ -825,7 +825,7 @@
     background: transparent;
     color: #eef0e9;
     cursor: pointer;
-    font-size: 0.7rem;
+    font-size: var(--text-xs);
   }
 
   .snake-close:hover,
@@ -875,14 +875,14 @@
   .snake-scoreboard span {
     color: rgba(238, 240, 233, 0.42);
     font-family: Consolas, monospace;
-    font-size: 0.52rem;
+    font-size: var(--text-xs);
     letter-spacing: 0.06em;
   }
 
   .snake-scoreboard strong {
     color: #eef0e9;
     font-family: Consolas, monospace;
-    font-size: 1.08rem;
+    font-size: var(--text-lg);
     font-weight: 500;
   }
 
@@ -943,16 +943,16 @@
 
   .snake-overlay h3 {
     margin: 8px 0 7px;
-    font-size: clamp(1.6rem, 3vw, 2.6rem);
+    font-size: var(--text-3xl);
     letter-spacing: -0.04em;
     line-height: 1.05;
   }
 
   .snake-overlay p:not(.snake-eyebrow) {
-    max-width: 360px;
+    max-width: 520px;
     margin: 0 0 18px;
     color: rgba(238, 240, 233, 0.62);
-    font-size: 0.75rem;
+    font-size: var(--text-xs);
   }
 
   .snake-overlay button {
@@ -978,14 +978,14 @@
 
   .snake-controls h3 {
     margin: 7px 0 0;
-    font-size: 1.05rem;
+    font-size: var(--text-lg);
   }
 
   .snake-instructions {
     display: grid;
     gap: 9px;
     color: rgba(238, 240, 233, 0.58);
-    font-size: 0.65rem;
+    font-size: var(--text-xs);
     line-height: 1.7;
   }
 
@@ -1003,7 +1003,7 @@
     background: rgba(255, 255, 255, 0.04);
     color: #eef0e9;
     font-family: Consolas, monospace;
-    font-size: 0.56rem;
+    font-size: var(--text-xs);
   }
 
   .snake-pad {
@@ -1026,7 +1026,7 @@
     background: rgba(255, 255, 255, 0.035);
     color: #eef0e9;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: var(--text-base);
     touch-action: manipulation;
   }
 
@@ -1058,7 +1058,7 @@
     padding-top: 16px;
     border-top: 1px solid rgba(238, 240, 233, 0.1);
     color: rgba(238, 240, 233, 0.42);
-    font-size: 0.62rem;
+    font-size: var(--text-xs);
     line-height: 1.7;
   }
 

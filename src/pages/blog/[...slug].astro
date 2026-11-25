@@ -71,7 +71,7 @@ const relatedPosts = allPosts
         <span>分类 / {post.data.category}</span>
         <div class="tag-list" aria-label="文章标签">
           {post.data.tags.map((tag) => (
-            <a href={`/tags/${tag}/`} class="tag">#{tag}</a>
+            <a href={`/tags/${encodeURIComponent(tag)}/`} class="tag">#{tag}</a>
           ))}
         </div>
       </div>

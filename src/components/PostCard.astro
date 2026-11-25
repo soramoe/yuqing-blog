@@ -4,6 +4,8 @@ import {
   formatDate,
   getPostPublishedAt,
   getReadingTime,
+  getSiteTagUsage,
+  rankTagsForCard,
 } from "../lib/blog";
 import { getResponsiveImage } from "../lib/images";
 import ArrowUpRight from "./ArrowUpRight.astro";
@@ -14,6 +16,13 @@ interface Props {
 }
 
 const { post, index = 0 } = Astro.props;
+
+// 标签频次全站共用，lib 里做了模块级缓存，多张卡片不会重复统计。
+const cardTags = rankTagsForCard(
+  post.data.tags,
+  await getSiteTagUsage(),
+);
+
 const publishedAt = getPostPublishedAt(post);
 const showCover = Boolean(post.data.cover && !post.data.hideCover);
 const cover = showCover && post.data.cover
@@ -81,9 +90,9 @@ const cover = showCover && post.data.cover
         <span>{post.data.category}</span>
       </a>
       {
-        post.data.tags.length > 0 && (
+        cardTags.length > 0 && (
           <div class="tag-list" aria-label="文章标签">
-            {post.data.tags.map((tag) => (
+            {cardTags.map((tag) => (
               <a class="tag" href={`/tags/${encodeURIComponent(tag)}/`}>
                 #{tag}
               </a>
