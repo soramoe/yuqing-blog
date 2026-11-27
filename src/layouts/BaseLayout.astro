@@ -26,6 +26,10 @@ interface Props {
   keywords?: string[];
   noindex?: boolean;
   bodyClass?: string;
+  /** 仅覆盖 SEO 用的完整标题，页面可见内容不变 */
+  seoTitle?: string;
+  /** 仅覆盖 SEO 里的站点名（标题后缀、og:site_name、JSON-LD），页面可见品牌不变 */
+  seoName?: string;
 }
 
 const {
@@ -41,10 +45,13 @@ const {
   keywords = [],
   noindex = false,
   bodyClass,
+  seoTitle,
+  seoName,
 } = Astro.props;
 
-const siteName = SITE.name;
-const pageTitle = title === siteName ? title : `${title} · ${siteName}`;
+const siteName = seoName ?? SITE.name;
+const pageTitle =
+  seoTitle ?? (title === siteName ? title : `${title} · ${siteName}`);
 const siteUrl = new URL("/", Astro.site ?? Astro.url);
 const canonical = new URL(Astro.url.pathname, siteUrl);
 const socialImage = new URL(image, Astro.site ?? Astro.url);
