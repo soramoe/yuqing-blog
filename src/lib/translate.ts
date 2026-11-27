@@ -8,6 +8,8 @@ export interface TranslateEnv {
       options?: { returnRawResponse?: boolean },
     ): Promise<unknown>;
   };
+  /** 生图提示词改写专用的 DeepSeek 密钥；未设置时回退 STORY_AI_API_KEY */
+  IMAGE_TRANSLATE_API_KEY?: string;
   STORY_AI_API_KEY?: string;
   STORY_AI_BASE_URL?: string;
 }
@@ -46,9 +48,10 @@ async function rewriteWithWorkersAi(env: TranslateEnv, text: string) {
   return cleanRewrite(rewritten);
 }
 
-// 2) DeepSeek（STORY_AI_API_KEY 已配置时启用；模型固定 deepseek-chat）
+// 2) DeepSeek：生图专用密钥优先，其次回退互动小说的 STORY_AI_API_KEY
 async function rewriteWithStoryAi(env: TranslateEnv, text: string) {
-  const apiKey = env.STORY_AI_API_KEY?.trim();
+  const apiKey =
+    env.IMAGE_TRANSLATE_API_KEY?.trim() || env.STORY_AI_API_KEY?.trim();
   if (!apiKey) throw new Error("no key");
   const baseUrl = env.STORY_AI_BASE_URL?.trim() || "https://api.deepseek.com";
   const endpoint = baseUrl.endsWith("/chat/completions")
@@ -129,13 +132,17 @@ async function gtxTranslate(text: string) {
 }
 
 // 对外入口：中文 → SDXL 风格英文提示词。
-// 链路：Workers AI 改写 → DeepSeek → Google 直译 → 原样返回
+// 链路：生图专用 DeepSeek（如已配置）→ Workers AI → 共用 DeepSeek → Google 直译 → 原样返回
 export async function translateImagePrompt(env: TranslateEnv, text: string) {
   if (!text.trim() || !CJK.test(text)) return text;
-  const rewriters = [
-    () => rewriteWithWorkersAi(env, text),
-    () => rewriteWithStoryAi(env, text),
-  ];
+  const rewriters: Array<() => Promise<string>> = [];
+  if (env.IMAGE_TRANSLATE_API_KEY?.trim()) {
+    rewriters.push(() => rewriteWithStoryAi(env, text));
+  }
+  rewriters.push(() => rewriteWithWorkersAi(env, text));
+  if (!env.IMAGE_TRANSLATE_API_KEY?.trim() && env.STORY_AI_API_KEY?.trim()) {
+    rewriters.push(() => rewriteWithStoryAi(env, text));
+  }
   for (const rewriter of rewriters) {
     try {
       return await rewriter();

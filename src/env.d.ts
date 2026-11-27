@@ -25,6 +25,8 @@ interface Env {
   IMAGE_COLAB_URL?: string;
   /** 与 Colab 端 API_KEY 一致的上游密钥 */
   IMAGE_COLAB_KEY?: string;
+  /** 生图提示词改写专用的 DeepSeek 密钥；未设置时回退 STORY_AI_API_KEY */
+  IMAGE_TRANSLATE_API_KEY?: string;
 }
 
 interface ImportMetaEnv {}
