@@ -10,9 +10,6 @@ export interface TranslateEnv {
   };
   STORY_AI_API_KEY?: string;
   STORY_AI_BASE_URL?: string;
-  STORY_AI_MODEL?: string;
-  IMAGE_QWEN_API_KEY?: string;
-  IMAGE_QWEN_BASE_URL?: string;
 }
 
 // 把中文自然语言改写成 SDXL 关键词式英文提示词（不是逐字直译）
@@ -49,7 +46,7 @@ async function rewriteWithWorkersAi(env: TranslateEnv, text: string) {
   return cleanRewrite(rewritten);
 }
 
-// 2) DeepSeek（STORY_AI_* 已配置时启用）
+// 2) DeepSeek（STORY_AI_API_KEY 已配置时启用；模型固定 deepseek-chat）
 async function rewriteWithStoryAi(env: TranslateEnv, text: string) {
   const apiKey = env.STORY_AI_API_KEY?.trim();
   if (!apiKey) throw new Error("no key");
@@ -57,20 +54,7 @@ async function rewriteWithStoryAi(env: TranslateEnv, text: string) {
   const endpoint = baseUrl.endsWith("/chat/completions")
     ? baseUrl
     : `${baseUrl.replace(/\/+$/, "")}/chat/completions`;
-  const model = env.STORY_AI_MODEL?.trim() || "deepseek-chat";
-  return chatRewrite(endpoint, apiKey, model, text);
-}
-
-// 3) DashScope 兼容模式（IMAGE_QWEN_API_KEY 已配置时启用）
-async function rewriteWithDashScope(env: TranslateEnv, text: string) {
-  const apiKey = env.IMAGE_QWEN_API_KEY?.trim();
-  if (!apiKey) throw new Error("no key");
-  const baseUrl =
-    env.IMAGE_QWEN_BASE_URL?.trim() || "https://dashscope.aliyuncs.com";
-  const endpoint = baseUrl.includes("/compatible-mode")
-    ? baseUrl
-    : `${baseUrl.replace(/\/+$/, "")}/compatible-mode/v1`;
-  return chatRewrite(`${endpoint}/chat/completions`, apiKey, "qwen-plus", text);
+  return chatRewrite(endpoint, apiKey, "deepseek-chat", text);
 }
 
 async function chatRewrite(
@@ -145,13 +129,12 @@ async function gtxTranslate(text: string) {
 }
 
 // 对外入口：中文 → SDXL 风格英文提示词。
-// 链路：Workers AI 改写 → DeepSeek → DashScope → Google 直译 → 原样返回
+// 链路：Workers AI 改写 → DeepSeek → Google 直译 → 原样返回
 export async function translateImagePrompt(env: TranslateEnv, text: string) {
   if (!text.trim() || !CJK.test(text)) return text;
   const rewriters = [
     () => rewriteWithWorkersAi(env, text),
     () => rewriteWithStoryAi(env, text),
-    () => rewriteWithDashScope(env, text),
   ];
   for (const rewriter of rewriters) {
     try {
