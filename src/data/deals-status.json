@@ -1,459 +1,449 @@
 {
-  "checkedAt": "2026-11-27T19:02:05.542Z",
+  "checkedAt": "2026-11-27T19:06:16.749Z",
   "summary": {
-    "ok": 71,
+    "ok": 61,
     "changed": 0,
-    "dead": 1,
-    "blocked": 2,
-    "unreachable": 0
+    "dead": 0,
+    "blocked": 4,
+    "unreachable": 9
   },
   "entries": {
     "ai-horde": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.946Z",
-      "hash": "12de12eb22f5f473",
-      "pendingHash": "93c6d17b701b42b1"
+      "checkedAt": "2026-11-27T19:06:09.177Z",
+      "hash": "93c6d17b701b42b1"
     },
     "aimlapi": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.977Z",
+      "checkedAt": "2026-11-27T19:06:00.907Z",
       "hash": "4e735493a50607c3"
     },
     "aion-labs": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.749Z"
+      "checkedAt": "2026-11-27T19:05:44.529Z"
     },
     "amazon-q": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.526Z",
-      "hash": "e670905d65a74f80",
-      "pendingHash": "20e2a4a4f2fb1939"
+      "checkedAt": "2026-11-27T19:05:57.714Z",
+      "hash": "e670905d65a74f80"
     },
     "anyapi": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.175Z",
+      "checkedAt": "2026-11-27T19:06:01.476Z",
       "hash": "c617d15905d55496"
     },
     "arli": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.268Z",
+      "checkedAt": "2026-11-27T19:06:02.977Z",
       "hash": "fa6622d190cfb13c"
     },
     "aws-activate": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.307Z",
-      "hash": "8a46a52042346422",
-      "pendingHash": "4e0d49320e828656"
+      "checkedAt": "2026-11-27T19:05:48.522Z",
+      "hash": "8a46a52042346422"
     },
     "axforge": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.585Z",
+      "checkedAt": "2026-11-27T19:06:07.899Z",
       "hash": "c4265ed19b3ed3d0"
     },
     "azure-students": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.845Z",
+      "checkedAt": "2026-11-27T19:05:54.407Z",
       "hash": "33159cde303da6bb",
-      "pendingHash": "d109ed4c6fca0a21"
+      "pendingHash": "88a4ac60c420bba9"
     },
     "baseten": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.412Z",
+      "checkedAt": "2026-11-27T19:05:49.866Z",
       "hash": "7a75bf3188515c1e"
     },
     "cerebras": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.566Z",
+      "checkedAt": "2026-11-27T19:05:43.808Z",
       "hash": "5fcf8c3770807971"
     },
     "chutes": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.369Z",
+      "checkedAt": "2026-11-27T19:06:05.111Z",
       "hash": "1378094d1ea21f9c"
     },
     "claude-oss": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.085Z",
+      "checkedAt": "2026-11-27T19:05:56.136Z",
       "hash": "77bb2db458599637"
     },
     "cloudflare-workers-ai": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.013Z",
+      "checkedAt": "2026-11-27T19:05:45.862Z",
       "hash": "574ae053790ca9eb"
     },
     "cn-baichuan": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:58.798Z"
+      "checkedAt": "2026-11-27T19:06:13.335Z"
     },
     "cn-comate": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:02:01.386Z",
+      "checkedAt": "2026-11-27T19:06:14.563Z",
       "hash": "e3b0c44298fc1c14"
     },
     "cn-deepseek": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:02:01.505Z",
+      "checkedAt": "2026-11-27T19:06:14.815Z",
       "hash": "587e14cfac6234d6"
     },
     "cn-ernie": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:56.485Z",
+      "checkedAt": "2026-11-27T19:06:12.619Z",
       "hash": "bfbfb735b9784ccd"
     },
     "cn-huawei": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:58.203Z",
+      "checkedAt": "2026-11-27T19:06:13.267Z",
       "hash": "ee23f5fd6f0c9e45"
     },
     "cn-kimi": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:59.017Z"
+      "checkedAt": "2026-11-27T19:06:13.872Z"
     },
     "cn-lingma": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:02:01.244Z",
+      "checkedAt": "2026-11-27T19:06:14.561Z",
       "hash": "abd0b2821885cfa5"
     },
     "cn-minimax": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:59.021Z"
+      "checkedAt": "2026-11-27T19:06:13.955Z"
     },
     "cn-modelscope": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:02:00.474Z",
+      "checkedAt": "2026-11-27T19:06:14.356Z",
       "hash": "fc944d18b656e901"
     },
     "cn-qwen": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:56.417Z",
-      "hash": "06ea8f6b7aba8a98"
+      "checkedAt": "2026-11-27T19:06:10.722Z",
+      "hash": "06ea8f6b7aba8a98",
+      "pendingHash": "4939ce4208b9dba5"
     },
     "cn-sensenova": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:59.328Z"
+      "checkedAt": "2026-11-27T19:06:14.202Z"
     },
     "cn-siliconflow": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:02:00.149Z",
+      "checkedAt": "2026-11-27T19:06:14.245Z",
       "hash": "831308d311866a34"
     },
     "cn-spark": {
       "status": "blocked",
       "http": 403,
-      "checkedAt": "2026-11-27T19:01:59.069Z"
+      "checkedAt": "2026-11-27T19:06:14.199Z"
     },
     "cn-stepfun": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:58.882Z"
+      "checkedAt": "2026-11-27T19:06:13.705Z"
     },
     "cn-tokenhub": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:56.686Z",
+      "checkedAt": "2026-11-27T19:06:12.920Z",
       "hash": "40d9c1c791f4288f"
     },
     "cn-trae": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:02:00.762Z",
-      "hash": "c410e6a0d254f774",
-      "pendingHash": "a5699e40b5e5c6c2"
+      "checkedAt": "2026-11-27T19:06:14.469Z",
+      "hash": "c410e6a0d254f774"
     },
     "cn-volcengine": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:57.915Z",
+      "checkedAt": "2026-11-27T19:06:13.089Z",
       "hash": "993998d799f79e06"
     },
     "cn-workbuddy": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:02:00.720Z",
+      "checkedAt": "2026-11-27T19:06:14.450Z",
       "hash": "9cc95c6c06619cd6"
     },
     "cn-zhipu": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:56.359Z",
+      "checkedAt": "2026-11-27T19:06:10.544Z",
       "hash": "f245af6c4d0de348"
     },
     "codex-oss": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.112Z",
-      "hash": "f16395a126e25656",
-      "pendingHash": "e6706c5317c6853d"
+      "checkedAt": "2026-11-27T19:05:56.905Z",
+      "hash": "f16395a126e25656"
     },
     "cohere": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.730Z",
+      "checkedAt": "2026-11-27T19:05:44.143Z",
       "hash": "b7121aea9a957da8"
     },
     "cursor": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.340Z",
+      "checkedAt": "2026-11-27T19:05:57.298Z",
       "hash": "d55715374efc39c0"
     },
     "deepinfra": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.632Z",
-      "hash": "a6366b8d0a314510",
-      "pendingHash": "560ecbb242ba78ee"
+      "status": "unreachable",
+      "error": "TypeError",
+      "checkedAt": "2026-11-27T19:05:58.679Z",
+      "hash": "a6366b8d0a314510"
     },
     "fireworks": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.603Z",
-      "hash": "822c52e06ff6e87f",
-      "pendingHash": "810083d505c6ff7d"
+      "status": "unreachable",
+      "error": "TypeError",
+      "checkedAt": "2026-11-27T19:05:58.407Z",
+      "hash": "822c52e06ff6e87f"
     },
     "github-copilot-free": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.277Z",
+      "checkedAt": "2026-11-27T19:05:57.191Z",
       "hash": "73d7f1e2d66887ca"
     },
     "github-student": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.771Z",
+      "checkedAt": "2026-11-27T19:05:54.406Z",
       "hash": "ddb78421425a8f1a",
-      "pendingHash": "6ef760bac7941bc0"
+      "pendingHash": "1f1237c4b7c0e85e"
     },
     "google-ai-studio": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.506Z",
-      "hash": "094ffd00393e752a",
-      "pendingHash": "b8f47d3f0e245e2a"
+      "status": "unreachable",
+      "error": "TypeError",
+      "checkedAt": "2026-11-27T19:05:43.773Z",
+      "hash": "094ffd00393e752a"
     },
     "google-cloud": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.267Z",
+      "status": "unreachable",
+      "error": "TypeError",
+      "checkedAt": "2026-11-27T19:05:48.011Z",
       "hash": "67fe6a0dddfa7b8d"
     },
     "google-startups": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.591Z",
+      "status": "unreachable",
+      "error": "timeout",
+      "checkedAt": "2026-11-27T19:05:52.995Z",
       "hash": "db73b42c4af4403b"
     },
     "groq": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.565Z"
+      "status": "blocked",
+      "http": 403,
+      "checkedAt": "2026-11-27T19:05:43.807Z"
     },
     "hyperbolic": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.765Z",
+      "checkedAt": "2026-11-27T19:05:59.238Z",
       "hash": "36a9cccd015e62f8"
     },
     "ibm-watsonx": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.489Z",
+      "checkedAt": "2026-11-27T19:05:50.442Z",
       "hash": "003f174c96a6d93a"
     },
     "jina": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.196Z",
+      "status": "unreachable",
+      "error": "TypeError",
+      "checkedAt": "2026-11-27T19:05:46.728Z",
       "hash": "77e5307599d8fa7d"
     },
     "kilo": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.537Z",
+      "checkedAt": "2026-11-27T19:06:06.354Z",
       "hash": "ce512980310b7081"
     },
     "kiro": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.389Z",
+      "checkedAt": "2026-11-27T19:05:57.496Z",
       "hash": "afb85132ac9e1ac2"
     },
     "llm7": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.750Z",
+      "checkedAt": "2026-11-27T19:06:08.905Z",
       "hash": "eeecfa8a38056781"
     },
     "mistral": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.570Z",
-      "hash": "143f517ff762d12a",
-      "pendingHash": "ebc18d22fc33b977"
+      "status": "unreachable",
+      "error": "TypeError",
+      "checkedAt": "2026-11-27T19:05:43.810Z",
+      "hash": "143f517ff762d12a"
     },
     "modal": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.131Z",
+      "checkedAt": "2026-11-27T19:05:46.632Z",
       "hash": "1052b92f2a55b5a0"
     },
     "ms-founders-hub": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.510Z",
+      "checkedAt": "2026-11-27T19:05:50.642Z",
       "hash": "80200fcecc6e195b",
-      "pendingHash": "2c535bddbd503eb5"
+      "pendingHash": "fed8afba7dbabae6"
     },
     "nebius": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.738Z",
+      "checkedAt": "2026-11-27T19:05:59.187Z",
       "hash": "c62ca639c0fede26"
     },
     "novita": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.665Z",
-      "hash": "ed55743792cebcc6",
-      "pendingHash": "ff472123000a7a2e"
+      "status": "unreachable",
+      "error": "TypeError",
+      "checkedAt": "2026-11-27T19:05:58.706Z",
+      "hash": "ed55743792cebcc6"
     },
     "nvidia-inception": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.770Z",
+      "checkedAt": "2026-11-27T19:05:53.409Z",
       "hash": "3254bc71398b1c6e"
     },
     "nvidia-nim": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.077Z"
+      "checkedAt": "2026-11-27T19:05:46.604Z"
     },
     "ollama-cloud": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.877Z",
+      "checkedAt": "2026-11-27T19:05:45.201Z",
       "hash": "246b8b50f82afc22"
     },
     "openrouter": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.569Z",
+      "checkedAt": "2026-11-27T19:05:43.809Z",
       "hash": "35721d77201ed1dd",
-      "pendingHash": "46dc9fa6d11ae94d"
+      "pendingHash": "ac70db9fcbd3890c"
     },
     "oracle-cloud": {
       "status": "blocked",
       "http": 403,
-      "checkedAt": "2026-11-27T19:01:53.378Z"
+      "checkedAt": "2026-11-27T19:05:49.108Z"
     },
     "ovhcloud-ai": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.863Z",
+      "checkedAt": "2026-11-27T19:06:08.907Z",
       "hash": "eeecfa8a38056781"
     },
     "parasail": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.339Z",
+      "checkedAt": "2026-11-27T19:06:04.555Z",
       "hash": "0a3590eafdf45b45"
     },
     "pollinations": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.833Z",
+      "checkedAt": "2026-11-27T19:06:08.906Z",
       "hash": "acdda98384a2fc4e"
     },
     "portkey": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.668Z",
+      "checkedAt": "2026-11-27T19:06:08.726Z",
       "hash": "376b5834d95faf35"
     },
     "requesty": {
-      "status": "ok",
-      "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.354Z",
-      "hash": "352996b414a645da",
-      "pendingHash": "b0e960b20b536b01"
+      "status": "unreachable",
+      "error": "TypeError",
+      "checkedAt": "2026-11-27T19:06:05.050Z",
+      "hash": "352996b414a645da"
     },
     "sambanova": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.567Z",
+      "checkedAt": "2026-11-27T19:05:43.808Z",
       "hash": "90eff01f69a0a48f"
     },
     "scaleway": {
-      "status": "dead",
-      "http": 404,
-      "checkedAt": "2026-11-27T19:01:52.883Z"
+      "status": "blocked",
+      "http": 403,
+      "checkedAt": "2026-11-27T19:05:45.624Z"
     },
     "siliconflow-intl": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.976Z",
+      "checkedAt": "2026-11-27T19:06:09.719Z",
       "hash": "1623e578d9aa306a"
     },
     "together": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.532Z",
+      "checkedAt": "2026-11-27T19:05:58.009Z",
       "hash": "1039d691ea5911f0"
     },
     "upstage": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.856Z",
+      "checkedAt": "2026-11-27T19:05:54.790Z",
       "hash": "5c4521b32d8a8fc3"
     },
     "vercel-ai-gateway": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:55.617Z",
+      "checkedAt": "2026-11-27T19:06:08.002Z",
       "hash": "de82026ca46da848"
     },
     "voyage": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:53.202Z",
+      "checkedAt": "2026-11-27T19:05:47.479Z",
       "hash": "464f8fb43a0e6b48"
     },
     "zai-intl": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:52.773Z",
+      "checkedAt": "2026-11-27T19:05:45.139Z",
       "hash": "11709d4d9e1150b1"
     },
     "zed": {
       "status": "ok",
       "http": 200,
-      "checkedAt": "2026-11-27T19:01:54.457Z",
+      "checkedAt": "2026-11-27T19:05:57.649Z",
       "hash": "371bcdef0a5d9bec"
     }
   }
