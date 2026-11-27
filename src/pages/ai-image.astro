@@ -1,0 +1,235 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="AI 生图"
+  description="在浏览器里输入中文提示词，自动翻译成英文后交给 Colab 上的 SDXL 模型生成图片。"
+>
+  <main class="ai-shell">
+    <p class="eyebrow">AI IMAGE LAB</p>
+    <h1>AI 生图</h1>
+    <p class="ai-lead">
+      中文会自动翻译成英文，再交给 Colab 上的 SDXL 模型。1024×1024 一张约 30~60 秒，GPU 一次只画一张。
+    </p>
+
+    <form id="gen-form" class="ai-form">
+      <label>
+        主体描述（必填）
+        <input id="prompt" maxlength="800" placeholder="例如：一只在太空里的橘猫宇航员" required />
+      </label>
+      <label>
+        第二提示词（可选，写给 SDXL 的第二个文本编码器）
+        <input id="prompt2" maxlength="800" placeholder="例如：电影感构图，细致的光影层次" />
+      </label>
+      <label>
+        负面提示词（可选，不想出现的东西）
+        <input id="negative" maxlength="500" placeholder="例如：模糊，低质量，多余的手指" />
+      </label>
+
+      <details class="ai-advanced">
+        <summary>高级参数（尺寸 / 步数 / CFG / 种子）</summary>
+        <div class="ai-advanced-grid">
+          <label>
+            尺寸
+            <select id="size">
+              <option value="1024x1024" selected>1024 × 1024（1:1）</option>
+              <option value="1216x832">1216 × 832（横版）</option>
+              <option value="832x1216">832 × 1216（竖版）</option>
+              <option value="1152x896">1152 × 896（横版）</option>
+              <option value="896x1152">896 × 1152（竖版）</option>
+            </select>
+          </label>
+          <label>
+            步数
+            <input id="steps" type="number" min="10" max="50" placeholder="30" />
+          </label>
+          <label>
+            CFG
+            <input id="guidance" type="number" min="1" max="20" step="0.5" placeholder="6.0" />
+          </label>
+          <label>
+            种子（留空随机）
+            <input id="seed" type="number" min="0" placeholder="42" />
+          </label>
+        </div>
+      </details>
+
+      <button id="submit" class="button button-primary" type="submit">生成</button>
+    </form>
+
+    <p id="status" class="ai-status">正在检查服务状态…</p>
+    <div id="result" class="ai-result"></div>
+  </main>
+</BaseLayout>
+
+<style>
+  .ai-shell {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 1.25rem 4rem;
+  }
+  .eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 0.5rem;
+  }
+  .ai-lead {
+    color: var(--muted);
+    margin-bottom: 2rem;
+  }
+  .ai-form {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .ai-form label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .ai-form input,
+  .ai-form select {
+    padding: 0.6rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+  }
+  .ai-form input:focus,
+  .ai-form select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .ai-form button {
+    justify-self: start;
+    cursor: pointer;
+  }
+  .ai-form button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ai-advanced {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+  }
+  .ai-advanced summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--muted);
+  }
+  .ai-advanced-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  .ai-status {
+    color: var(--muted);
+    min-height: 1.5em;
+  }
+  .ai-result img {
+    display: block;
+    margin-top: 1rem;
+    max-width: 100%;
+    border-radius: 12px;
+  }
+</style>
+
+<script>
+  const $ = (id: string) => document.getElementById(id);
+  const statusEl = $("status") as HTMLElement;
+  const btn = $("submit") as HTMLButtonElement;
+  const result = $("result") as HTMLElement;
+  const promptInput = $("prompt") as HTMLInputElement;
+  const prompt2Input = $("prompt2") as HTMLInputElement;
+  const negativeInput = $("negative") as HTMLInputElement;
+  const sizeSelect = $("size") as HTMLSelectElement;
+  const stepsInput = $("steps") as HTMLInputElement;
+  const guidanceInput = $("guidance") as HTMLInputElement;
+  const seedInput = $("seed") as HTMLInputElement;
+
+  const OFFLINE_TEXT = "🛌 GPU 休息中，稍后再来看看";
+
+  function setStatus(text: string) {
+    statusEl.textContent = text;
+  }
+
+  async function checkHealth() {
+    try {
+      const response = await fetch("/api/ai-image/health");
+      setStatus(response.ok ? "✅ 服务在线，填好提示词点生成" : OFFLINE_TEXT);
+    } catch {
+      setStatus(OFFLINE_TEXT);
+    }
+  }
+
+  checkHealth();
+
+  document
+    .getElementById("gen-form")
+    ?.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const prompt = promptInput.value.trim();
+      if (!prompt) {
+        setStatus("先填主体描述");
+        return;
+      }
+
+      const [width, height] = sizeSelect.value.split("x").map(Number);
+      const payload: Record<string, unknown> = {
+        prompt,
+        prompt_2: prompt2Input.value.trim(),
+        negative_prompt: negativeInput.value.trim(),
+        width,
+        height,
+      };
+      if (stepsInput.value) payload.steps = Number(stepsInput.value);
+      if (guidanceInput.value) payload.guidance = Number(guidanceInput.value);
+      if (seedInput.value !== "") payload.seed = Number(seedInput.value);
+
+      btn.disabled = true;
+      setStatus("🎨 翻译 + 生成中，一般 30~60 秒…");
+      result.innerHTML = "";
+      try {
+        const response = await fetch("/api/ai-image/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (response.status === 429) throw new Error("busy");
+        if (response.status === 401) throw new Error("auth");
+        if (response.status === 502 || response.status === 503)
+          throw new Error("offline");
+        if (!response.ok) throw new Error("fail");
+        const data = (await response.json()) as { images?: string[] };
+        for (const b64 of data.images ?? []) {
+          const img = new Image();
+          img.src = `data:image/png;base64,${b64}`;
+          img.alt = prompt;
+          result.appendChild(img);
+        }
+        setStatus("✅ 完成");
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        setStatus(
+          {
+            busy: "⏳ 请求太频繁或有人正在生成，稍等几秒再试",
+            offline: OFFLINE_TEXT,
+            auth: "🔑 上游密钥不匹配：检查 IMAGE_COLAB_KEY 和 Colab 的 API_KEY",
+          }[message] ?? "😞 生成失败，稍后再试",
+        );
+      } finally {
+        btn.disabled = false;
+      }
+    });
+</script>

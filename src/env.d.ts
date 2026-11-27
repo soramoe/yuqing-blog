@@ -21,6 +21,10 @@ interface Env {
   IMAGE_QWEN_BASE_URL?: string;
   IMAGE_SILICONFLOW_API_KEY?: string;
   IMAGE_SILICONFLOW_BASE_URL?: string;
+  /** Colab SDXL 上游：ngrok 固定域名，如 https://xxxx.ngrok-free.app */
+  IMAGE_COLAB_URL?: string;
+  /** 与 Colab 端 API_KEY 一致的上游密钥 */
+  IMAGE_COLAB_KEY?: string;
 }
 
 interface ImportMetaEnv {}
