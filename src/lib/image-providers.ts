@@ -3,7 +3,7 @@ import type {
   ImageProviderConfig,
   ImageQuality,
 } from "./image-settings";
-import { translateToEnglish } from "./translate";
+import { gtxTranslate, translateImagePrompt } from "./translate";
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 
@@ -23,6 +23,9 @@ export interface ImageProviderEnv {
   IMAGE_SILICONFLOW_BASE_URL?: string;
   IMAGE_COLAB_URL?: string;
   IMAGE_COLAB_KEY?: string;
+  STORY_AI_API_KEY?: string;
+  STORY_AI_BASE_URL?: string;
+  STORY_AI_MODEL?: string;
 }
 
 export interface ImageGenerationRequest {
@@ -494,11 +497,12 @@ async function generateWithColab(
       false,
     );
   }
-  // Colab 管线只认英文；优先使用现成英文提示词，否则自动翻译
+  // Colab 管线只认英文；优先使用现成英文提示词，否则走智能改写链路
   const prompt =
-    request.englishPrompt?.trim() || (await translateToEnglish(request.prompt));
+    request.englishPrompt?.trim() ||
+    (await translateImagePrompt(env, request.prompt));
   const negativePrompt = request.negativePrompt
-    ? await translateToEnglish(request.negativePrompt)
+    ? await gtxTranslate(request.negativePrompt)
     : "";
 
   const controller = new AbortController();

@@ -6,6 +6,7 @@ import {
 } from "../../../src/lib/image-service";
 import { getImageSettings } from "../../../src/lib/image-settings";
 import { notifyColabDown } from "../../../src/lib/system-notify";
+import { gtxTranslate, translateImagePrompt } from "../../../src/lib/translate";
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -92,14 +93,22 @@ export const onRequestPost: PagesFunction<Env> = async ({
     return json({ error: "主体描述至少 6 个字。" }, 400);
   }
 
+  // 中文 → SDXL 风格英文提示词（Workers AI 智能改写优先，直译兜底）
+  const [enPrompt, enPrompt2, enNegative] = await Promise.all([
+    translateImagePrompt(env, prompt),
+    prompt2 ? translateImagePrompt(env, prompt2) : Promise.resolve(""),
+    negativePrompt ? gtxTranslate(negativePrompt) : Promise.resolve(""),
+  ]);
+
   try {
     const result = await createAndRunImageJob(env, {
       userId: session.user.id,
       requestId,
       feature: "image_studio",
       prompt,
-      prompt2,
-      negativePrompt,
+      englishPrompt: enPrompt,
+      prompt2: enPrompt2,
+      negativePrompt: enNegative,
       quality,
       aspectRatio: ratio,
       permission: "private",
@@ -112,6 +121,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
         balance: result.balance,
         width: result.width,
         height: result.height,
+        translated: enPrompt,
       },
       201,
     );
