@@ -13,6 +13,7 @@ export default defineConfig({
     "./src/lib/story-settings-schema.ts",
     "./src/lib/story-cloud-schema.ts",
     "./src/lib/image-schema.ts",
+    "./src/lib/notification-schema.ts",
   ],
   out: "./migrations",
 });

@@ -16,6 +16,7 @@ export const imageSetting = sqliteTable("image_setting", {
   pointValueCents: integer("point_value_cents").default(1).notNull(),
   standardPoints: integer("standard_points").default(20).notNull(),
   hdPoints: integer("hd_points").default(32).notNull(),
+  studioPoints: integer("studio_points").default(120).notNull(),
   dailyJobLimit: integer("daily_job_limit").default(100).notNull(),
   monthlyBudgetCents: integer("monthly_budget_cents")
     .default(5000)
@@ -33,6 +34,7 @@ export const imageProvider = sqliteTable(
     name: text("name").notNull(),
     adapter: text("adapter").notNull(),
     model: text("model").notNull(),
+    features: text("features").default("").notNull(),
     enabled: integer("enabled", { mode: "boolean" }).default(true).notNull(),
     priority: integer("priority").default(100).notNull(),
     dailyJobLimit: integer("daily_job_limit").default(100).notNull(),

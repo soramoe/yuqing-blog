@@ -4,68 +4,94 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <BaseLayout
   title="AI 生图"
-  description="在浏览器里输入中文提示词，自动翻译成英文后交给 Colab 上的 SDXL 模型生成图片。"
+  description="输入中文提示词，自动翻译成英文后交给站长的 SDXL 模型生成图片。消耗积分。"
 >
   <main class="ai-shell">
     <p class="eyebrow">AI IMAGE LAB</p>
     <h1>AI 生图</h1>
     <p class="ai-lead">
-      中文会自动翻译成英文，再交给 Colab 上的 SDXL 模型。1024×1024 一张约 30~60 秒，GPU 一次只画一张。
+      中文会自动翻译成英文，交给站长自建的 SDXL 模型。每次生成消耗积分，生成失败自动退回。
     </p>
 
-    <form id="gen-form" class="ai-form">
-      <label>
-        主体描述（必填）
-        <input id="prompt" maxlength="800" placeholder="例如：一只在太空里的橘猫宇航员" required />
-      </label>
-      <label>
-        第二提示词（可选，写给 SDXL 的第二个文本编码器）
-        <input id="prompt2" maxlength="800" placeholder="例如：电影感构图，细致的光影层次" />
-      </label>
-      <label>
-        负面提示词（可选，不想出现的东西）
-        <input id="negative" maxlength="500" placeholder="例如：模糊，低质量，多余的手指" />
-      </label>
+    <!-- 未登录：引导登录 -->
+    <div id="login-card" class="ai-card" hidden>
+      <h2>登录后才能使用</h2>
+      <p class="ai-muted">
+        生图消耗积分，只有登录用户可以画。登录后每天签到还能攒积分。
+      </p>
+      <div class="ai-actions">
+        <a class="button button-primary" href="/login/">去登录</a>
+        <a class="text-link" href="/points/">了解积分 <span aria-hidden="true">→</span></a>
+      </div>
+    </div>
 
-      <details class="ai-advanced">
-        <summary>高级参数（尺寸 / 步数 / CFG / 种子）</summary>
-        <div class="ai-advanced-grid">
+    <!-- 已登录：主体 -->
+    <div id="app" hidden>
+      <div class="ai-statusbar">
+        <span id="service-badge" class="ai-badge" data-state="checking">
+          检查服务…
+        </span>
+        <span id="balance-chip" class="ai-chip" hidden>
+          积分余额 <strong id="balance-value">–</strong>
+        </span>
+        <span id="price-chip" class="ai-chip" hidden>
+          本次消耗 <strong id="price-value">–</strong> 积分
+        </span>
+      </div>
+
+      <form id="gen-form" class="ai-form">
+        <label>
+          主体描述（必填）
+          <input id="prompt" maxlength="800" placeholder="例如：一只在太空里的橘猫宇航员" required />
+        </label>
+        <label>
+          第二提示词（可选，写给 SDXL 的第二个文本编码器）
+          <input id="prompt2" maxlength="800" placeholder="例如：电影感构图，细致的光影层次" />
+        </label>
+        <label>
+          负面提示词（可选，不想出现的东西）
+          <input id="negative" maxlength="500" placeholder="例如：模糊，低质量，多余的手指" />
+        </label>
+        <div class="ai-grid">
           <label>
-            尺寸
-            <select id="size">
-              <option value="1024x1024" selected>1024 × 1024（1:1）</option>
-              <option value="1216x832">1216 × 832（横版）</option>
-              <option value="832x1216">832 × 1216（竖版）</option>
-              <option value="1152x896">1152 × 896（横版）</option>
-              <option value="896x1152">896 × 1152（竖版）</option>
+            画质
+            <select id="quality">
+              <option value="standard" selected>标准</option>
+              <option value="hd">高清</option>
             </select>
           </label>
           <label>
-            步数
-            <input id="steps" type="number" min="10" max="50" placeholder="30" />
-          </label>
-          <label>
-            CFG
-            <input id="guidance" type="number" min="1" max="20" step="0.5" placeholder="6.0" />
-          </label>
-          <label>
-            种子（留空随机）
-            <input id="seed" type="number" min="0" placeholder="42" />
+            比例
+            <select id="ratio">
+              <option value="1:1" selected>1:1 方形</option>
+              <option value="4:5">4:5 竖版</option>
+              <option value="16:9">16:9 横版</option>
+            </select>
           </label>
         </div>
-      </details>
+        <button id="submit" class="button button-primary" type="submit">
+          生成
+        </button>
+      </form>
 
-      <button id="submit" class="button button-primary" type="submit">生成</button>
-    </form>
+      <p id="status" class="ai-status">正在检查服务状态…</p>
 
-    <p id="status" class="ai-status">正在检查服务状态…</p>
-    <div id="result" class="ai-result"></div>
+      <div id="result" class="ai-result" hidden>
+        <img id="result-img" alt="生成结果" />
+        <p id="result-meta" class="ai-muted"></p>
+      </div>
+
+      <div id="history-wrap" hidden>
+        <p class="ai-history-title">本次会话的生成记录</p>
+        <div id="history" class="ai-history"></div>
+      </div>
+    </div>
   </main>
 </BaseLayout>
 
 <style>
   .ai-shell {
-    max-width: 720px;
+    max-width: 760px;
     margin: 0 auto;
     padding: 0 1.25rem 4rem;
   }
@@ -82,12 +108,62 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
   .ai-lead {
     color: var(--muted);
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .ai-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.6rem;
+    display: grid;
+    gap: 0.8rem;
+  }
+  .ai-card h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+  .ai-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+  }
+  .ai-statusbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+  }
+  .ai-badge,
+  .ai-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem 0.7rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--surface);
+  }
+  .ai-badge[data-state="online"] {
+    color: #7ec699;
+    border-color: rgb(83 160 112 / 45%);
+  }
+  .ai-badge[data-state="busy"] {
+    color: #e2a355;
+    border-color: rgb(205 125 54 / 45%);
+  }
+  .ai-chip strong {
+    color: var(--text);
   }
   .ai-form {
     display: grid;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.4rem;
+    margin-bottom: 1rem;
   }
   .ai-form label {
     display: grid;
@@ -97,10 +173,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
   .ai-form input,
   .ai-form select {
-    padding: 0.6rem 0.8rem;
+    padding: 0.62rem 0.85rem;
     border: 1px solid var(--border);
     border-radius: 10px;
-    background: var(--surface);
+    background: var(--background);
     color: var(--text);
     font: inherit;
   }
@@ -109,127 +185,240 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     outline: none;
     border-color: var(--accent);
   }
+  .ai-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem;
+  }
   .ai-form button {
     justify-self: start;
     cursor: pointer;
+    min-width: 8rem;
   }
   .ai-form button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
-  .ai-advanced {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 0.75rem 1rem;
-  }
-  .ai-advanced summary {
-    cursor: pointer;
-    font-size: 0.85rem;
-    color: var(--muted);
-  }
-  .ai-advanced-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.75rem;
-    margin-top: 0.75rem;
-  }
   .ai-status {
     color: var(--muted);
     min-height: 1.5em;
   }
+  .ai-result {
+    margin-top: 1.2rem;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--surface);
+  }
   .ai-result img {
     display: block;
-    margin-top: 1rem;
-    max-width: 100%;
-    border-radius: 12px;
+    width: 100%;
+    height: auto;
+  }
+  .ai-result p {
+    margin: 0;
+    padding: 0.7rem 1rem;
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+  }
+  .ai-muted {
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
+  .ai-history-title {
+    margin: 1.6rem 0 0.6rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .ai-history {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .ai-history img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    cursor: pointer;
   }
 </style>
 
 <script>
   const $ = (id: string) => document.getElementById(id);
+  const loginCard = $("login-card") as HTMLElement;
+  const app = $("app") as HTMLElement;
   const statusEl = $("status") as HTMLElement;
+  const badge = $("service-badge") as HTMLElement;
+  const balanceChip = $("balance-chip") as HTMLElement;
+  const balanceValue = $("balance-value") as HTMLElement;
+  const priceChip = $("price-chip") as HTMLElement;
+  const priceValue = $("price-value") as HTMLElement;
+  const form = document.getElementById("gen-form") as HTMLFormElement;
   const btn = $("submit") as HTMLButtonElement;
-  const result = $("result") as HTMLElement;
   const promptInput = $("prompt") as HTMLInputElement;
   const prompt2Input = $("prompt2") as HTMLInputElement;
   const negativeInput = $("negative") as HTMLInputElement;
-  const sizeSelect = $("size") as HTMLSelectElement;
-  const stepsInput = $("steps") as HTMLInputElement;
-  const guidanceInput = $("guidance") as HTMLInputElement;
-  const seedInput = $("seed") as HTMLInputElement;
+  const qualitySelect = $("quality") as HTMLSelectElement;
+  const ratioSelect = $("ratio") as HTMLSelectElement;
+  const resultWrap = $("result") as HTMLElement;
+  const resultImg = $("result-img") as HTMLImageElement;
+  const resultMeta = $("result-meta") as HTMLElement;
+  const historyWrap = $("history-wrap") as HTMLElement;
+  const historyEl = $("history") as HTMLElement;
 
-  const OFFLINE_TEXT = "🛌 GPU 休息中，稍后再来看看";
+  const history: string[] = [];
+  let balance: number | null = null;
+  let pointsCost: number | null = null;
 
-  function setStatus(text: string) {
+  const setStatus = (text: string) => {
     statusEl.textContent = text;
+  };
+  const setBalance = (value: number | null) => {
+    if (value === null) return;
+    balance = value;
+    balanceValue.textContent = String(balance);
+    balanceChip.hidden = false;
+  };
+
+  function setBadge(state: "online" | "busy" | "checking", text: string) {
+    badge.dataset.state = state;
+    badge.textContent = text;
   }
 
-  async function checkHealth() {
-    try {
-      const response = await fetch("/api/ai-image/health");
-      setStatus(response.ok ? "✅ 服务在线，填好提示词点生成" : OFFLINE_TEXT);
-    } catch {
-      setStatus(OFFLINE_TEXT);
+  const ERROR_TEXT: Record<string, string> = {
+    insufficient: "积分不足啦 — 每日签到可以攒积分。",
+    unavailable: "服务正忙（GPU 可能掉线了），积分没有扣。",
+    processing: "这个请求正在处理中，别着急。",
+    duplicate: "刚才已经提交过一样的请求了。",
+  };
+
+  function addToHistory(url: string) {
+    history.push(url);
+    historyWrap.hidden = false;
+    const img = document.createElement("img");
+    img.src = url;
+    img.alt = "历史生成";
+    img.addEventListener("click", () => {
+      resultImg.src = url;
+      resultWrap.hidden = false;
+    });
+    historyEl.prepend(img);
+  }
+
+  // 1) 登录态：未登录显示登录引导；2) 已登录并行拉取余额与服务状态
+  void (async () => {
+    const session = await fetch("/api/auth/get-session", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null);
+
+    if (!session?.user) {
+      loginCard.hidden = false;
+      statusEl.hidden = true;
+      return;
     }
-  }
+    app.hidden = false;
 
-  checkHealth();
+    void fetch("/api/points", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setBalance(data?.balance ?? null))
+      .catch(() => undefined);
 
-  document
-    .getElementById("gen-form")
-    ?.addEventListener("submit", async (event) => {
+    try {
+      const response = await fetch("/api/ai-image/generate", {
+        headers: { Accept: "application/json" },
+      });
+      const data = (await response.json()) as {
+        ok: boolean;
+        enabled: boolean;
+        points: number;
+      };
+      pointsCost = data.points;
+      priceValue.textContent = String(data.points);
+      priceChip.hidden = false;
+      if (data.ok && data.enabled) {
+        setBadge("online", "● 服务在线");
+        setStatus("填好提示词，点「生成」开始。");
+      } else {
+        setBadge("busy", "● 服务正忙");
+        setStatus("GPU 服务暂时掉线，稍后再来看看（积分不会白扣）。");
+      }
+    } catch {
+      setBadge("busy", "● 服务正忙");
+      setStatus("暂时无法确认服务状态，稍后再试。");
+    }
+
+    form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const prompt = promptInput.value.trim();
-      if (!prompt) {
-        setStatus("先填主体描述");
+      if (prompt.length < 6) {
+        setStatus("主体描述至少 6 个字。");
         return;
       }
-
-      const [width, height] = sizeSelect.value.split("x").map(Number);
-      const payload: Record<string, unknown> = {
-        prompt,
-        prompt_2: prompt2Input.value.trim(),
-        negative_prompt: negativeInput.value.trim(),
-        width,
-        height,
-      };
-      if (stepsInput.value) payload.steps = Number(stepsInput.value);
-      if (guidanceInput.value) payload.guidance = Number(guidanceInput.value);
-      if (seedInput.value !== "") payload.seed = Number(seedInput.value);
-
       btn.disabled = true;
       setStatus("🎨 翻译 + 生成中，一般 30~60 秒…");
-      result.innerHTML = "";
+      resultWrap.hidden = true;
       try {
         const response = await fetch("/api/ai-image/generate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
+          credentials: "same-origin",
+          body: JSON.stringify({
+            requestId: crypto.randomUUID(),
+            prompt,
+            prompt_2: prompt2Input.value.trim(),
+            negative_prompt: negativeInput.value.trim(),
+            quality: qualitySelect.value,
+            aspectRatio: ratioSelect.value,
+          }),
         });
-        if (response.status === 429) throw new Error("busy");
-        if (response.status === 401) throw new Error("auth");
-        if (response.status === 502 || response.status === 503)
-          throw new Error("offline");
-        if (!response.ok) throw new Error("fail");
-        const data = (await response.json()) as { images?: string[] };
-        for (const b64 of data.images ?? []) {
-          const img = new Image();
-          img.src = `data:image/png;base64,${b64}`;
-          img.alt = prompt;
-          result.appendChild(img);
+        const data = (await response.json()) as {
+          error?: string;
+          code?: string;
+          balance?: number;
+          pointsCost?: number;
+          jobId?: string;
+          url?: string;
+        };
+        if (response.status === 401) {
+          app.hidden = true;
+          loginCard.hidden = false;
+          return;
+        }
+        if (!response.ok) {
+          setStatus(
+            ERROR_TEXT[data.code ?? ""] ??
+              data.error ??
+              "生成失败，稍后再试。",
+          );
+          if (typeof data.balance === "number") setBalance(data.balance);
+          return;
+        }
+        // 成功
+        if (typeof data.balance === "number") setBalance(data.balance);
+        if (typeof data.url === "string") {
+          resultImg.src = data.url;
+          resultWrap.hidden = false;
+          addToHistory(data.url);
+          resultMeta.textContent =
+            `消耗 ${data.pointsCost ?? pointsCost ?? "–"} 积分 · ` +
+            `余额 ${data.balance ?? "–"} · ${data.width}×${data.height}`;
         }
         setStatus("✅ 完成");
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "";
-        setStatus(
-          {
-            busy: "⏳ 请求太频繁或有人正在生成，稍等几秒再试",
-            offline: OFFLINE_TEXT,
-            auth: "🔑 上游密钥不匹配：检查 IMAGE_COLAB_KEY 和 Colab 的 API_KEY",
-          }[message] ?? "😞 生成失败，稍后再试",
-        );
+      } catch {
+        setStatus("😞 生成失败，稍后再试。");
       } finally {
         btn.disabled = false;
       }
     });
+  })();
 </script>

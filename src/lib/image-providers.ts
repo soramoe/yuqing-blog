@@ -3,6 +3,7 @@ import type {
   ImageProviderConfig,
   ImageQuality,
 } from "./image-settings";
+import { translateToEnglish } from "./translate";
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 
@@ -20,11 +21,16 @@ export interface ImageProviderEnv {
   IMAGE_QWEN_BASE_URL?: string;
   IMAGE_SILICONFLOW_API_KEY?: string;
   IMAGE_SILICONFLOW_BASE_URL?: string;
+  IMAGE_COLAB_URL?: string;
+  IMAGE_COLAB_KEY?: string;
 }
 
 export interface ImageGenerationRequest {
+  feature: string;
   prompt: string;
   englishPrompt?: string;
+  /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
+  prompt2?: string;
   negativePrompt: string;
   width: number;
   height: number;
@@ -62,6 +68,9 @@ export function isProviderConfigured(
   if (provider.adapter === "workers-ai") return Boolean(env.AI);
   if (provider.adapter === "dashscope-images") {
     return Boolean(env.IMAGE_QWEN_API_KEY?.trim());
+  }
+  if (provider.adapter === "colab-sdxl") {
+    return Boolean(env.IMAGE_COLAB_URL?.trim());
   }
   return Boolean(env.IMAGE_SILICONFLOW_API_KEY?.trim());
 }
@@ -471,6 +480,93 @@ async function generateWithOpenAiImages(
   );
 }
 
+// 站长在 Colab 上自建的 SDXL 管线：英文提示词 + GPU 锁（并发时返回 429）
+async function generateWithColab(
+  env: ImageProviderEnv,
+  provider: ImageProviderConfig,
+  request: ImageGenerationRequest,
+) {
+  const baseUrl = env.IMAGE_COLAB_URL?.trim().replace(/\/+$/, "");
+  if (!baseUrl) {
+    throw new ImageProviderError(
+      `${provider.name} 的服务地址尚未配置。`,
+      "not-configured",
+      false,
+    );
+  }
+  // Colab 管线只认英文；优先使用现成英文提示词，否则自动翻译
+  const prompt =
+    request.englishPrompt?.trim() || (await translateToEnglish(request.prompt));
+  const negativePrompt = request.negativePrompt
+    ? await translateToEnglish(request.negativePrompt)
+    : "";
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 150_000);
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/generate`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": env.IMAGE_COLAB_KEY?.trim() ?? "",
+        "ngrok-skip-browser-warning": "1",
+      },
+      body: JSON.stringify({
+        prompt,
+        prompt_2: request.prompt2?.trim()
+          ? await translateToEnglish(request.prompt2)
+          : undefined,
+        negative_prompt: negativePrompt || undefined,
+        width: request.width,
+        height: request.height,
+        steps: request.quality === "hd" ? 40 : 30,
+        guidance: 6.0,
+      }),
+    });
+  } catch {
+    throw new ImageProviderError(
+      controller.signal.aborted
+        ? "Colab 生图响应超时，GPU 可能掉线了。"
+        : "Colab GPU 服务无法连接。",
+      controller.signal.aborted ? "timeout" : "provider-unavailable",
+      true,
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+
+  if (!response.ok) {
+    throw new ImageProviderError(
+      response.status === 429
+        ? "Colab GPU 一次只能画一张，请稍等几秒再试。"
+        : response.status === 401
+          ? "Colab 上游密钥不匹配。"
+          : `Colab 生图服务返回 HTTP ${response.status}。`,
+      response.status === 429
+        ? "rate-limited"
+        : response.status === 401
+          ? "not-configured"
+          : "provider-unavailable",
+      response.status === 429 || response.status >= 500,
+    );
+  }
+
+  const payload = (await response.json().catch(() => null)) as {
+    images?: string[];
+  } | null;
+  const base64 = payload?.images?.[0];
+  if (!base64) {
+    throw new ImageProviderError(
+      "Colab 没有返回图片。",
+      "invalid-response",
+      true,
+    );
+  }
+  return normalizeBinary({ b64_json: base64 }, request.width, request.height);
+}
+
 export async function generateWithProvider(
   env: ImageProviderEnv,
   provider: ImageProviderConfig,
@@ -490,6 +586,8 @@ export async function generateWithProvider(
       return generateWithDashScope(env, provider, request);
     case "openai-images":
       return generateWithOpenAiImages(env, provider, request);
+    case "colab-sdxl":
+      return generateWithColab(env, provider, request);
     default:
       throw new ImageProviderError(
         "图片供应商适配器不受支持。",

@@ -39,6 +39,18 @@ export class ImageRoutingError extends Error {
 }
 
 const monthKey = () => chinaDateKey().slice(0, 7);
+
+// provider 的 features 白名单：为空表示对所有生图功能可用
+const providerSupportsFeature = (
+  provider: ImageProviderConfig,
+  feature: string,
+) => {
+  const allowed = provider.features
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  return allowed.length === 0 || allowed.includes(feature);
+};
 const budgetReserveCents = (provider: ImageProviderConfig) =>
   Math.max(0, provider.reserveCostCents, provider.actualCostCents);
 
@@ -255,6 +267,7 @@ export async function routeImageGeneration(
   const errors: string[] = [];
   for (const provider of providers) {
     if (!provider.enabled) continue;
+    if (!providerSupportsFeature(provider, request.feature)) continue;
     if (provider.cooldownUntil && provider.cooldownUntil > now) continue;
     if (!isProviderConfigured(env, provider)) continue;
 

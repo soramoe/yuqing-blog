@@ -18,6 +18,8 @@ export interface CreateImageJobInput {
   sourceId?: string;
   prompt: string;
   englishPrompt?: string;
+  /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
+  prompt2?: string;
   negativePrompt?: string;
   quality: ImageQuality;
   aspectRatio?: string;
@@ -327,8 +329,13 @@ export async function createAndRunImageJob(
   }
 
   const jobId = crypto.randomUUID();
+  // image_studio 走站长自己的 Colab GPU，单独计价；其余沿用标准/高清价
   const pointsCost =
-    quality === "hd" ? settings.hdPoints : settings.standardPoints;
+    input.feature === "image_studio"
+      ? settings.studioPoints
+      : quality === "hd"
+        ? settings.hdPoints
+        : settings.standardPoints;
   const now = Date.now();
   try {
     await env.DB.prepare(
@@ -397,8 +404,10 @@ export async function createAndRunImageJob(
   const { width, height } = dimensions(quality, ratio);
   try {
     const generated = await routeImageGeneration(env, jobId, {
+      feature: input.feature,
       prompt,
       englishPrompt: input.englishPrompt?.trim().slice(0, 2000),
+      prompt2: input.prompt2?.trim().slice(0, 2000),
       negativePrompt,
       width,
       height,

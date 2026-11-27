@@ -1,6 +1,7 @@
 export const IMAGE_POINT_VALUE_CENTS = 1;
 export const IMAGE_STANDARD_POINTS = 20;
 export const IMAGE_HD_POINTS = 32;
+export const IMAGE_STUDIO_POINTS = 120;
 
 export type ImageQuality = "standard" | "hd";
 export type ImageFeature = "story_chapter" | "image_studio" | "admin_test";
@@ -8,13 +9,15 @@ export type ImagePermission = "private" | "public";
 export type ImageProviderAdapter =
   | "workers-ai"
   | "dashscope-images"
-  | "openai-images";
+  | "openai-images"
+  | "colab-sdxl";
 
 export interface ImageSettings {
   enabled: boolean;
   pointValueCents: number;
   standardPoints: number;
   hdPoints: number;
+  studioPoints: number;
   dailyJobLimit: number;
   monthlyBudgetCents: number;
   updatedAt: number | null;
@@ -26,6 +29,8 @@ export interface ImageProviderConfig {
   name: string;
   adapter: ImageProviderAdapter;
   model: string;
+  /** 逗号分隔的功能白名单；为空表示对所有生图功能可用 */
+  features: string;
   enabled: boolean;
   priority: number;
   dailyJobLimit: number;
@@ -45,6 +50,7 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   pointValueCents: IMAGE_POINT_VALUE_CENTS,
   standardPoints: IMAGE_STANDARD_POINTS,
   hdPoints: IMAGE_HD_POINTS,
+  studioPoints: IMAGE_STUDIO_POINTS,
   dailyJobLimit: 100,
   monthlyBudgetCents: 5000,
   updatedAt: null,
@@ -88,6 +94,12 @@ export function sanitizeImageSettings(value: unknown): ImageSettings {
       1000,
       IMAGE_HD_POINTS,
     ),
+    studioPoints: clampInteger(
+      input.studioPoints,
+      1,
+      10000,
+      IMAGE_STUDIO_POINTS,
+    ),
     dailyJobLimit: clampInteger(input.dailyJobLimit, 1, 5000, 100),
     monthlyBudgetCents: clampInteger(
       input.monthlyBudgetCents,
@@ -108,6 +120,7 @@ export async function getImageSettings(db: D1Database) {
         point_value_cents AS pointValueCents,
         standard_points AS standardPoints,
         hd_points AS hdPoints,
+        studio_points AS studioPoints,
         daily_job_limit AS dailyJobLimit,
         monthly_budget_cents AS monthlyBudgetCents,
         updated_at AS updatedAt,
@@ -120,6 +133,7 @@ export async function getImageSettings(db: D1Database) {
       pointValueCents: number;
       standardPoints: number;
       hdPoints: number;
+      studioPoints: number;
       dailyJobLimit: number;
       monthlyBudgetCents: number;
       updatedAt: number;
@@ -131,6 +145,7 @@ export async function getImageSettings(db: D1Database) {
     pointValueCents: Number(row.pointValueCents),
     standardPoints: Number(row.standardPoints),
     hdPoints: Number(row.hdPoints),
+    studioPoints: Number(row.studioPoints),
     dailyJobLimit: Number(row.dailyJobLimit),
     monthlyBudgetCents: Number(row.monthlyBudgetCents),
     updatedAt: Number(row.updatedAt),
@@ -146,6 +161,7 @@ export async function listImageProviders(db: D1Database) {
         name,
         adapter,
         model,
+        features,
         enabled,
         priority,
         daily_job_limit AS dailyJobLimit,
@@ -166,6 +182,7 @@ export async function listImageProviders(db: D1Database) {
       name: string;
       adapter: string;
       model: string;
+      features: string;
       enabled: number;
       priority: number;
       dailyJobLimit: number;
@@ -188,8 +205,11 @@ export async function listImageProviders(db: D1Database) {
           ? "workers-ai"
           : row.adapter === "openai-images"
             ? "openai-images"
-            : "dashscope-images",
+            : row.adapter === "colab-sdxl"
+              ? "colab-sdxl"
+              : "dashscope-images",
       model: row.model,
+      features: row.features ?? "",
       enabled: Boolean(row.enabled),
       priority: Number(row.priority),
       dailyJobLimit: Number(row.dailyJobLimit),

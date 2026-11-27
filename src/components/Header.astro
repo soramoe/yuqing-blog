@@ -20,6 +20,40 @@ const isActive = (href: string) =>
 ---
 
 <header class="site-header">
+  <style>
+    .nav-bell {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1.9rem;
+      height: 1.9rem;
+      border-radius: 50%;
+      color: var(--muted);
+    }
+    .nav-bell:hover {
+      color: var(--text);
+      background: color-mix(in srgb, var(--text) 8%, transparent);
+    }
+    .nav-bell-badge {
+      position: absolute;
+      top: -2px;
+      right: -4px;
+      min-width: 1rem;
+      height: 1rem;
+      padding: 0 0.25rem;
+      border-radius: 999px;
+      background: var(--accent, #b54a31);
+      color: #fff;
+      font-size: 0.62rem;
+      font-weight: 700;
+      line-height: 1rem;
+      text-align: center;
+    }
+    .nav-bell-badge[hidden] {
+      display: none;
+    }
+  </style>
   <div class="container header-inner">
     <a class="brand" href="/" aria-label={`${SITE.name} 首页`}>
       <span class="brand-symbol" aria-hidden="true">渔</span>
@@ -39,6 +73,19 @@ const isActive = (href: string) =>
           <span>{item.label}</span>
         </a>
       ))}
+      <a
+        href="/notifications/"
+        class="nav-bell"
+        data-notif-nav
+        hidden
+        aria-label="站内信"
+      >
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        <span class="nav-bell-badge" data-notif-badge hidden></span>
+      </a>
       <a
         href="/login/"
         class:list={{
@@ -88,6 +135,25 @@ const isActive = (href: string) =>
         if (!data?.user) return;
         authNav.href = "/account/";
         authLabel.textContent = "账户";
+        // 登录后拉取未读站内信数量，点亮铃铛
+        fetch("/api/notifications", {
+          credentials: "same-origin",
+          headers: { Accept: "application/json" },
+        })
+          .then((response) => (response.ok ? response.json() : null))
+          .then((payload) => {
+            if (!payload) return;
+            const bell = document.querySelector<HTMLElement>("[data-notif-nav]");
+            const badge = document.querySelector<HTMLElement>("[data-notif-badge]");
+            if (!bell || !badge) return;
+            bell.hidden = false;
+            const unread = Number(payload.unread ?? 0);
+            if (unread > 0) {
+              badge.hidden = false;
+              badge.textContent = unread > 9 ? "9+" : String(unread);
+            }
+          })
+          .catch(() => undefined);
       })
       .catch(() => undefined)
       .finally(() => window.clearTimeout(timer));

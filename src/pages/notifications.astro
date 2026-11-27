@@ -1,0 +1,218 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="站内信" description="渔情站内通知中心。">
+  <main class="notif-shell">
+    <p class="eyebrow">INBOX</p>
+    <div class="notif-head">
+      <h1>站内信</h1>
+      <button id="read-all" class="notif-readall" type="button" hidden>
+        全部已读
+      </button>
+    </div>
+    <p id="status" class="notif-status">正在加载…</p>
+
+    <div id="login-prompt" class="notif-login" hidden>
+      <p>登录后才能查看你的站内信。</p>
+      <a class="button button-primary" href="/login/">去登录</a>
+    </div>
+
+    <ul id="list" class="notif-list" hidden></ul>
+  </main>
+</BaseLayout>
+
+<style>
+  .notif-shell {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 1.25rem 4rem;
+  }
+  .eyebrow {
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+  .notif-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 1rem;
+  }
+  .notif-readall {
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.85rem;
+    padding: 0.2rem 0.4rem;
+  }
+  .notif-status {
+    color: var(--muted);
+    min-height: 1.5em;
+  }
+  .notif-login {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 1.5rem;
+    display: grid;
+    gap: 1rem;
+    justify-items: start;
+  }
+  .notif-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.7rem;
+  }
+  .notif-item {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+  }
+  .notif-item.unread {
+    border-left-color: var(--accent);
+  }
+  .notif-item h2 {
+    font-size: 0.95rem;
+    margin: 0 0 0.3rem;
+    color: var(--text);
+  }
+  .notif-item.unread h2::before {
+    content: "●";
+    color: var(--accent);
+    margin-right: 0.4rem;
+    font-size: 0.7rem;
+    vertical-align: 0.15em;
+  }
+  .notif-item p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+  .notif-item time {
+    display: block;
+    margin-top: 0.45rem;
+    color: var(--muted);
+    font-size: 0.72rem;
+    opacity: 0.8;
+  }
+  .notif-item a {
+    color: var(--accent);
+  }
+</style>
+
+<script>
+  const statusEl = document.getElementById("status") as HTMLElement;
+  const loginPrompt = document.getElementById("login-prompt") as HTMLElement;
+  const listEl = document.getElementById("list") as HTMLElement;
+  const readAllBtn = document.getElementById("read-all") as HTMLButtonElement;
+
+  interface NotificationItem {
+    id: string;
+    type: string;
+    title: string;
+    body: string;
+    link: string | null;
+    readAt: number | null;
+    createdAt: number;
+  }
+
+  async function markRead(id: string | null) {
+    await fetch("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify(id ? { id } : { all: true }),
+    }).catch(() => undefined);
+  }
+
+  function render(items: NotificationItem[], unread: number) {
+    statusEl.hidden = true;
+    listEl.hidden = false;
+    readAllBtn.hidden = unread === 0;
+    listEl.innerHTML = "";
+    for (const item of items) {
+      const li = document.createElement("li");
+      li.className = "notif-item" + (item.readAt ? "" : " unread");
+      const title = document.createElement("h2");
+      title.textContent = item.title;
+      const body = document.createElement("p");
+      body.textContent = item.body;
+      const time = document.createElement("time");
+      time.textContent = new Date(item.createdAt).toLocaleString("zh-CN");
+      li.append(title, body, time);
+      if (item.link) {
+        const link = document.createElement("a");
+        link.href = item.link;
+        link.textContent = "查看";
+        link.addEventListener("click", () => void markRead(item.id));
+        li.appendChild(link);
+      }
+      if (!item.readAt) {
+        li.addEventListener("click", () => {
+          li.classList.remove("unread");
+          void markRead(item.id);
+        });
+      }
+      listEl.appendChild(li);
+    }
+  }
+
+  async function load() {
+    try {
+      const response = await fetch("/api/notifications", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      if (response.status === 401) {
+        statusEl.hidden = true;
+        loginPrompt.hidden = false;
+        return;
+      }
+      const data = (await response.json()) as {
+        unread: number;
+        items: NotificationItem[];
+      };
+      render(data.items ?? [], data.unread ?? 0);
+    } catch {
+      statusEl.textContent = "加载失败，请稍后重试。";
+    }
+  }
+
+  fetch("/api/auth/get-session", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      if (!data?.user) {
+        statusEl.hidden = true;
+        loginPrompt.hidden = false;
+        return;
+      }
+      void load();
+    })
+    .catch(() => {
+      statusEl.hidden = true;
+      loginPrompt.hidden = false;
+    });
+
+  readAllBtn.addEventListener("click", async () => {
+    await markRead(null);
+    void load();
+  });
+</script>

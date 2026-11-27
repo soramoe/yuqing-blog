@@ -79,8 +79,17 @@
     maintenance: "维护",
   };
 
-  if (import.meta.env.PROD && banner) {
+  if (banner) {
     const storageKey = (id: string) => `yq-announcement-dismissed:${id}`;
+    // 关闭公告只隐藏 3 天，之后自动重新出现，避免「关一次就永远看不到」
+    const DISMISS_TTL_MS = 3 * 24 * 60 * 60 * 1000;
+    const isDismissed = (id: string) => {
+      const raw = localStorage.getItem(storageKey(id));
+      if (!raw) return false;
+      const timestamp = Number(raw);
+      if (!Number.isFinite(timestamp)) return true;
+      return Date.now() - timestamp < DISMISS_TTL_MS;
+    };
     let announcements: Announcement[] = [];
     let activeIndex = 0;
     const syncHeight = () => {
@@ -151,7 +160,7 @@
     close?.addEventListener("click", () => {
       const announcement = announcements[activeIndex];
       if (announcement) {
-        localStorage.setItem(storageKey(announcement.id), "1");
+        localStorage.setItem(storageKey(announcement.id), String(Date.now()));
       }
       announcements = announcements.filter(
         (_, index) => index !== activeIndex,
@@ -171,7 +180,7 @@
       .then((response) => (response.ok ? response.json() : null))
       .then((payload: { announcements?: Announcement[] } | null) => {
         announcements = (payload?.announcements ?? []).filter(
-          (announcement) => !localStorage.getItem(storageKey(announcement.id)),
+          (announcement) => !isDismissed(announcement.id),
         );
         activeIndex = 0;
         render();
