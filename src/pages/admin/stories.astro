@@ -230,6 +230,7 @@ import "../../styles/admin-story.css";
           <div class="admin-image-provider-list" data-image-provider-list></div>
           <div class="admin-story-form-actions">
             <button type="submit" data-image-config-submit>保存生图控制</button>
+            <button type="button" data-image-cooldown-reset>重置生图冷却</button>
           </div>
           <p data-image-config-message aria-live="polite"></p>
         </form>
@@ -438,6 +439,9 @@ import "../../styles/admin-story.css";
   const imageConfigMessage = document.querySelector<HTMLElement>(
     "[data-image-config-message]",
   );
+  const imageCooldownReset = document.querySelector<HTMLButtonElement>(
+    "[data-image-cooldown-reset]",
+  );
   let imageConfigProviders: AdminImageProvider[] = [];
 
   const setStatus = (
@@ -546,6 +550,33 @@ import "../../styles/admin-story.css";
     }
     renderImageProviders();
   };
+
+  // Colab 重启恢复后，清零所有图片供应商的失败计数与冷却锁，立刻恢复可用
+  imageCooldownReset?.addEventListener("click", async () => {
+    if (!imageCooldownReset) return;
+    imageCooldownReset.disabled = true;
+    setImageConfigMessage("正在重置生图服务冷却…");
+    try {
+      const response = await fetch("/api/admin/image/cooldown", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const payload = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error || "重置失败。");
+      }
+      setImageConfigMessage("生图服务冷却已重置，可以立即重新生图。", "success");
+      void loadImageConfig();
+    } catch (error) {
+      setImageConfigMessage(
+        error instanceof Error ? error.message : "重置失败，请稍后重试。",
+        "error",
+      );
+    } finally {
+      imageCooldownReset.disabled = false;
+    }
+  });
 
   const loadImageConfig = async () => {
     const response = await fetch("/api/admin/image", {
