@@ -767,11 +767,13 @@ import "../../styles/admin-story.css";
       if (!data?.user) {
         if (gateTitle) gateTitle.textContent = "请先登录";
         if (gateCopy) gateCopy.textContent = "登录站长账号后才能管理 AI 配置。";
+        if (status) status.hidden = true;
         gate?.removeAttribute("hidden");
         return;
       }
       try {
         await loadImageConfig();
+        if (status) status.hidden = true;
         gate?.setAttribute("hidden", "");
         content?.removeAttribute("hidden");
         // 实时监控：每 15 秒自动刷新；正在编辑输入框时跳过
@@ -800,8 +802,8 @@ import "../../styles/admin-story.css";
           }
           if (gateLink) gateLink.hidden = true;
         }
+        if (status) status.hidden = true;
         gate?.removeAttribute("hidden");
-        setStatus("");
       }
     })
     .catch(() => {

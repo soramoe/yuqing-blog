@@ -295,11 +295,13 @@ import "../../styles/admin-story.css";
       if (!data?.user) {
         if (gateTitle) gateTitle.textContent = "请先登录";
         if (gateCopy) gateCopy.textContent = "登录站长账号后才能管理生图。";
+        if (status) status.hidden = true;
         gate?.removeAttribute("hidden");
         return;
       }
       try {
         await loadImageConfig();
+        if (status) status.hidden = true;
         gate?.setAttribute("hidden", "");
         content?.removeAttribute("hidden");
       } catch (error) {
@@ -318,8 +320,8 @@ import "../../styles/admin-story.css";
           }
           if (gateLink) gateLink.hidden = true;
         }
+        if (status) status.hidden = true;
         gate?.removeAttribute("hidden");
-        if (status) status.textContent = "";
       }
     })
     .catch(() => {
