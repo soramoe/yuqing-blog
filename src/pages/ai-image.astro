@@ -154,6 +154,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     color: #e2a355;
     border-color: rgb(205 125 54 / 45%);
   }
+  .ai-badge[data-state="cooldown"] {
+    color: #e2a355;
+    border-color: rgb(205 125 54 / 45%);
+  }
   .ai-chip strong {
     color: var(--text);
   }
@@ -341,29 +345,45 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       .then((data) => setBalance(data?.balance ?? null))
       .catch(() => undefined);
 
-    try {
-      const response = await fetch("/api/ai-image/generate", {
-        headers: { Accept: "application/json" },
-      });
-      const data = (await response.json()) as {
-        ok: boolean;
-        enabled: boolean;
-        points: number;
-      };
-      pointsCost = data.points;
-      priceValue.textContent = String(data.points);
-      priceChip.hidden = false;
-      if (data.ok && data.enabled) {
-        setBadge("online", "● 服务在线");
-        setStatus("填好提示词，点「生成」开始。");
-      } else {
+    // 服务状态：30 秒自动刷新一次，徽章会如实反映 在线/冷却/掉线
+    const refreshService = async () => {
+      try {
+        const response = await fetch("/api/ai-image/generate", {
+          headers: { Accept: "application/json" },
+        });
+        const data = (await response.json()) as {
+          ok: boolean;
+          enabled: boolean;
+          points: number;
+          cooldownSeconds?: number;
+        };
+        pointsCost = data.points;
+        priceValue.textContent = String(data.points);
+        priceChip.hidden = false;
+        if (!data.enabled) {
+          setBadge("busy", "● 生图未开放");
+          setStatus("站长暂时关闭了生图功能。");
+        } else if ((data.cooldownSeconds ?? 0) > 0) {
+          const minutes = Math.ceil((data.cooldownSeconds ?? 0) / 60);
+          setBadge("cooldown", "● 冷却中");
+          setStatus(
+            `GPU 刚经历失败，冷却约 ${minutes} 分钟后自动恢复；` +
+              "也可以让站长在后台点「重置生图冷却」。",
+          );
+        } else if (data.ok) {
+          setBadge("online", "● 服务在线");
+          setStatus("填好提示词，点「生成」开始。");
+        } else {
+          setBadge("busy", "● 服务正忙");
+          setStatus("GPU 服务暂时掉线，稍后再来看看（积分不会白扣）。");
+        }
+      } catch {
         setBadge("busy", "● 服务正忙");
-        setStatus("GPU 服务暂时掉线，稍后再来看看（积分不会白扣）。");
       }
-    } catch {
-      setBadge("busy", "● 服务正忙");
-      setStatus("暂时无法确认服务状态，稍后再试。");
-    }
+    };
+
+    await refreshService();
+    window.setInterval(() => void refreshService(), 30_000);
 
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -411,6 +431,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               "生成失败，稍后再试。",
           );
           if (typeof data.balance === "number") setBalance(data.balance);
+          void refreshService(); // 失败后立刻刷新徽章，让冷却状态可见
           return;
         }
         // 成功

@@ -23,7 +23,7 @@ const safeText = (value: unknown, maximum: number) =>
 const colabBase = (env: Env) =>
   env.IMAGE_COLAB_URL?.trim().replace(/\/+$/, "") ?? "";
 
-// 探活 + 配置：页面据此显示「服务在线/正忙」和本次生图的积分价格
+// 探活 + 配置：页面据此显示「服务在线/冷却中/正忙」和本次生图的积分价格
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const settings = await getImageSettings(env.DB);
   const base = colabBase(env);
@@ -43,11 +43,24 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       clearTimeout(timeout);
     }
   }
+  // 顺带返回 provider 冷却状态：隧道活着但冷却没过时，页面能如实显示
+  const provider = await env.DB.prepare(
+    `SELECT consecutive_failures AS failures, cooldown_until AS cooldownUntil
+     FROM image_provider WHERE id = 'colab-sdxl'`,
+  ).first<{ failures: number; cooldownUntil: number | null }>();
+  const now = Date.now();
+  const cooldownUntil = provider?.cooldownUntil
+    ? Number(provider.cooldownUntil)
+    : 0;
+  const cooldownSeconds =
+    cooldownUntil > now ? Math.ceil((cooldownUntil - now) / 1000) : 0;
   return json({
     ok,
     configured: Boolean(base),
     enabled: settings.enabled,
     points: settings.studioPoints,
+    failures: Number(provider?.failures ?? 0),
+    cooldownSeconds,
   });
 };
 
