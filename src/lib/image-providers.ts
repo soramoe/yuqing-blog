@@ -498,12 +498,15 @@ async function generateWithColab(
     );
   }
   // Colab 管线只认英文；优先使用现成英文提示词，否则走智能改写链路
+  // 用户没填负面提示词时，自动带一组 SDXL 标准负面，提升出图稳定性
+  const DEFAULT_NEGATIVE =
+    "lowres, blurry, bad anatomy, extra limbs, text, watermark, signature, jpeg artifacts";
   const prompt =
     request.englishPrompt?.trim() ||
     (await translateImagePrompt(env, request.prompt));
   const negativePrompt = request.negativePrompt
     ? await gtxTranslate(request.negativePrompt)
-    : "";
+    : DEFAULT_NEGATIVE;
 
   const body = JSON.stringify({
     prompt,

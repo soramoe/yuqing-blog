@@ -21,6 +21,7 @@ const REWRITE_SYSTEM_PROMPT = [
   "2. 完整保留主体、动作、场景、构图、光影、色彩、艺术风格等要素；不要添加原文没有的内容。",
   "3. 末尾可补充两三个通用画质词（如 highly detailed, sharp focus）。",
   "4. 只输出英文提示词本身，不要解释、引号或任何前缀。",
+  "5. 如果主体是穿着衣物或拟人化的动物，必须在主体短语中加入 anthropomorphic（如 anthropomorphic orange and white cat），避免模型把动物画成真人。",
 ].join("\n");
 
 const cleanRewrite = (value: string) =>
