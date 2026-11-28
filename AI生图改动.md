@@ -18,12 +18,12 @@
 | features 白名单 | `image_provider.features` 决定能力：`image_studio`=AI 生图页可用，`story_chapter`=互动小说可用，`admin_test`=后台可测试。路由时只挑 `enabled=1` 且含目标 feature 的供应商 |
 | 指定模型 | 前端传 `model`（即 provider id）时**只**调用该供应商，并给出精确错误（不存在 / 冷却中 / 未绑定密钥） |
 | 积分 | 每张图按 `image_setting.studio_points` 扣（当前 500）；VIP 插队另扣 `queue_jump_points`（当前 60）；`chargeImageJob` / `refundImageJob` 原子扣退（point_account + point_transaction） |
-| 翻译 | `src/lib/translate.ts` 三级级联：Workers AI llama-3.3-70b 智能改写 → DeepSeek（`IMAGE_TRANSLATE_API_KEY`，与 `STORY_AI_API_KEY` 隔离）→ gtx 直译兜底。系统提示含 **anthropomorphic 拟人动物保护规则**（防止把猫画成人） |
+| 翻译 | `src/lib/translate.ts` 三级级联：Workers AI llama-3.3-70b 智能改写 → DeepSeek（`IMAGE_TRANSLATE_API_KEY`，与 `STORY_AI_API_KEY` 隔离）→ gtx 直译兜底。系统提示含 **anthropomorphic 拟人动物保护规则**（防止把猫画成人）。只有 `providerNeedsEnglishPrompt`（colab-sdxl / workers-ai）才翻译，原生中文模型直接用原文 |
 | Colab API 契约 | `POST {colab}/generate`，header `x-api-key` + `x-queue-jump`（"1"=VIP）；请求体 `{prompt, prompt_2, init_image, strength, negative_prompt, width, height, steps, guidance, seed}`；响应 `{images:[base64]}`；3 次重试仅针对 <15s 的快速失败 |
 | Colab 排队 | 侧 GenQueue `max_queue=4`，VIP 优先；`GET {colab}/queue` 返回 `{busy,waiting,vip}`，经 `/api/ai-image/queue` 透传给前端 |
 | 冷却熔断 | `image_provider.consecutive_failures / cooldown_until`，达到 `failure_threshold` 后冷却 `cooldown_seconds`；后台一键清零 |
 | 密钥脱敏 | 管理端点返回 provider 时剥掉 apiKey，给 `hasApiKey` + `apiKeyMasked` |
-| 参考图 | 仅 Colab 支持 img2img（`init_image` data URL，≤12MB，`strength` 默认 0.55）；云端模型会回退纯文生图并在响应 note 标注 |
+| 参考图 | 仅 Colab / 方舟支持 img2img（`init_image` data URL，页面限 8MB、API 限 12M 字符，`strength` 默认 0.55）；其余模型回退纯文生图并在响应 `note` 标注「参考图已忽略」 |
 
 ## 2. 尺寸表（image-service.ts，auto=不传宽高走模型默认）
 
@@ -51,6 +51,8 @@
 **收尾修复**：`b23f0e5` auto 比例下三个云端适配器 size 缺省 1024×1024（修掉 `"undefinedxundefined"` 非法参数）
 **下午追加**：`5637896` 模型选择改为**下拉框**（模型卡片 UI 崩坏弃用）；火山方舟按官方 API 重写——`seedreamSize` 总像素守卫 [921600(1280x720), 8294400(2880x2880)]、参考图走 `image:[Base64]`（Seedream 5.x 单图生图语义）；新增智谱 **GLM 适配器** `bigmodel-image`（`POST https://open.bigmodel.cn/api/paas/v4/images/generations`、Bearer、返回 URL 由 `fetchProviderImage` 二次下载、`glmSize` 512–2048 且 32 倍数、prompt≤1000）；0027 迁移建 `glm-image` 供应商行 → `8d91b1d` 方舟 `SetLimitExceeded` 映射为「安全体验模式额度上限」明确提示
 
+**链路补洞（交接后追加）**：`f6fafef` 生图 POST 真正接收 `init_image` 与全部 7 种比例（含 auto）——此前页面虽发了这两个字段，但 API 只白名单 3 种比例、且完全忽略 `init_image`，导致「大重构」的参考图/竖版/超宽/auto 全部静默失效（9:16 等被压成 1:1）。同时：Colab 适配器透传 `init_image`/`strength`；参考图只下发给支持 img2img 的适配器并在 note 提示；原生中文模型跳过翻译；插队只对 Colab 扣费；方舟/智谱 baseUrl 兼容完整 `/images/generations` 地址；后台新增供应商适配器白名单补 ark / GLM；模型列表按适配器拉取；未知适配器不再回落成千问。
+
 > 同日另有 deals 数据巡检合并（PR #2 等），与生图无关。
 
 ## 4. 今天完成但不在 git 里的改动
@@ -66,16 +68,16 @@
 
 ## 5. 生产环境实况（2026-11-28 经 wrangler 直查远程 D1）
 
-`image_provider`（5 行）：
+`image_provider`（6 行，2026-11-28 下午复核）：
 
 | id | adapter | model | enabled | features | api_key |
 |---|---|---|---|---|---|
-| cloudflare-workers-ai | workers-ai | @cf/black-forest-labs/flux-1-schnell | 1 | story_chapter, admin_test | EMPTY（env 兜底） |
+| cloudflare-workers-ai | workers-ai | @cf/black-forest-labs/flux-1-schnell | **0** | story_chapter, admin_test | EMPTY（env 兜底） |
 | qwen-image | dashscope-images | qwen-image-2.1-turbo | **0** | story_chapter, admin_test | EMPTY |
 | siliconflow-image | openai-images | Qwen/Qwen-Image | **0** | story_chapter, admin_test | EMPTY |
 | colab-sdxl | colab-sdxl | sd_xl_base_1.0 | 1 | **image_studio**, admin_test | EMPTY（走 `IMAGE_COLAB_URL`/`IMAGE_COLAB_KEY` 环境变量） |
-| ark-seedream | ark-images | doubao-seedream-5-5-261028 | 1 | **image_studio**, admin_test | **SET** ✅ |
-| glm-image | bigmodel-image | glm-image | 1 | **image_studio**, admin_test | EMPTY（待站长绑定智谱密钥） |
+| ark-seedream | ark-images | doubao-seedream-5-5-261028 | 1 | **image_studio**, admin_test | **SET** ✅（`base_url` 直接填了完整 `/api/v3/images/generations`） |
+| glm-image | bigmodel-image | glm-image | 1 | **image_studio**, admin_test | **SET** ✅（已绑定智谱密钥） |
 
 `image_setting`（id=global）：`enabled=1`，`studio_points=500`，`standard_points=500`，`hd_points=1000`，`queue_jump_points=60`，`daily_job_limit=100`，`monthly_budget_cents=5000`，`point_value_cents=1`。
 
@@ -91,10 +93,11 @@
    打开笔记本 → 右上角「连接 T4」→「全部运行」→ 若弹 Drive 授权点「允许」→ 等输出 **`✅ 全部就绪: <ngrok域名> · 自检出图 (1024, 1024)`** → `curl -H "ngrok-skip-browser-warning: 1" https://concerned-composer-lumpiness.ngrok-free.dev/health` 应返回 `{"ok":true}`。
    若格子代码丢失：用本地备份 `colab-oneclick-v3.py` 重新粘贴运行。
 2. **v3 从未实际跑过** → 额度恢复后除自检外，补一次带参考图的端到端生图验证（`init_image` + `strength`）。
-3. **旧公告「关闭生图…暂时还没调试好」仍在站内横幅展示** → 到公告管理下线，避免误导。
+3. ~~旧公告「关闭生图…暂时还没调试好」仍在站内横幅展示~~ → **已处理（2026-11-28）**：远程 D1 `site_announcement` 中该行（id `a555d866…`）已置 `active=0`。恢复命令：`UPDATE site_announcement SET active=1 WHERE id='a555d866-1a4b-4641-8555-cb050d637f1d'`。
 4. `IMAGE_COLAB_URL` / `IMAGE_COLAB_KEY` 走环境变量而非 provider 行绑定（colab-sdxl 行 api_key 为空是**正常**的）；如迁移到后台绑定，在 AI 配置页填入即可。
 5. **火山方舟「安全体验模式」额度上限**（2026-11-28 直测确认 `SetLimitExceeded`，模型服务已被暂停）→ 站长到方舟控制台「模型激活」页调整或关闭该模式后生图即恢复；站点侧错误提示已映射为明确文案。
-6. **GLM 待绑密钥** → 后台 AI 配置页在 `glm-image` 行粘贴智谱 API Key 即可用（密钥也可走环境变量 `IMAGE_BIGMODEL_API_KEY`）。
+6. ~~GLM 待绑密钥~~ → **已绑定（2026-11-28 复核 `hasKey=1`）**；仍缺一次真实出图验证（需在后台「测试」或前台选 GLM 模型跑一张）。
+7. **本地提交 `f6fafef` 尚未推送** → 推送 main 才会触发 Pages 部署；部署后前台参考图/全量比例/插队修复才在线上生效。
 
 ## 8. 文件地图（全部相对仓库根）
 
@@ -107,7 +110,7 @@ src/pages/admin/image.astro       生图管理（运营参数页：开关/定价
 src/components/AdminNav.astro     后台统一导航
 src/lib/image-service.ts          任务编排：扣费/翻译/尺寸/落库/退款
 src/lib/image-router.ts           features 白名单路由 + 指定模型精确报错
-src/lib/image-providers.ts        5 个适配器（colab-sdxl / workers-ai / dashscope / openai-images / ark）
+src/lib/image-providers.ts        6 个适配器（colab-sdxl / workers-ai / dashscope / openai-images / ark / bigmodel）
 src/lib/image-settings.ts         运营参数默认值与读写（IMAGE_STUDIO_POINTS=40 仅为兜底，实际以 D1 为准）
 src/lib/translate.ts              三级翻译级联 + anthropomorphic 规则
 src/lib/system-notify.ts          站内信 + 邮件（30 分钟去重）
@@ -131,6 +134,8 @@ C:\Users\14055\.zcode\workspace\default\colab-probe-worker\    定时探活 Work
 - **ngrok 免费版**：单静态域名；curl 需带 `ngrok-skip-browser-warning` 头。
 - **火山方舟**：原生中文 prompt 直传（不走翻译）、`response_format:"b64_json"`、`watermark:false`；错误详情读取必须 `(await response.text().catch(()=>"")).slice(0,100)`（括号别丢）。
 - **SDXL 拟人陷阱**：拟人动物提示词必须带 anthropomorphic 类关键词，负面词要有默认值。
+- **前后端字段脱节**：页面新增字段（`init_image`、新比例）必须同步改 `functions/api/ai-image/generate.ts` 的白名单/解析，脚本层 `image-service.ts` 支持不代表 API 层会转发——曾因此让参考图和 6 种比例静默失效。改页面表单时先看 API 的入参白名单。
+- **云端供应商 base_url**：后台可能填基础地址，也可能填完整 `/images/generations`（方舟行就是完整地址）；适配器统一走 `imagesEndpoint()` 拼接，别再手写 `${base}/images/generations`。
 
 ## 10. 常用验证命令
 
