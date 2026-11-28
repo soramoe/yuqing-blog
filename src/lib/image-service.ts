@@ -305,6 +305,10 @@ export async function createAndRunImageJob(
   if (!settings.enabled) {
     throw new ImageServiceError("生图功能当前未开放。", 503);
   }
+  // 互动小说章节插画有独立开关（总开关关闭时上面已拦截）
+  if (input.feature === "story_chapter" && !settings.storyEnabled) {
+    throw new ImageServiceError("互动小说的生图功能当前已关闭。", 503);
+  }
 
   const previous = await existingJob(env.DB, input.userId, input.requestId);
   if (previous) {

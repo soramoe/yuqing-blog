@@ -25,6 +25,8 @@ const toAdapter = (value: string | null | undefined): ImageProviderAdapter => {
 
 export interface ImageSettings {
   enabled: boolean;
+  /** 互动小说章节插画独立开关：总开关关闭时仍然整体不开放 */
+  storyEnabled: boolean;
   pointValueCents: number;
   standardPoints: number;
   hdPoints: number;
@@ -63,6 +65,7 @@ export interface ImageProviderConfig {
 
 export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   enabled: false,
+  storyEnabled: true,
   pointValueCents: IMAGE_POINT_VALUE_CENTS,
   standardPoints: IMAGE_STANDARD_POINTS,
   hdPoints: IMAGE_HD_POINTS,
@@ -93,6 +96,9 @@ export function sanitizeImageSettings(value: unknown): ImageSettings {
       : {};
   return {
     enabled: typeof input.enabled === "boolean" ? input.enabled : false,
+    // 旧客户端不传该字段时保持开启，避免一次普通保存把小说插画关掉
+    storyEnabled:
+      typeof input.storyEnabled === "boolean" ? input.storyEnabled : true,
     pointValueCents: clampInteger(
       input.pointValueCents,
       1,
@@ -140,6 +146,7 @@ export async function getImageSettings(db: D1Database) {
     .prepare(
       `SELECT
         enabled,
+        story_enabled AS storyEnabled,
         point_value_cents AS pointValueCents,
         standard_points AS standardPoints,
         hd_points AS hdPoints,
@@ -154,6 +161,7 @@ export async function getImageSettings(db: D1Database) {
     )
     .first<{
       enabled: number;
+      storyEnabled: number;
       pointValueCents: number;
       standardPoints: number;
       hdPoints: number;
@@ -167,6 +175,7 @@ export async function getImageSettings(db: D1Database) {
   if (!row) return { ...DEFAULT_IMAGE_SETTINGS };
   return {
     enabled: Boolean(row.enabled),
+    storyEnabled: Boolean(row.storyEnabled),
     pointValueCents: Number(row.pointValueCents),
     standardPoints: Number(row.standardPoints),
     hdPoints: Number(row.hdPoints),

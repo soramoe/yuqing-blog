@@ -4,6 +4,7 @@ import {
   createAndRunImageJob,
   ImageServiceError,
 } from "../../../src/lib/image-service";
+import { getImageSettings } from "../../../src/lib/image-settings";
 import {
   getStoryTemplate,
   sanitizeStoryCharacters,
@@ -201,6 +202,15 @@ export const onRequestPost: PagesFunction<Env> = async ({
   const auth = createAuth(env, new URL(request.url));
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.user) return json({ error: "请先登录。" }, 401);
+
+  // 独立开关先拦在前端：关闭时连场景改写（LLM）都不该发生
+  const imageSettings = await getImageSettings(env.DB);
+  if (!imageSettings.enabled) {
+    return json({ error: "生图功能当前未开放。" }, 503);
+  }
+  if (!imageSettings.storyEnabled) {
+    return json({ error: "互动小说的生图功能当前已关闭。" }, 503);
+  }
 
   let payload: unknown;
   try {

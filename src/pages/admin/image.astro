@@ -51,6 +51,13 @@ import "../../styles/admin-story.css";
               <small>总开关关闭时，所有生图功能（含互动小说插画）都不会调用图片模型。</small>
             </span>
           </label>
+          <label class="admin-story-toggle">
+            <input type="checkbox" data-image-story-enabled />
+            <span>
+              <strong>互动小说生图</strong>
+              <small>独立开关：关闭后互动小说不再生成章节插画，但「AI 生图」页面不受影响；需总开关同时开启。</small>
+            </span>
+          </label>
           <label>
             <span>标准图积分（章节插画）</span>
             <input type="number" min="1" max="1000" data-image-standard-points required />
@@ -102,6 +109,7 @@ import "../../styles/admin-story.css";
 
   interface AdminImageConfig {
     enabled: boolean;
+    storyEnabled: boolean;
     standardPoints: number;
     hdPoints: number;
     studioPoints: number;
@@ -131,6 +139,9 @@ import "../../styles/admin-story.css";
   );
   const imageEnabledInput = document.querySelector<HTMLInputElement>(
     "[data-image-enabled]",
+  );
+  const imageStoryEnabledInput = document.querySelector<HTMLInputElement>(
+    "[data-image-story-enabled]",
   );
   const imageStandardInput = document.querySelector<HTMLInputElement>(
     "[data-image-standard-points]",
@@ -174,6 +185,10 @@ import "../../styles/admin-story.css";
 
   const fillImageConfig = (settings: AdminImageConfig) => {
     if (imageEnabledInput) imageEnabledInput.checked = settings.enabled;
+    if (imageStoryEnabledInput) {
+      imageStoryEnabledInput.checked = settings.storyEnabled;
+      imageStoryEnabledInput.disabled = !settings.enabled;
+    }
     if (imageStandardInput) {
       imageStandardInput.value = String(settings.standardPoints);
     }
@@ -191,9 +206,20 @@ import "../../styles/admin-story.css";
       imageBudgetInput.value = String(settings.monthlyBudgetCents / 100);
     }
     if (imageConfigStatus) {
-      imageConfigStatus.textContent = settings.enabled ? "生图已开启" : "生图已关闭";
+      imageConfigStatus.textContent = settings.enabled
+        ? settings.storyEnabled
+          ? "生图已开启"
+          : "生图已开启（小说插画关闭）"
+        : "生图已关闭";
     }
   };
+
+  // 总开关关闭时，小说插画开关不可单独操作
+  imageEnabledInput?.addEventListener("change", () => {
+    if (imageStoryEnabledInput) {
+      imageStoryEnabledInput.disabled = !imageEnabledInput.checked;
+    }
+  });
 
   const loadImageConfig = async () => {
     const response = await fetch("/api/admin/image", {
@@ -259,6 +285,7 @@ import "../../styles/admin-story.css";
         body: JSON.stringify({
           settings: {
             enabled: imageEnabledInput?.checked ?? false,
+            storyEnabled: imageStoryEnabledInput?.checked ?? true,
             standardPoints: Number(imageStandardInput?.value),
             hdPoints: Number(imageHdInput?.value),
             studioPoints: Number(imageStudioInput?.value),

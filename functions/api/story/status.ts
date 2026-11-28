@@ -45,7 +45,8 @@ export const onRequestGet: PagesFunction<Env> = async ({
       trialDailyBudgetYuan: settings.trialDailyBudgetYuan,
       trialIpDailyLimit: settings.trialIpDailyLimit,
       trial,
-      imageGenerationEnabled: imageSettings.enabled,
+      imageGenerationEnabled:
+        imageSettings.enabled && imageSettings.storyEnabled,
       imageStandardPoints: imageSettings.standardPoints,
       imageHdPoints: imageSettings.hdPoints,
       stateEngineReady,

@@ -13,6 +13,10 @@ import { user } from "./auth-schema";
 export const imageSetting = sqliteTable("image_setting", {
   id: text("id").primaryKey(),
   enabled: integer("enabled", { mode: "boolean" }).default(false).notNull(),
+  /** 互动小说章节插画的独立开关（总开关关闭时仍然整体不开放） */
+  storyEnabled: integer("story_enabled", { mode: "boolean" })
+    .default(true)
+    .notNull(),
   pointValueCents: integer("point_value_cents").default(1).notNull(),
   standardPoints: integer("standard_points").default(20).notNull(),
   hdPoints: integer("hd_points").default(32).notNull(),
