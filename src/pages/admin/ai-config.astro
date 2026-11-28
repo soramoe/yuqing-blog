@@ -60,7 +60,8 @@ import "../../styles/admin-story.css";
             <label>
               <span>适配器类型</span>
               <select data-ai-new-adapter>
-                <option value="openai-images" selected>OpenAI 图片兼容（硅基流动等）</option>
+                <option value="ark-images" selected>火山方舟（豆包 Seedream）</option>
+                <option value="openai-images">OpenAI 图片兼容（硅基流动等）</option>
                 <option value="dashscope-images">阿里千问（DashScope）</option>
                 <option value="workers-ai">Cloudflare Workers AI</option>
               </select>
@@ -516,7 +517,8 @@ import "../../styles/admin-story.css";
 
       if (
         provider.adapter === "dashscope-images" ||
-        provider.adapter === "openai-images"
+        provider.adapter === "openai-images" ||
+        provider.adapter === "ark-images"
       ) {
         const keyLabel = document.createElement("label");
         const keySpan = document.createElement("span");

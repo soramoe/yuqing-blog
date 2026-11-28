@@ -81,6 +81,9 @@ export function isProviderConfigured(
   if (provider.adapter === "colab-sdxl") {
     return Boolean(env.IMAGE_COLAB_URL?.trim());
   }
+  if (provider.adapter === "ark-images") {
+    return Boolean(provider.apiKey?.trim());
+  }
   if (provider.adapter === "openai-images") {
     return Boolean(
       provider.apiKey?.trim() || env.IMAGE_SILICONFLOW_API_KEY?.trim(),
@@ -625,6 +628,89 @@ async function generateWithColab(
   );
 }
 
+// 火山方舟（豆包 Seedream）：原生支持中文提示词，无需翻译；无负面词参数
+async function generateWithArk(
+  env: ImageProviderEnv,
+  provider: ImageProviderConfig,
+  request: ImageGenerationRequest,
+) {
+  const apiKey = provider.apiKey?.trim();
+  if (!apiKey) {
+    throw new ImageProviderError(
+      `${provider.name} 的 API 密钥尚未绑定（AI 配置页可绑定）。`,
+      "not-configured",
+      false,
+    );
+  }
+  const base = (
+    provider.baseUrl?.trim() ||
+    "https://ark.cn-beijing.volces.com/api/v3"
+  ).replace(/\/+$/, "");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 300_000);
+  try {
+    const response = await fetch(`${base}/images/generations`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        // Seedream 原生理解中文，直接用原文（比翻译成英文更贴合描述）
+        prompt: request.prompt,
+        response_format: "b64_json",
+        size: `${request.width}x${request.height}`,
+        watermark: false,
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "").slice(0, 100);
+      throw new ImageProviderError(
+        response.status === 429
+          ? "火山方舟请求过于频繁或额度不足。"
+          : `火山方舟生图返回 HTTP ${response.status}（${detail}）。`,
+        response.status === 429 ? "rate-limited" : "provider-unavailable",
+        response.status === 429 || response.status >= 500,
+      );
+    }
+    const payload = (await response.json().catch(() => null)) as {
+      data?: Array<{ b64_json?: string; url?: string }>;
+    } | null;
+    const item = payload?.data?.[0];
+    if (item?.b64_json) {
+      return normalizeBinary(
+        { b64_json: item.b64_json },
+        request.width,
+        request.height,
+      );
+    }
+    if (item?.url) {
+      const bytes = await fetchProviderImage(item.url);
+      return normalizeBinary(bytes, request.width, request.height);
+    }
+    throw new ImageProviderError(
+      "火山方舟没有返回图片。",
+      "invalid-response",
+      true,
+    );
+  } catch (error) {
+    if (error instanceof ImageProviderError) throw error;
+    if (controller.signal.aborted) {
+      throw new ImageProviderError("火山方舟生图响应超时。", "timeout", true);
+    }
+    throw new ImageProviderError(
+      "火山方舟服务暂时无法连接。",
+      "provider-unavailable",
+      true,
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function generateWithProvider(
   env: ImageProviderEnv,
   provider: ImageProviderConfig,
@@ -646,6 +732,8 @@ export async function generateWithProvider(
       return generateWithOpenAiImages(env, provider, request);
     case "colab-sdxl":
       return generateWithColab(env, provider, request);
+    case "ark-images":
+      return generateWithArk(env, provider, request);
     default:
       throw new ImageProviderError(
         "图片供应商适配器不受支持。",
