@@ -5,29 +5,29 @@ import AdminNav from "../../components/AdminNav.astro";
 
 <BaseLayout
   title="管理后台"
-  description="渔情站长管理后台。"
+  description="渔情站长管理后台：服务运行状态与生图、互动小说运营概览。"
   bodyClass="page-admin-index"
   noindex
 >
-  <div class="container admin-index-shell">
-    <header class="admin-index-header">
+  <div class="container admin-dash-shell">
+    <header class="admin-dash-header">
       <div>
         <p class="eyebrow">ADMIN CONSOLE</p>
         <h1>管理后台</h1>
-        <p>站内各模块的运营入口，仅站长账号可见。</p>
+        <p>服务运行状态与运营概览，仅站长账号可见。</p>
       </div>
-      <div class="admin-index-account">
+      <div class="admin-dash-account">
         <a href="/account/">返回账户</a>
       </div>
     </header>
 
     <AdminNav />
 
-    <p class="admin-index-status" id="admin-index-status" aria-live="polite">
+    <p class="admin-dash-status" id="admin-index-status" aria-live="polite">
       正在验证权限…
     </p>
 
-    <div class="admin-index-denied" id="admin-index-denied" hidden>
+    <div class="admin-dash-denied" id="admin-index-denied" hidden>
       <p class="eyebrow">ACCESS REQUIRED</p>
       <strong data-admin-index-gate-title>请先登录</strong>
       <p data-admin-index-gate-copy>登录站长账号后才能进入管理后台。</p>
@@ -36,79 +36,145 @@ import AdminNav from "../../components/AdminNav.astro";
       </a>
     </div>
 
-    <div class="admin-index-grid" id="admin-index-content" hidden>
-      <a class="admin-index-card" href="/admin/stories/">
-        <p class="eyebrow">AI STORY</p>
-        <h2>互动小说管理</h2>
-        <p>回合积分、免费试玩额度、站长 Key 开关，以及公共故事审核。</p>
-      </a>
-      <a class="admin-index-card" href="/admin/image/">
-        <p class="eyebrow">IMAGE OPS</p>
-        <h2>生图管理</h2>
-        <p>生图总开关、四类积分定价、每日配额与预算、冷却重置。</p>
-      </a>
-      <a class="admin-index-card" href="/admin/ai-config/">
-        <p class="eyebrow">AI CONFIG</p>
-        <h2>AI 配置</h2>
-        <p>模型与 API 绑定、实时消耗监控、模型测试。</p>
-      </a>
-      <a class="admin-index-card" href="/admin/announcements/">
-        <p class="eyebrow">ANNOUNCEMENTS</p>
-        <h2>公告管理</h2>
-        <p>新建、编辑、上下线和删除全站公告，支持定时展示。</p>
-      </a>
-      <a class="admin-index-card" href="/admin/comments/">
-        <p class="eyebrow">MODERATION</p>
-        <h2>评论审核</h2>
-        <p>检查最近评论，隐藏违规内容或删除正文。</p>
-      </a>
-      <a class="admin-index-card" href="/admin/gallery/">
-        <p class="eyebrow">GALLERY</p>
-        <h2>图库管理</h2>
-        <p>审核公共投稿，管理已发布图片的可见性。</p>
-      </a>
-      <a class="admin-index-card" href="/admin/points/">
-        <p class="eyebrow">POINTS</p>
-        <h2>积分管理</h2>
-        <p>查找用户并手动调整积分余额，操作写入独立流水。</p>
-      </a>
-      <a class="admin-index-card" href="/admin/shop/">
-        <p class="eyebrow">SHOP</p>
-        <h2>商城管理</h2>
-        <p>商品与库存、兑换订单处理、一次性积分码生成。</p>
-      </a>
+    <div id="admin-index-content" hidden>
+      <div class="admin-dash-toolbar">
+        <span data-dash-updated>正在读取运行状态…</span>
+        <button type="button" class="admin-dash-refresh" data-dash-refresh>
+          刷新
+        </button>
+      </div>
+
+      <div class="admin-dash-tiles">
+        <article class="admin-dash-tile" data-tile="site">
+          <p class="admin-dash-tile-label">站点服务</p>
+          <strong data-tile-value>检查中…</strong>
+          <small data-tile-note></small>
+        </article>
+        <article class="admin-dash-tile" data-tile="image">
+          <p class="admin-dash-tile-label">生图总开关</p>
+          <strong data-tile-value>–</strong>
+          <small data-tile-note></small>
+        </article>
+        <article class="admin-dash-tile" data-tile="story">
+          <p class="admin-dash-tile-label">互动小说插画</p>
+          <strong data-tile-value>–</strong>
+          <small data-tile-note></small>
+        </article>
+        <article class="admin-dash-tile" data-tile="colab">
+          <p class="admin-dash-tile-label">Colab 生图服务</p>
+          <strong data-tile-value>检查中…</strong>
+          <small data-tile-note></small>
+        </article>
+      </div>
+
+      <div class="admin-dash-grid">
+        <section class="admin-dash-panel">
+          <header class="admin-dash-panel-head">
+            <h2>生图服务</h2>
+            <a href="/admin/image/">管理 →</a>
+          </header>
+          <dl class="admin-dash-metrics">
+            <div>
+              <dt>今日任务</dt>
+              <dd data-metric="jobs">–</dd>
+            </div>
+            <div>
+              <dt>今日成功 / 失败</dt>
+              <dd data-metric="jobs-result">–</dd>
+            </div>
+            <div>
+              <dt>1K / 2K 单价</dt>
+              <dd data-metric="price">–</dd>
+            </div>
+            <div>
+              <dt>本月预算</dt>
+              <dd data-metric="budget">–</dd>
+            </div>
+          </dl>
+          <ul class="admin-dash-models" data-dash-models></ul>
+        </section>
+
+        <section class="admin-dash-panel">
+          <header class="admin-dash-panel-head">
+            <h2>互动小说</h2>
+            <a href="/admin/stories/">管理 →</a>
+          </header>
+          <dl class="admin-dash-metrics">
+            <div>
+              <dt>站点 Key</dt>
+              <dd data-metric="story-key">–</dd>
+            </div>
+            <div>
+              <dt>每回合积分</dt>
+              <dd data-metric="story-points">–</dd>
+            </div>
+            <div>
+              <dt>每日回合上限</dt>
+              <dd data-metric="story-limit">–</dd>
+            </div>
+            <div>
+              <dt>免费试玩</dt>
+              <dd data-metric="story-trial">–</dd>
+            </div>
+          </dl>
+          <p class="admin-dash-note" data-story-note></p>
+        </section>
+
+        <section class="admin-dash-panel admin-dash-panel-wide">
+          <header class="admin-dash-panel-head">
+            <h2>最近生图调用</h2>
+            <a href="/admin/ai-config/">消耗监控 →</a>
+          </header>
+          <div class="admin-dash-table-wrap">
+            <table class="admin-dash-table">
+              <thead>
+                <tr>
+                  <th>时间</th>
+                  <th>供应商</th>
+                  <th>状态</th>
+                  <th>耗时</th>
+                  <th>错误</th>
+                </tr>
+              </thead>
+              <tbody data-dash-attempts>
+                <tr><td colspan="5">正在读取…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </BaseLayout>
 
-<style>
-  .admin-index-shell {
+<style is:global>
+  .admin-dash-shell {
     padding-bottom: 4rem;
   }
-  .admin-index-header {
+  .admin-dash-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     gap: 1rem;
     margin-bottom: 1rem;
   }
-  h1 {
+  .admin-dash-header h1 {
     font-size: 2rem;
     margin: 0 0 0.4rem;
   }
-  .admin-index-header p {
+  .admin-dash-header p {
     margin: 0;
     color: var(--muted);
   }
-  .admin-index-account a {
+  .admin-dash-account a {
     color: var(--accent);
     font-size: 0.85rem;
   }
-  .admin-index-status {
+  .admin-dash-status {
     color: var(--muted);
     min-height: 1.5em;
   }
-  .admin-index-denied {
+  .admin-dash-denied {
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--surface);
@@ -117,57 +183,277 @@ import AdminNav from "../../components/AdminNav.astro";
     gap: 0.8rem;
     justify-items: start;
   }
-  .admin-index-denied strong {
+  .admin-dash-denied strong {
     font-size: 1.05rem;
   }
-  .admin-index-denied p {
+  .admin-dash-denied p {
     margin: 0;
     color: var(--muted);
   }
-  .admin-index-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-    gap: 0.9rem;
+  .admin-dash-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    margin: 1rem 0 0.8rem;
+    color: var(--muted);
+    font-size: 0.78rem;
   }
-  .admin-index-card {
+  .admin-dash-refresh {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+  .admin-dash-refresh:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .admin-dash-refresh:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  .admin-dash-tiles {
     display: grid;
-    gap: 0.45rem;
-    align-content: start;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 0.8rem;
+  }
+  .admin-dash-tile {
     border: 1px solid var(--border);
     border-radius: 14px;
     background: var(--surface);
-    padding: 1.15rem 1.25rem;
-    text-decoration: none;
-    color: var(--text);
-    transition: border-color 140ms ease, transform 140ms ease;
+    padding: 0.95rem 1.1rem;
+    display: grid;
+    gap: 0.25rem;
+    align-content: start;
   }
-  .admin-index-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-2px);
-  }
-  .admin-index-card .eyebrow {
-    color: var(--accent);
-    font-size: 0.68rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    margin: 0;
-  }
-  .admin-index-card h2 {
-    font-size: 1.02rem;
-    margin: 0;
-  }
-  .admin-index-card p {
+  .admin-dash-tile-label {
     margin: 0;
     color: var(--muted);
-    font-size: 0.82rem;
-    line-height: 1.55;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+  }
+  .admin-dash-tile strong {
+    font-size: 1.05rem;
+  }
+  .admin-dash-tile small {
+    color: var(--muted);
+    font-size: 0.74rem;
+  }
+  .admin-dash-tile[data-state="ok"] strong {
+    color: var(--accent);
+  }
+  .admin-dash-tile[data-state="warn"] strong {
+    color: #d99a45;
+  }
+  .admin-dash-tile[data-state="off"] strong {
+    color: var(--muted);
+  }
+  .admin-dash-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 0.9rem;
+  }
+  .admin-dash-panel {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.1rem 1.2rem;
+    display: grid;
+    gap: 0.8rem;
+    align-content: start;
+  }
+  .admin-dash-panel-wide {
+    grid-column: 1 / -1;
+  }
+  .admin-dash-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+  }
+  .admin-dash-panel-head h2 {
+    margin: 0;
+    font-size: 1rem;
+  }
+  .admin-dash-panel-head a {
+    color: var(--accent);
+    font-size: 0.78rem;
+    text-decoration: none;
+  }
+  .admin-dash-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 0.7rem;
+    margin: 0;
+  }
+  .admin-dash-metrics > div {
+    display: grid;
+    gap: 0.15rem;
+  }
+  .admin-dash-metrics dt {
+    color: var(--muted);
+    font-size: 0.72rem;
+  }
+  .admin-dash-metrics dd {
+    margin: 0;
+    font-size: 0.92rem;
+    font-weight: 600;
+  }
+  .admin-dash-models {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.4rem;
+  }
+  .admin-dash-models li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    border-radius: 10px;
+    font-size: 0.8rem;
+  }
+  .admin-dash-badge {
+    flex: none;
+    padding: 0.08rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.68rem;
+  }
+  .admin-dash-badge[data-state="ok"] {
+    color: #7ec699;
+    border-color: rgb(83 160 112 / 45%);
+  }
+  .admin-dash-badge[data-state="warn"] {
+    color: #e2a355;
+    border-color: rgb(205 125 54 / 45%);
+  }
+  .admin-dash-badge[data-state="off"] {
+    color: var(--muted);
+  }
+  .admin-dash-note {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.74rem;
+    line-height: 1.6;
+  }
+  .admin-dash-table-wrap {
+    overflow-x: auto;
+  }
+  .admin-dash-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .admin-dash-table th,
+  .admin-dash-table td {
+    padding: 0.42rem 0.55rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .admin-dash-table th {
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .admin-dash-table td[data-status="failed"] {
+    color: #e07a5f;
+  }
+  .admin-dash-table td[data-status="succeeded"] {
+    color: #7ec699;
+  }
+  .admin-dash-error {
+    color: var(--muted);
+  }
+  @media (max-width: 760px) {
+    .admin-dash-grid {
+      grid-template-columns: 1fr;
+    }
+    .admin-dash-table th,
+    .admin-dash-table td {
+      white-space: normal;
+    }
   }
 </style>
 
 <script>
-  const statusEl = document.getElementById(
-    "admin-index-status",
-  ) as HTMLElement;
+  interface ImageSettingsLite {
+    enabled: boolean;
+    storyEnabled: boolean;
+    studioPoints: number;
+    studioHdPoints: number;
+    queueJumpPoints: number;
+    standardPoints: number;
+    hdPoints: number;
+    dailyJobLimit: number;
+    monthlyBudgetCents: number;
+  }
+
+  interface ProviderLite {
+    id: string;
+    name: string;
+    adapter: string;
+    model: string;
+    enabled: boolean;
+    features: string;
+    configured: boolean;
+    cooldownActive: boolean;
+    consecutiveFailures: number;
+  }
+
+  interface AttemptLite {
+    providerId: string;
+    providerName: string | null;
+    model: string;
+    status: "succeeded" | "failed" | string;
+    errorMessage: string | null;
+    durationMs: number;
+    createdAt: number;
+  }
+
+  interface AdminImagePayload {
+    settings?: ImageSettingsLite;
+    providers?: ProviderLite[];
+    today?: { jobs: number; succeeded: number; failed: number };
+    usage?: Array<{
+      period: string;
+      reservedCents: number;
+      spentCents: number;
+    }>;
+    recentAttempts?: AttemptLite[];
+    error?: string;
+  }
+
+  interface GeneratePayload {
+    ok?: boolean;
+    enabled?: boolean;
+    points?: number;
+    pointsHd?: number;
+    queueJumpPoints?: number;
+    models?: Array<{ id: string; name: string; adapter: string; status: string }>;
+  }
+
+  interface StoryPayload {
+    siteKeyConfigured?: boolean;
+    siteKeyEnabled?: boolean;
+    pointsPerTurn?: number;
+    dailyTurnLimit?: number;
+    trialEnabled?: boolean;
+    trialGithubTurns?: number;
+    trialEmailTurns?: number;
+    imageGenerationEnabled?: boolean;
+  }
+
+  const statusEl = document.getElementById("admin-index-status") as HTMLElement;
   const denied = document.getElementById("admin-index-denied") as HTMLElement;
   const gateTitle = document.querySelector(
     "[data-admin-index-gate-title]",
@@ -178,34 +464,327 @@ import AdminNav from "../../components/AdminNav.astro";
   const gateLink = document.querySelector<HTMLAnchorElement>(
     "[data-admin-index-gate-link]",
   );
-  const content = document.getElementById("admin-index-content") as HTMLElement;
+  const content = document.getElementById(
+    "admin-index-content",
+  ) as HTMLElement;
+  const updatedEl = document.querySelector("[data-dash-updated]") as HTMLElement;
+  const refreshBtn = document.querySelector(
+    "[data-dash-refresh]",
+  ) as HTMLButtonElement;
+  const modelsEl = document.querySelector("[data-dash-models]") as HTMLElement;
+  const attemptsBody = document.querySelector(
+    "[data-dash-attempts]",
+  ) as HTMLElement;
 
-  fetch("/api/admin/status", {
-    credentials: "same-origin",
-    headers: { Accept: "application/json" },
-  })
-    .then((response) => (response.ok ? response.json() : null))
-    .then((data) => {
-      if (!data) {
+  const adapterIcon: Record<string, string> = {
+    "colab-sdxl": "🚀",
+    "workers-ai": "⚡",
+    "dashscope-images": "🌊",
+    "openai-images": "🎨",
+    "ark-images": "🌋",
+    "bigmodel-image": "✨",
+  };
+
+  const formatTime = (value: number | string | Date) =>
+    new Date(value).toLocaleString("zh-CN", {
+      timeZone: "Asia/Shanghai",
+      hour12: false,
+    });
+
+  const monthKey = () => {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Shanghai",
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(new Date());
+    const year = parts.find((part) => part.type === "year")?.value ?? "";
+    const month = parts.find((part) => part.type === "month")?.value ?? "";
+    return `${year}-${month}`;
+  };
+
+  const setTile = (
+    key: string,
+    value: string,
+    note: string,
+    state: "ok" | "warn" | "off",
+  ) => {
+    const tile = document.querySelector<HTMLElement>(
+      `[data-tile="${key}"]`,
+    );
+    if (!tile) return;
+    tile.dataset.state = state;
+    const valueEl = tile.querySelector("[data-tile-value]");
+    const noteEl = tile.querySelector("[data-tile-note]");
+    if (valueEl) valueEl.textContent = value;
+    if (noteEl) noteEl.textContent = note;
+  };
+
+  const setMetric = (key: string, text: string) => {
+    const el = document.querySelector(`[data-metric="${key}"]`);
+    if (el) el.textContent = text;
+  };
+
+  const providerBadge = (provider: ProviderLite) => {
+    if (!provider.enabled) return { label: "未启用", state: "off" as const };
+    if (!provider.configured) return { label: "未配置", state: "off" as const };
+    if (provider.cooldownActive) return { label: "冷却中", state: "warn" as const };
+    if (provider.consecutiveFailures > 0) {
+      return {
+        label: `就绪 · 连错 ${provider.consecutiveFailures}`,
+        state: "warn" as const,
+      };
+    }
+    return { label: "就绪", state: "ok" as const };
+  };
+
+  const renderModels = (providers: ProviderLite[]) => {
+    modelsEl.replaceChildren();
+    const list = providers.filter((provider) =>
+      provider.features.split(",").some((item) => item.trim()),
+    );
+    if (!list.length) {
+      const empty = document.createElement("li");
+      empty.textContent = "暂无已登记的图片供应商。";
+      modelsEl.appendChild(empty);
+      return;
+    }
+    for (const provider of list) {
+      const item = document.createElement("li");
+      const name = document.createElement("span");
+      name.textContent = `${adapterIcon[provider.adapter] ?? "🎨"} ${provider.name}`;
+      const badge = document.createElement("span");
+      const status = providerBadge(provider);
+      badge.className = "admin-dash-badge";
+      badge.dataset.state = status.state;
+      badge.textContent = status.label;
+      item.append(name, badge);
+      modelsEl.appendChild(item);
+    }
+  };
+
+  const renderAttempts = (attempts: AttemptLite[]) => {
+    attemptsBody.replaceChildren();
+    if (!attempts.length) {
+      const row = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 5;
+      cell.className = "admin-dash-error";
+      cell.textContent = "还没有生图调用记录。";
+      row.appendChild(cell);
+      attemptsBody.appendChild(row);
+      return;
+    }
+    for (const attempt of attempts.slice(0, 8)) {
+      const row = document.createElement("tr");
+      const time = document.createElement("td");
+      time.textContent = formatTime(attempt.createdAt);
+      const provider = document.createElement("td");
+      provider.textContent = attempt.providerName ?? attempt.providerId;
+      const state = document.createElement("td");
+      state.dataset.status = attempt.status;
+      state.textContent = attempt.status === "succeeded" ? "成功" : "失败";
+      const duration = document.createElement("td");
+      duration.textContent = `${(attempt.durationMs / 1000).toFixed(1)}s`;
+      const error = document.createElement("td");
+      error.className = "admin-dash-error";
+      error.textContent = attempt.errorMessage?.slice(0, 60) ?? "—";
+      row.append(time, provider, state, duration, error);
+      attemptsBody.appendChild(row);
+    }
+  };
+
+  let refreshing = false;
+
+  const loadDashboard = async () => {
+    if (refreshing) return;
+    refreshing = true;
+    refreshBtn.disabled = true;
+    try {
+      const startedAt = performance.now();
+      const statusResponse = await fetch("/api/admin/status", {
+        credentials: "same-origin",
+        headers: { Accept: "application/json" },
+      });
+      const latency = Math.round(performance.now() - startedAt);
+      if (!statusResponse.ok) {
+        // 登录态失效时回到门禁
         gateTitle.textContent = "请先登录";
         gateCopy.textContent = "登录站长账号后才能进入管理后台。";
         denied.hidden = false;
+        content.hidden = true;
+        statusEl.hidden = true;
         return;
       }
-      if (!data.isAdmin) {
+      const statusPayload = (await statusResponse.json()) as {
+        isAdmin?: boolean;
+      };
+      if (!statusPayload.isAdmin) {
         gateTitle.textContent = "没有管理权限";
         gateCopy.textContent = "当前账号不是站长。";
         if (gateLink) gateLink.hidden = true;
         denied.hidden = false;
+        content.hidden = true;
+        statusEl.hidden = true;
         return;
       }
       statusEl.hidden = true;
       content.hidden = false;
-    })
-    .catch(() => {
-      statusEl.hidden = true;
-      gateTitle.textContent = "无法验证登录状态";
-      gateCopy.textContent = "请刷新页面后重试。";
-      denied.hidden = false;
-    });
+
+      setTile(
+        "site",
+        "在线",
+        `API 响应 ${latency} ms · ${formatTime(new Date())}`,
+        "ok",
+      );
+
+      const [imageResult, generateResult, storyResult] =
+        await Promise.allSettled([
+          fetch("/api/admin/image", {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+          }).then((response) =>
+            response.ok
+              ? (response.json() as Promise<AdminImagePayload>)
+              : Promise.reject(new Error(`HTTP ${response.status}`)),
+          ),
+          fetch("/api/ai-image/generate", {
+            credentials: "same-origin",
+            headers: { Accept: "application/json" },
+          }).then(
+            (response) => response.json() as Promise<GeneratePayload>,
+          ),
+          fetch("/api/story/status", {
+            headers: { Accept: "application/json" },
+          }).then((response) => response.json() as Promise<StoryPayload>),
+        ]);
+
+      const image =
+        imageResult.status === "fulfilled" ? imageResult.value : null;
+      const generate =
+        generateResult.status === "fulfilled" ? generateResult.value : null;
+      const story =
+        storyResult.status === "fulfilled" ? storyResult.value : null;
+
+      // 生图总开关
+      const enabled = image?.settings?.enabled ?? generate?.enabled ?? false;
+      setTile(
+        "image",
+        enabled ? "已开启" : "已关闭",
+        image?.settings
+          ? `互动小说插画${image.settings.storyEnabled ? "开启" : "关闭"}`
+          : "读取设置失败",
+        enabled ? "ok" : "off",
+      );
+
+      // 互动小说插画（受总开关与独立开关共同控制）
+      const storyImage = story?.imageGenerationEnabled ?? false;
+      setTile(
+        "story",
+        storyImage ? "已开启" : "已关闭",
+        storyImage ? "章节插画可生成" : "章节插画暂停",
+        storyImage ? "ok" : "off",
+      );
+
+      // Colab 探活
+      const colabOk = Boolean(generate?.ok);
+      const colabModel = generate?.models?.find(
+        (model) => model.id === "colab-sdxl",
+      );
+      setTile(
+        "colab",
+        colabOk ? "在线" : "离线",
+        colabModel ? `模型 ${colabModel.model}` : "未登记 Colab 模型",
+        colabOk ? "ok" : "warn",
+      );
+
+      if (image?.settings) {
+        const settings = image.settings;
+        setMetric("jobs", `${image.today?.jobs ?? 0} / ${settings.dailyJobLimit}`);
+        setMetric(
+          "jobs-result",
+          `${image.today?.succeeded ?? 0} / ${image.today?.failed ?? 0}`,
+        );
+        setMetric(
+          "price",
+          `${settings.studioPoints} / ${settings.studioHdPoints} 积分`,
+        );
+        const period = monthKey();
+        const usedCents = (image.usage ?? [])
+          .filter((row) => row.period === period)
+          .reduce(
+            (sum, row) => sum + row.reservedCents + row.spentCents,
+            0,
+          );
+        setMetric(
+          "budget",
+          `¥${(usedCents / 100).toFixed(2)} / ¥${(
+            settings.monthlyBudgetCents / 100
+          ).toFixed(2)}`,
+        );
+      } else {
+        setMetric("jobs", "读取失败");
+        setMetric("jobs-result", "—");
+        setMetric("price", "—");
+        setMetric("budget", "—");
+      }
+
+      if (image?.providers) {
+        renderModels(image.providers);
+      } else {
+        modelsEl.replaceChildren();
+        const item = document.createElement("li");
+        item.textContent = "供应商状态读取失败。";
+        modelsEl.appendChild(item);
+      }
+
+      renderAttempts(image?.recentAttempts ?? []);
+
+      if (story) {
+        const keyConfigured = Boolean(story.siteKeyConfigured);
+        setMetric(
+          "story-key",
+          keyConfigured
+            ? story.siteKeyEnabled
+              ? "已配置 · 开启"
+              : "已配置 · 关闭"
+            : "未配置",
+        );
+        setMetric("story-points", `${story.pointsPerTurn ?? "–"} 积分`);
+        setMetric("story-limit", `${story.dailyTurnLimit ?? "–"} 回合/天`);
+        setMetric(
+          "story-trial",
+          story.trialEnabled
+            ? `GitHub ${story.trialGithubTurns ?? 0} 回合 · 邮箱 ${story.trialEmailTurns ?? 0} 回合`
+            : "未开启",
+        );
+        const note = document.querySelector(
+          "[data-story-note]",
+        ) as HTMLElement | null;
+        if (note) {
+          note.textContent = storyImage
+            ? "互动小说插画当前可用，消耗按「互动小说插画定价」计算。"
+            : "互动小说插画已关闭；可在「生图管理」重新开启。";
+        }
+      } else {
+        setMetric("story-key", "读取失败");
+        setMetric("story-points", "—");
+        setMetric("story-limit", "—");
+        setMetric("story-trial", "—");
+      }
+
+      updatedEl.textContent = `最后更新 ${formatTime(new Date())} · 每 60 秒自动刷新`;
+    } finally {
+      refreshing = false;
+      refreshBtn.disabled = false;
+    }
+  };
+
+  refreshBtn.addEventListener("click", () => {
+    void loadDashboard();
+  });
+
+  void loadDashboard();
+  window.setInterval(() => {
+    if (!document.hidden) void loadDashboard();
+  }, 60_000);
 </script>
