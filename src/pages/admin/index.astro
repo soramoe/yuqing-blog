@@ -60,11 +60,6 @@ import AdminNav from "../../components/AdminNav.astro";
           <strong data-tile-value>–</strong>
           <small data-tile-note></small>
         </article>
-        <article class="admin-dash-tile" data-tile="colab">
-          <p class="admin-dash-tile-label">Colab 生图服务</p>
-          <strong data-tile-value>检查中…</strong>
-          <small data-tile-note></small>
-        </article>
       </div>
 
       <div class="admin-dash-grid">
@@ -391,7 +386,6 @@ import AdminNav from "../../components/AdminNav.astro";
     storyEnabled: boolean;
     studioPoints: number;
     studioHdPoints: number;
-    queueJumpPoints: number;
     standardPoints: number;
     hdPoints: number;
     dailyJobLimit: number;
@@ -434,11 +428,9 @@ import AdminNav from "../../components/AdminNav.astro";
   }
 
   interface GeneratePayload {
-    ok?: boolean;
     enabled?: boolean;
     points?: number;
     pointsHd?: number;
-    queueJumpPoints?: number;
     models?: Array<{ id: string; name: string; adapter: string; status: string }>;
   }
 
@@ -477,7 +469,6 @@ import AdminNav from "../../components/AdminNav.astro";
   ) as HTMLElement;
 
   const adapterIcon: Record<string, string> = {
-    "colab-sdxl": "🚀",
     "workers-ai": "⚡",
     "dashscope-images": "🌊",
     "openai-images": "🎨",
@@ -694,18 +685,6 @@ import AdminNav from "../../components/AdminNav.astro";
         storyImage ? "已开启" : "已关闭",
         storyImage ? "章节插画可生成" : "章节插画暂停",
         storyImage ? "ok" : "off",
-      );
-
-      // Colab 探活
-      const colabOk = Boolean(generate?.ok);
-      const colabModel = generate?.models?.find(
-        (model) => model.id === "colab-sdxl",
-      );
-      setTile(
-        "colab",
-        colabOk ? "在线" : "离线",
-        colabModel ? `模型 ${colabModel.model}` : "未登记 Colab 模型",
-        colabOk ? "ok" : "warn",
       );
 
       if (image?.settings) {

@@ -12,7 +12,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     <p class="eyebrow">AI IMAGE STUDIO</p>
     <h1>AI 生图</h1>
     <p class="ai-lead">
-      中文自动翻译（Colab/云模型均适配）。左侧配置，右侧出图。失败自动退积分。
+      火山方舟 / 智谱 GLM 双模型。左侧配置，右侧出图。失败自动退积分。
     </p>
 
     <div id="login-card" class="ai-card" hidden>
@@ -56,14 +56,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               主体描述（必填）
               <textarea id="prompt" rows="3" maxlength="800" required placeholder="例如：一只橘白色的猫穿着古代官服，站在雪后的江南石桥上，手里捧着发光的红灯笼"></textarea>
             </label>
-            <label>
-              第二提示词（可选，写给 SDXL 第二文本编码器）
-              <input id="prompt2" maxlength="800" placeholder="例如：电影感构图，细致的光影层次" />
-            </label>
-            <label>
-              负面提示词（可选）
-              <input id="negative" maxlength="500" placeholder="例如：模糊，低质量，多余的手指" />
-            </label>
             <div class="ai-grid">
               <label>
                 清晰度
@@ -95,16 +87,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
                   <option value="auto">自动（由提示词决定）</option>
                 </select>
               </label>
-              <label id="jump-wrap" class="ai-jump" hidden>
-                插队优先生成
-                <span class="ai-jump-inner">
-                  <input id="jump" type="checkbox" />
-                  <span>消耗 <strong data-jump-fee>–</strong> 积分</span>
-                </span>
-              </label>
             </div>
             <label>
-              参考图（可选，上传后按参考图+提示词生图；当前 Colab / 火山方舟模型支持）
+              参考图（可选，上传后按参考图+提示词生图；火山方舟模型支持）
               <input id="ref-image" type="file" accept="image/png,image/jpeg,image/webp" hidden />
               <span
                 id="ref-drop"
@@ -117,7 +102,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
                 <button type="button" data-ref-clear class="ai-ref-clear">移除</button>
               </span>
             </label>
-            <label class="ai-jump ai-gallery-check">
+            <label class="ai-gallery-check">
               <input id="gallery-check" type="checkbox" />
               <span>生成后上传到站内图库（公开可见）</span>
             </label>
@@ -125,12 +110,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <button id="submit" class="button button-primary" type="submit">
                 开始生成
               </button>
-              <span id="queue-line" class="ai-queue" hidden></span>
             </div>
           </form>
 
           <p id="status" class="ai-status">正在检查服务状态…</p>
-          <p id="translated-line" class="ai-translated" hidden></p>
         </div>
 
         <!-- ============ 右：结果 ============ -->
@@ -336,23 +319,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     grid-template-columns: 1fr 1fr;
     gap: 0.9rem;
   }
-  .ai-jump {
-    cursor: pointer;
-    align-content: start;
-  }
-  .ai-jump-inner {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    color: var(--text);
-    font-size: 0.85rem;
-  }
-  .ai-jump input {
-    width: auto;
-  }
-  .ai-jump[hidden] {
-    display: none !important;
-  }
   .ai-gallery-check {
     flex-direction: row !important;
     align-items: center;
@@ -410,19 +376,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     opacity: 0.5;
     cursor: not-allowed;
   }
-  .ai-queue {
-    color: #e2a355;
-    font-size: 0.8rem;
-  }
   .ai-status {
     color: var(--muted);
     min-height: 1.5em;
-  }
-  .ai-translated {
-    color: var(--muted);
-    font-size: 0.78rem;
-    line-height: 1.6;
-    margin: -0.3rem 0 0.8rem;
   }
   .ai-results-panel {
     min-height: 320px;
@@ -576,23 +532,16 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   const form = document.getElementById("gen-form") as HTMLFormElement;
   const btn = $("submit") as HTMLButtonElement;
   const promptInput = $("prompt") as HTMLTextAreaElement;
-  const prompt2Input = $("prompt2") as HTMLInputElement;
-  const negativeInput = $("negative") as HTMLInputElement;
   const qualitySelect = $("quality") as HTMLSelectElement;
   const batchSelect = $("batch") as HTMLSelectElement;
   const ratioSelect = $("ratio") as HTMLSelectElement;
-  const jumpWrap = $("jump-wrap") as HTMLElement;
-  const jumpCheckbox = $("jump") as HTMLInputElement;
-  const jumpFeeEl = jumpWrap.querySelector("[data-jump-fee]") as HTMLElement;
   const refInput = $("ref-image") as HTMLInputElement;
   const refDrop = $("ref-drop") as HTMLElement;
   const refPreview = $("ref-preview") as HTMLElement;
   const refThumb = refPreview.querySelector("img") as HTMLImageElement;
   const refClear = refPreview.querySelector("[data-ref-clear]") as HTMLButtonElement;
   const galleryCheck = $("gallery-check") as HTMLInputElement;
-  const queueLine = $("queue-line") as HTMLElement;
   const statusEl = $("status") as HTMLElement;
-  const translatedLine = $("translated-line") as HTMLElement;
   const resultGrid = $("result-grid") as HTMLElement;
   const resultEmpty = document.querySelector("[data-result-empty]") as HTMLElement;
   const historyWrap = $("history-section") as HTMLElement;
@@ -602,7 +551,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   let balance: number | null = null;
   let pointsCost: number | null = null;
   let pointsHd: number | null = null;
-  let jumpFee: number | null = null;
   let models: ModelInfo[] = [];
   let selectedModelId: string | null = null;
   let refDataUrl: string | null = null;
@@ -661,7 +609,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   };
 
   const adapterIcon: Record<string, string> = {
-    "colab-sdxl": "🚀",
     "workers-ai": "⚡",
     "dashscope-images": "🌊",
     "openai-images": "🎨",
@@ -700,51 +647,12 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         (current.supportsInitImage ? " · 支持参考图" : " · 不支持参考图（将忽略）") +
         (current.status === "cooldown" ? " · 冷却中，稍后可生成" : "")
       : "";
-    updateJumpVisibility();
   }
 
   modelSelect.addEventListener("change", () => {
     selectedModelId = modelSelect.value;
     renderModels();
-    refreshQueue();
   });
-
-  function updateJumpVisibility() {
-    const usingColab = selectedModelId === "colab-sdxl";
-    jumpWrap.hidden = !usingColab || generating || (jumpFee ?? 0) <= 0;
-  }
-
-  async function refreshQueue() {
-    if (selectedModelId !== "colab-sdxl") {
-      queueLine.hidden = true;
-      return;
-    }
-    try {
-      const response = await fetch("/api/ai-image/queue", {
-        headers: { Accept: "application/json" },
-      });
-      const data = (await response.json()) as {
-        offline?: boolean;
-        busy?: boolean;
-        waiting?: number;
-        vip?: number;
-      };
-      const crowded = !data.offline && (data.busy || (data.waiting ?? 0) > 0);
-      if (crowded) {
-        const vipNote = (data.vip ?? 0) > 0 ? `（含 ${data.vip} 位插队）` : "";
-        const jumpPrice =
-          (jumpFee ?? 0) > 0 ? ` · 插队 ${jumpFee} 积分可优先` : "";
-        queueLine.textContent =
-          `🎨 GPU 忙碌中 · 前方排队 ${data.waiting ?? 0} 人${vipNote}${jumpPrice}`;
-        queueLine.hidden = false;
-      } else {
-        queueLine.hidden = true;
-      }
-      updateJumpVisibility();
-    } catch {
-      queueLine.hidden = true;
-    }
-  }
 
   async function refreshService() {
     try {
@@ -752,11 +660,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         headers: { Accept: "application/json" },
       });
       const data = (await response.json()) as {
-        ok: boolean;
         enabled: boolean;
         points: number;
         pointsHd?: number;
-        queueJumpPoints?: number;
         cooldownSeconds?: number;
         models?: ModelInfo[];
       };
@@ -764,13 +670,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       pointsHd =
         typeof data.pointsHd === "number" ? data.pointsHd : data.points;
       renderPrice();
-      if (typeof data.queueJumpPoints === "number") {
-        jumpFee = data.queueJumpPoints;
-        jumpFeeEl.textContent = String(data.queueJumpPoints);
-      }
       models = data.models ?? [];
       renderModels();
-      void refreshQueue();
       if (!data.enabled) {
         setBadge("busy", "● 生图未开放");
         setStatus("站长暂时关闭了生图功能。");
@@ -879,19 +780,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     generating = true;
     btn.disabled = true;
     const count = Number(batchSelect.value);
-    const usingColab = selectedModelId === "colab-sdxl";
     const startedAt = Date.now();
     genTimer = window.setInterval(() => {
       const elapsed = Math.round((Date.now() - startedAt) / 1000);
-      setStatus(
-        `🎨 批量生成中… 已等待 ${elapsed} 秒` +
-          (usingColab ? "（含排队）" : ""),
-      );
+      setStatus(`🎨 批量生成中… 已等待 ${elapsed} 秒`);
     }, 1000);
 
     resultGrid.replaceChildren();
     resultEmpty?.remove();
-    translatedLine.hidden = true;
 
     const slots: BatchSlot[] = [];
     for (let i = 0; i < count; i += 1) {
@@ -916,8 +812,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       });
     }
 
-    void refreshQueue();
-
     const tasks = slots.map((slot) =>
       fetch("/api/ai-image/generate", {
         method: "POST",
@@ -927,12 +821,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           requestId: slot.requestId,
           model: selectedModelId,
           prompt,
-          prompt_2: prompt2Input.value.trim(),
-          negative_prompt: negativeInput.value.trim(),
           quality: qualitySelect.value,
           aspectRatio: ratioSelect.value,
           init_image: refDataUrl ?? undefined,
-          jump: usingColab && jumpCheckbox.checked,
         }),
       })
         .then(async (response) => {
@@ -943,7 +834,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             pointsCost?: number;
             jobId?: string;
             url?: string;
-            translated?: string;
             providerName?: string;
             note?: string;
           };
@@ -955,10 +845,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             slot.info.textContent =
               payload.error?.slice(0, 60) ?? "生成失败（积分已退回）";
             return;
-          }
-          if (payload.translated && slot.index === 0) {
-            translatedLine.textContent = "已翻译为：" + payload.translated;
-            translatedLine.hidden = false;
           }
           slot.url = payload.url;
           slot.el.dataset.state = "done";
@@ -1019,7 +905,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         : `完成 ${done}/${count}，失败部分积分已退回。`,
     );
     void refreshService();
-    void refreshQueue();
   });
 
   async function uploadToGallery(
@@ -1103,7 +988,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
     await refreshService();
     window.setInterval(() => void refreshService(), 30_000);
-    window.setInterval(() => void refreshQueue(), 5000);
   }
 
   void init();

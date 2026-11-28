@@ -71,12 +71,6 @@ import "../../styles/admin-story.css";
             <input type="number" min="1" max="10000" data-image-studio-hd-points required />
             <small>选择 2K 高清时的单张价格；自动比例也会按该清晰度出图。</small>
           </label>
-          <label>
-            <span>插队积分</span>
-            <input type="number" min="0" max="10000" data-image-jump-points required />
-            <small>Colab 排队时可付费插队；0 = 关闭。生成失败自动退回。</small>
-          </label>
-
           <h3 class="admin-image-section-title">互动小说插画定价</h3>
           <label>
             <span>1K 积分（标准图）</span>
@@ -127,7 +121,6 @@ import "../../styles/admin-story.css";
     hdPoints: number;
     studioPoints: number;
     studioHdPoints: number;
-    queueJumpPoints: number;
     dailyJobLimit: number;
     monthlyBudgetCents: number;
   }
@@ -168,9 +161,6 @@ import "../../styles/admin-story.css";
   );
   const imageStudioHdInput = document.querySelector<HTMLInputElement>(
     "[data-image-studio-hd-points]",
-  );
-  const imageJumpInput = document.querySelector<HTMLInputElement>(
-    "[data-image-jump-points]",
   );
   const imageDailyInput = document.querySelector<HTMLInputElement>(
     "[data-image-daily-limit]",
@@ -216,9 +206,6 @@ import "../../styles/admin-story.css";
     if (imageStudioHdInput) {
       imageStudioHdInput.value = String(settings.studioHdPoints);
     }
-    if (imageJumpInput) {
-      imageJumpInput.value = String(settings.queueJumpPoints);
-    }
     if (imageDailyInput) {
       imageDailyInput.value = String(settings.dailyJobLimit);
     }
@@ -263,7 +250,7 @@ import "../../styles/admin-story.css";
     fillImageConfig(payload.settings);
   };
 
-  // Colab 重启恢复后，清零所有图片供应商的失败计数与冷却锁，立刻恢复可用
+  // 供应商连续失败进入冷却后，可一键清零立刻恢复可用
   imageCooldownReset?.addEventListener("click", async () => {
     if (!imageCooldownReset) return;
     imageCooldownReset.disabled = true;
@@ -310,7 +297,6 @@ import "../../styles/admin-story.css";
             hdPoints: Number(imageHdInput?.value),
             studioPoints: Number(imageStudioInput?.value),
             studioHdPoints: Number(imageStudioHdInput?.value),
-            queueJumpPoints: Number(imageJumpInput?.value),
             dailyJobLimit: Number(imageDailyInput?.value),
             monthlyBudgetCents: Math.round(
               Number(imageBudgetInput?.value ?? 0) * 100,
