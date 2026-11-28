@@ -23,6 +23,7 @@ export interface ImageProviderEnv {
   IMAGE_SILICONFLOW_BASE_URL?: string;
   IMAGE_COLAB_URL?: string;
   IMAGE_COLAB_KEY?: string;
+  IMAGE_BIGMODEL_API_KEY?: string;
   STORY_AI_API_KEY?: string;
   STORY_AI_BASE_URL?: string;
   STORY_AI_MODEL?: string;
@@ -92,6 +93,11 @@ export function isProviderConfigured(
       provider.apiKey?.trim() || env.IMAGE_SILICONFLOW_API_KEY?.trim(),
     );
   }
+  if (provider.adapter === "bigmodel-image") {
+    return Boolean(
+      provider.apiKey?.trim() || env.IMAGE_BIGMODEL_API_KEY?.trim(),
+    );
+  }
   return false;
 }
 
@@ -113,6 +119,28 @@ const base64Bytes = (value: string) => {
   }
   return bytes;
 };
+
+// 火山 Seedream 尺寸约束：总像素需在 [921600(1280x720), 8294400(2880x2880)] 区间内，超限按面积等比缩放
+const seedreamSize = (width?: number, height?: number) => {
+  const MIN = 921_600;
+  const MAX = 8_294_400;
+  const w = Math.max(1, Math.round(width ?? 1024));
+  const h = Math.max(1, Math.round(height ?? 1024));
+  const area = w * h;
+  const scale =
+    area < MIN ? Math.sqrt(MIN / area) : area > MAX ? Math.sqrt(MAX / area) : 1;
+  return `${Math.round(w * scale)}x${Math.round(h * scale)}`;
+};
+
+// 智谱 GLM-Image 尺寸约束：512–2048 且为 32 的整数倍
+const glmSize = (width?: number, height?: number) => {
+  const fix = (v?: number) =>
+    Math.min(2048, Math.max(512, Math.round((v ?? 1024) / 32) * 32));
+  return `${fix(width)}x${fix(height)}`;
+};
+
+const stripDataUrl = (value: string) =>
+  value.includes(",") ? value.slice(value.indexOf(",") + 1) : value;
 
 const detectContentType = (bytes: Uint8Array, fallback = "") => {
   if (
@@ -641,7 +669,7 @@ async function generateWithColab(
   );
 }
 
-// 火山方舟（豆包 Seedream）：原生支持中文提示词，无需翻译；无负面词参数
+// 火山方舟（豆包 Seedream）：原生中文无需翻译；支持参考图（image）；无负面词/seed/guidance 参数
 async function generateWithArk(
   env: ImageProviderEnv,
   provider: ImageProviderConfig,
@@ -674,8 +702,12 @@ async function generateWithArk(
         model: provider.model,
         // Seedream 原生理解中文，直接用原文（比翻译成英文更贴合描述）
         prompt: request.prompt,
+        // Seedream 5.x 支持参考图（Base64[]），按官方"单图生图/图像编辑"语义重绘
+        ...(request.initImage
+          ? { image: [stripDataUrl(request.initImage)] }
+          : {}),
         response_format: "b64_json",
-        size: `${request.width ?? 1024}x${request.height ?? 1024}`,
+        size: seedreamSize(request.width, request.height),
         watermark: false,
       }),
     });
@@ -726,6 +758,89 @@ async function generateWithArk(
   }
 }
 
+// 智谱 GLM-Image：原生中文；返回图片 URL 需二次下载；文档未提供负面词/参考图参数
+async function generateWithBigModel(
+  env: ImageProviderEnv,
+  provider: ImageProviderConfig,
+  request: ImageGenerationRequest,
+) {
+  const apiKey =
+    provider.apiKey?.trim() || env.IMAGE_BIGMODEL_API_KEY?.trim() || "";
+  if (!apiKey) {
+    throw new ImageProviderError(
+      `${provider.name} 的 API 密钥尚未绑定（AI 配置页可绑定）。`,
+      "not-configured",
+      false,
+    );
+  }
+  const base = (
+    provider.baseUrl?.trim() || "https://open.bigmodel.cn/api/paas/v4"
+  ).replace(/\/+$/, "");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 300_000);
+  try {
+    const response = await fetch(`${base}/images/generations`, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: provider.model,
+        // GLM-Image 原生中文；官方文档 prompt 上限 1000 字符
+        prompt: request.prompt.slice(0, 1000),
+        size: glmSize(request.width, request.height),
+      }),
+    });
+    if (!response.ok) {
+      const detail = (
+        await response.text().catch(() => "")
+      ).slice(0, 100);
+      throw new ImageProviderError(
+        response.status === 429
+          ? "智谱 GLM 请求过于频繁或额度不足。"
+          : `智谱 GLM 生图返回 HTTP ${response.status}（${detail}）。`,
+        response.status === 429 ? "rate-limited" : "provider-unavailable",
+        response.status === 429 || response.status >= 500,
+      );
+    }
+    const payload = (await response.json().catch(() => null)) as {
+      data?: Array<{ url?: string; b64_json?: string }>;
+    } | null;
+    const item = payload?.data?.[0];
+    if (item?.url) {
+      const bytes = await fetchProviderImage(item.url);
+      return normalizeBinary(bytes, request.width, request.height);
+    }
+    if (item?.b64_json) {
+      return normalizeBinary(
+        { b64_json: item.b64_json },
+        request.width,
+        request.height,
+      );
+    }
+    throw new ImageProviderError(
+      "智谱 GLM 没有返回图片。",
+      "invalid-response",
+      true,
+    );
+  } catch (error) {
+    if (error instanceof ImageProviderError) throw error;
+    if (controller.signal.aborted) {
+      throw new ImageProviderError("智谱 GLM 生图响应超时。", "timeout", true);
+    }
+    throw new ImageProviderError(
+      "智谱 GLM 服务暂时无法连接。",
+      "provider-unavailable",
+      true,
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function generateWithProvider(
   env: ImageProviderEnv,
   provider: ImageProviderConfig,
@@ -749,6 +864,8 @@ export async function generateWithProvider(
       return generateWithColab(env, provider, request);
     case "ark-images":
       return generateWithArk(env, provider, request);
+    case "bigmodel-image":
+      return generateWithBigModel(env, provider, request);
     default:
       throw new ImageProviderError(
         "图片供应商适配器不受支持。",

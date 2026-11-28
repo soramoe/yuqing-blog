@@ -12,7 +12,8 @@ export type ImageProviderAdapter =
   | "dashscope-images"
   | "openai-images"
   | "colab-sdxl"
-  | "ark-images";
+  | "ark-images"
+  | "bigmodel-image";
 
 export interface ImageSettings {
   enabled: boolean;

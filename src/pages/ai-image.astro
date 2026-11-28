@@ -46,7 +46,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               <p class="ai-section-label">选择模型</p>
               <span id="service-badge-mini" class="ai-mini-status"></span>
             </div>
-            <div id="model-grid" class="ai-model-grid" hidden></div>
+            <select id="model-select" class="ai-model-select" hidden aria-label="选择生图模型"></select>
+            <p id="model-hint" class="ai-model-hint" hidden></p>
           </section>
 
           <form id="gen-form" class="ai-form ai-card">
@@ -266,80 +267,33 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     font-size: 0.75rem;
     color: var(--muted);
   }
-  .ai-model-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.6rem;
-  }
-  .ai-model-card {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
+  .ai-model-select {
+    width: 100%;
+    padding: 0.62rem 0.7rem;
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: 10px;
     background: var(--surface);
-    padding: 0.75rem 0.9rem;
+    color: var(--text);
+    font-size: 0.9rem;
     cursor: pointer;
-    transition: border-color 140ms ease, box-shadow 140ms ease;
   }
-  .ai-model-card:hover:not(:disabled) {
-    border-color: var(--text);
-  }
-  .ai-model-card.selected {
+  .ai-model-select:focus {
+    outline: none;
     border-color: var(--accent);
     box-shadow: 0 0 0 1px var(--accent);
-    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
   }
-  .ai-model-card:disabled {
-    opacity: 0.45;
+  .ai-model-select:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
   }
-  .ai-model-icon {
-    font-size: 1.3rem;
-    line-height: 1;
-  }
-  .ai-model-body {
-    display: grid;
-    gap: 0.15rem;
-    min-width: 0;
-    flex: 1;
-  }
-  .ai-model-name {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    font-weight: 650;
-    font-size: 0.88rem;
-  }
-  .ai-model-id {
-    font-size: 0.68rem;
+  .ai-model-hint {
+    margin: 0.45rem 0 0;
+    font-size: 0.72rem;
     color: var(--muted);
     font-family: Consolas, monospace;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-  .ai-model-status {
-    padding: 0.1rem 0.45rem;
-    border-radius: 999px;
-    font-size: 0.65rem;
-    border: 1px solid var(--border);
-    color: var(--muted);
-  }
-  .ai-model-status[data-state="ready"] {
-    color: #7ec699;
-    border-color: rgb(83 160 112 / 45%);
-  }
-  .ai-model-status[data-state="cooldown"] {
-    color: #e2a355;
-    border-color: rgb(205 125 54 / 45%);
-  }
-  .ai-model-status[data-state="offline"],
-  .ai-model-status[data-state="unconfigured"] {
-    color: var(--bad, #e07a5f);
-    border-color: rgb(224 122 95 / 45%);
   }
   .ai-form {
     display: grid;
@@ -610,7 +564,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   const balanceValue = $("balance-value") as HTMLElement;
   const priceChip = $("price-chip") as HTMLElement;
   const priceValue = $("price-value") as HTMLElement;
-  const modelGrid = $("model-grid") as HTMLElement;
+  const modelSelect = $("model-select") as HTMLSelectElement;
+  const modelHint = $("model-hint") as HTMLElement;
   const form = document.getElementById("gen-form") as HTMLFormElement;
   const btn = $("submit") as HTMLButtonElement;
   const promptInput = $("prompt") as HTMLTextAreaElement;
@@ -688,75 +643,46 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     "dashscope-images": "🌊",
     "openai-images": "🎨",
     "ark-images": "🌋",
+    "bigmodel-image": "✨",
   };
 
   function renderModels() {
-    modelGrid.replaceChildren();
+    modelSelect.replaceChildren();
     const usable = models.filter((m) => m.status !== "unconfigured");
     if (!usable.length) {
-      modelGrid.hidden = true;
+      modelSelect.hidden = true;
+      modelHint.hidden = true;
       setBadge("offline", "● 服务离线");
       setStatus("暂无可用模型，请联系站长配置。");
       return;
     }
-    modelGrid.hidden = false;
+    modelSelect.hidden = false;
     if (!models.some((m) => m.id === selectedModelId)) {
       const firstReady = models.find((m) => m.status === "ready");
       selectedModelId = (firstReady ?? usable[0]).id;
     }
     for (const m of models) {
       if (m.status === "unconfigured") continue;
-      const selected = m.id === selectedModelId;
-
-      const card = document.createElement("button");
-      card.type = "button";
-      card.className = "ai-model-card" + (selected ? " selected" : "");
-      card.disabled = m.status === "offline";
-      card.title =
-        m.status === "ready"
-          ? "点击选择此模型"
-          : m.status === "cooldown"
-            ? "冷却中，恢复后可选"
-            : "当前不可用";
-
-      const icon = document.createElement("span");
-      icon.className = "ai-model-icon";
-      icon.textContent = adapterIcon[m.adapter] ?? "🎨";
-      icon.setAttribute("aria-hidden", "true");
-
-      const body = document.createElement("span");
-      body.className = "ai-model-body";
-
-      const nameRow = document.createElement("span");
-      nameRow.className = "ai-model-name";
-      const name = document.createElement("span");
-      name.textContent = m.name;
-      const st = document.createElement("span");
-      st.className = "ai-model-status";
-      st.dataset.state = m.status;
-      st.textContent = statusLabel[m.status] ?? m.status;
-      nameRow.append(name, st);
-
-      const idRow = document.createElement("span");
-      idRow.className = "ai-model-id";
-      idRow.textContent = m.model;
-      body.append(nameRow, idRow);
-
-      const check = document.createElement("span");
-      check.className = "ai-model-check";
-      check.textContent = "✓";
-      check.hidden = !selected;
-
-      card.append(icon, body, check);
-
-      card.addEventListener("click", () => {
-        selectedModelId = m.id;
-        renderModels();
-      });
-      modelGrid.appendChild(card);
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = `${adapterIcon[m.adapter] ?? "🎨"} ${m.name} · ${statusLabel[m.status] ?? m.status}`;
+      opt.disabled = m.status === "offline";
+      opt.selected = m.id === selectedModelId;
+      modelSelect.appendChild(opt);
     }
+    const current = models.find((m) => m.id === selectedModelId);
+    modelHint.hidden = false;
+    modelHint.textContent = current
+      ? `当前模型 ${current.model}${current.status === "cooldown" ? " · 冷却中，稍后可生成" : ""}`
+      : "";
     updateJumpVisibility();
   }
+
+  modelSelect.addEventListener("change", () => {
+    selectedModelId = modelSelect.value;
+    renderModels();
+    refreshQueue();
+  });
 
   function updateJumpVisibility() {
     const usingColab = selectedModelId === "colab-sdxl";
