@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminNav from "../../components/AdminNav.astro";
 import "../../styles/admin-story.css";
 ---
 
@@ -16,12 +17,7 @@ import "../../styles/admin-story.css";
         <h1>互动小说管理</h1>
         <p>修改后立即影响下一个剧情回合，历史积分流水不会被重算。</p>
       </div>
-      <div class="admin-story-nav">
-        <a href="/admin/comments/">评论审核</a>
-        <a href="/admin/gallery/">图库管理</a>
-        <a href="/admin/points/">积分管理</a>
-        <a href="/account/">返回账户</a>
-      </div>
+      <AdminNav />
     </header>
 
     <p class="admin-story-status" data-story-admin-status aria-live="polite">
@@ -192,87 +188,13 @@ import "../../styles/admin-story.css";
             <p class="eyebrow">IMAGE CONTROL</p>
             <h2>生图控制</h2>
           </div>
-          <span data-image-config-status>正在读取…</span>
+          <span>已迁移至「生图管理」页面。</span>
         </div>
-        <form data-image-config-form>
-          <label class="admin-story-toggle admin-image-master-toggle">
-            <input type="checkbox" data-image-enabled />
-            <span>
-              <strong>开放生图能力</strong>
-              <small>总开关关闭时，管理员测试也不会调用图片模型。</small>
-            </span>
-          </label>
-          <label>
-            <span>标准图积分</span>
-            <input type="number" min="1" max="1000" data-image-standard-points required />
-            <small>推荐 20 积分，加上文本回合后总价 24。</small>
-          </label>
-          <label>
-            <span>高清图积分</span>
-            <input type="number" min="1" max="1000" data-image-hd-points required />
-            <small>推荐 32 积分，加上文本回合后总价 36。</small>
-          </label>
-          <label>
-            <span>AI 生图积分（Colab SDXL）</span>
-            <input type="number" min="1" max="10000" data-image-studio-points required />
-            <small>「AI 生图」页面每次生成的消耗，走站长自己的 Colab GPU。</small>
-          </label>
-          <label>
-            <span>插队积分</span>
-            <input type="number" min="0" max="10000" data-image-jump-points required />
-            <small>有人在生图时，其他用户可付此积分插队；0 = 关闭插队。生成失败自动退回。</small>
-          </label>
-          <label>
-            <span>每日全站任务上限</span>
-            <input type="number" min="1" max="5000" data-image-daily-limit required />
-            <small>达到上限后自动停止新任务。</small>
-          </label>
-          <label>
-            <span>每月全站预算（元）</span>
-            <input type="number" min="0" max="10000" data-image-monthly-budget required />
-            <small>只统计付费供应商的保守成本。</small>
-          </label>
-          <div class="admin-image-provider-list" data-image-provider-list></div>
-          <div class="admin-story-form-actions">
-            <button type="submit" data-image-config-submit>保存生图控制</button>
-            <button type="button" data-image-cooldown-reset>重置生图冷却</button>
-          </div>
-          <p data-image-config-message aria-live="polite"></p>
-        </form>
-      </section>
-
-      <section class="admin-story-settings admin-image-test-panel">
-        <div class="admin-story-section-heading">
-          <div>
-            <p class="eyebrow">IMAGE PROVIDER TEST</p>
-            <h2>生图模型测试</h2>
-          </div>
-          <span>仅管理员可见</span>
-        </div>
-        <form data-image-test-form>
-          <label>
-            <span>测试提示词</span>
-            <textarea
-              rows="3"
-              maxlength="1000"
-              data-image-test-prompt
-              required
-            >雨夜中的中式旧城，一名撑伞的旅人站在河桥边，电影感，水墨与霓虹交织，无文字</textarea>
-            <small>会按后台供应商顺序调用，并产生一次测试任务。</small>
-          </label>
-          <label>
-            <span>图片质量</span>
-            <select data-image-test-quality>
-              <option value="standard">标准图</option>
-              <option value="hd">高清图</option>
-            </select>
-            <small>正式环境默认标准图附加 20 积分，高清图附加 32 积分。</small>
-          </label>
-          <div class="admin-story-form-actions">
-            <button type="submit" data-image-test-submit>开始测试</button>
-          </div>
-          <p data-image-test-status aria-live="polite"></p>
-        </form>
+        <p class="admin-story-empty">
+          生图开关、积分定价、供应商与冷却重置已整理到
+          <a href="/admin/image/">生图管理</a>
+          页面，点此前往。
+        </p>
       </section>
 
       <section class="admin-story-publications">
@@ -307,27 +229,6 @@ import "../../styles/admin-story.css";
     afterJson: string;
     createdAt: number;
     operatorName: string | null;
-  }
-
-  interface AdminImageProvider {
-    id: string;
-    name: string;
-    adapter: string;
-    model: string;
-    enabled: boolean;
-    priority: number;
-    configured: boolean;
-    cooldownActive: boolean;
-  }
-
-  interface AdminImageConfig {
-    enabled: boolean;
-    standardPoints: number;
-    hdPoints: number;
-    studioPoints: number;
-    queueJumpPoints: number;
-    dailyJobLimit: number;
-    monthlyBudgetCents: number;
   }
 
   const status = document.querySelector<HTMLElement>(
@@ -397,61 +298,6 @@ import "../../styles/admin-story.css";
   const publicationList = document.querySelector<HTMLElement>(
     "[data-story-publication-list]",
   );
-  const imageTestForm = document.querySelector<HTMLFormElement>(
-    "[data-image-test-form]",
-  );
-  const imageTestPrompt = document.querySelector<HTMLTextAreaElement>(
-    "[data-image-test-prompt]",
-  );
-  const imageTestQuality = document.querySelector<HTMLSelectElement>(
-    "[data-image-test-quality]",
-  );
-  const imageTestSubmit = document.querySelector<HTMLButtonElement>(
-    "[data-image-test-submit]",
-  );
-  const imageTestStatus = document.querySelector<HTMLElement>(
-    "[data-image-test-status]",
-  );
-  const imageConfigForm = document.querySelector<HTMLFormElement>(
-    "[data-image-config-form]",
-  );
-  const imageEnabledInput = document.querySelector<HTMLInputElement>(
-    "[data-image-enabled]",
-  );
-  const imageStandardInput = document.querySelector<HTMLInputElement>(
-    "[data-image-standard-points]",
-  );
-  const imageHdInput = document.querySelector<HTMLInputElement>(
-    "[data-image-hd-points]",
-  );
-  const imageStudioInput = document.querySelector<HTMLInputElement>(
-    "[data-image-studio-points]",
-  );
-  const imageJumpInput = document.querySelector<HTMLInputElement>(
-    "[data-image-jump-points]",
-  );
-  const imageDailyInput = document.querySelector<HTMLInputElement>(
-    "[data-image-daily-limit]",
-  );
-  const imageBudgetInput = document.querySelector<HTMLInputElement>(
-    "[data-image-monthly-budget]",
-  );
-  const imageProviderList = document.querySelector<HTMLElement>(
-    "[data-image-provider-list]",
-  );
-  const imageConfigSubmit = document.querySelector<HTMLButtonElement>(
-    "[data-image-config-submit]",
-  );
-  const imageConfigStatus = document.querySelector<HTMLElement>(
-    "[data-image-config-status]",
-  );
-  const imageConfigMessage = document.querySelector<HTMLElement>(
-    "[data-image-config-message]",
-  );
-  const imageCooldownReset = document.querySelector<HTMLButtonElement>(
-    "[data-image-cooldown-reset]",
-  );
-  let imageConfigProviders: AdminImageProvider[] = [];
 
   const setStatus = (
     message = "",
@@ -468,143 +314,6 @@ import "../../styles/admin-story.css";
       dateStyle: "medium",
       timeStyle: "short",
     }).format(new Date(timestamp));
-
-  const setImageConfigMessage = (
-    message = "",
-    state: "idle" | "error" | "success" = "idle",
-  ) => {
-    if (!imageConfigMessage) return;
-    imageConfigMessage.textContent = message;
-    imageConfigMessage.dataset.state = state;
-  };
-
-  const renderImageProviders = () => {
-    if (!imageProviderList) return;
-    imageProviderList.replaceChildren();
-    for (const provider of imageConfigProviders) {
-      const card = document.createElement("article");
-      card.className = "admin-image-provider";
-      card.dataset.imageProviderId = provider.id;
-
-      const heading = document.createElement("header");
-      const active = document.createElement("label");
-      active.className = "admin-image-provider-toggle";
-      const enabled = document.createElement("input");
-      enabled.type = "checkbox";
-      enabled.checked = provider.enabled;
-      enabled.dataset.imageProviderEnabled = "";
-      const name = document.createElement("span");
-      const strong = document.createElement("strong");
-      strong.textContent = provider.name;
-      const state = document.createElement("small");
-      state.textContent = provider.configured
-        ? provider.cooldownActive
-          ? "冷却中"
-          : "已配置"
-        : "缺少密钥";
-      state.dataset.configured = String(provider.configured);
-      name.append(strong, state);
-      active.append(enabled, name);
-      heading.append(active);
-
-      const fields = document.createElement("div");
-      fields.className = "admin-image-provider-fields";
-      const modelLabel = document.createElement("label");
-      const modelSpan = document.createElement("span");
-      modelSpan.textContent = "模型";
-      const modelInput = document.createElement("input");
-      modelInput.type = "text";
-      modelInput.maxLength = 160;
-      modelInput.value = provider.model;
-      modelInput.dataset.imageProviderModel = "";
-      modelLabel.append(modelSpan, modelInput);
-
-      const priorityLabel = document.createElement("label");
-      const prioritySpan = document.createElement("span");
-      prioritySpan.textContent = "优先级";
-      const priorityInput = document.createElement("input");
-      priorityInput.type = "number";
-      priorityInput.min = "0";
-      priorityInput.max = "10000";
-      priorityInput.value = String(provider.priority);
-      priorityInput.dataset.imageProviderPriority = "";
-      priorityLabel.append(prioritySpan, priorityInput);
-      fields.append(modelLabel, priorityLabel);
-      card.append(heading, fields);
-      imageProviderList.append(card);
-    }
-  };
-
-  const fillImageConfig = (
-    settings: AdminImageConfig,
-    providers: AdminImageProvider[],
-  ) => {
-    imageConfigProviders = providers;
-    if (imageEnabledInput) imageEnabledInput.checked = settings.enabled;
-    if (imageStandardInput) {
-      imageStandardInput.value = String(settings.standardPoints);
-    }
-    if (imageHdInput) imageHdInput.value = String(settings.hdPoints);
-    if (imageStudioInput) {
-      imageStudioInput.value = String(settings.studioPoints);
-    }
-    if (imageJumpInput) {
-      imageJumpInput.value = String(settings.queueJumpPoints);
-    }
-    if (imageDailyInput) {
-      imageDailyInput.value = String(settings.dailyJobLimit);
-    }
-    if (imageBudgetInput) {
-      imageBudgetInput.value = String(settings.monthlyBudgetCents / 100);
-    }
-    if (imageConfigStatus) {
-      imageConfigStatus.textContent = settings.enabled ? "生图已开启" : "生图已关闭";
-    }
-    renderImageProviders();
-  };
-
-  // Colab 重启恢复后，清零所有图片供应商的失败计数与冷却锁，立刻恢复可用
-  imageCooldownReset?.addEventListener("click", async () => {
-    if (!imageCooldownReset) return;
-    imageCooldownReset.disabled = true;
-    setImageConfigMessage("正在重置生图服务冷却…");
-    try {
-      const response = await fetch("/api/admin/image/cooldown", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { Accept: "application/json" },
-      });
-      const payload = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        throw new Error(payload.error || "重置失败。");
-      }
-      setImageConfigMessage("生图服务冷却已重置，可以立即重新生图。", "success");
-      void loadImageConfig();
-    } catch (error) {
-      setImageConfigMessage(
-        error instanceof Error ? error.message : "重置失败，请稍后重试。",
-        "error",
-      );
-    } finally {
-      imageCooldownReset.disabled = false;
-    }
-  });
-
-  const loadImageConfig = async () => {
-    const response = await fetch("/api/admin/image", {
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    });
-    const payload = (await response.json()) as {
-      settings?: AdminImageConfig;
-      providers?: AdminImageProvider[];
-      error?: string;
-    };
-    if (!response.ok || !payload.settings) {
-      throw new Error(payload.error || "生图设置读取失败。");
-    }
-    fillImageConfig(payload.settings, payload.providers ?? []);
-  };
 
   const fillSettings = (settings: StorySettings) => {
     if (pointsInput) pointsInput.value = String(settings.pointsPerTurn);
@@ -824,125 +533,6 @@ import "../../styles/admin-story.css";
     });
   });
 
-  imageTestForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const prompt = imageTestPrompt?.value.trim() ?? "";
-    if (prompt.length < 6 || !imageTestSubmit) {
-      if (imageTestStatus) imageTestStatus.textContent = "测试提示词过短。";
-      return;
-    }
-    imageTestSubmit.disabled = true;
-    if (imageTestStatus) imageTestStatus.textContent = "正在生成测试图片…";
-    try {
-      const response = await fetch("/api/admin/image/test", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          quality: imageTestQuality?.value === "hd" ? "hd" : "standard",
-          aspectRatio: "1:1",
-          requestId: crypto.randomUUID(),
-        }),
-      });
-      const payload = (await response.json()) as {
-        job?: {
-          providerName?: string;
-          model?: string;
-          r2Key?: string;
-          width?: number;
-          height?: number;
-          pointsCost?: number;
-          balance?: number;
-        };
-        error?: string;
-      };
-      if (!response.ok || !payload.job) {
-        throw new Error(payload.error || "生图测试失败。");
-      }
-      if (imageTestStatus) {
-        imageTestStatus.textContent = `成功：${payload.job.providerName} / ${payload.job.model} / ${payload.job.width}×${payload.job.height} / 扣 ${payload.job.pointsCost} 积分 / 余额 ${payload.job.balance} / ${payload.job.r2Key}`;
-      }
-    } catch (error) {
-      if (imageTestStatus) {
-        imageTestStatus.textContent =
-          error instanceof Error ? error.message : "生图测试失败。";
-      }
-    } finally {
-      imageTestSubmit.disabled = false;
-    }
-  });
-
-  imageConfigForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    if (!imageConfigSubmit) return;
-    imageConfigSubmit.disabled = true;
-    setImageConfigMessage("正在保存生图控制…");
-    const providers = Array.from(
-      imageProviderList?.querySelectorAll<HTMLElement>(
-        "[data-image-provider-id]",
-      ) ?? [],
-    ).map((card) => ({
-      id: card.dataset.imageProviderId,
-      enabled:
-        card.querySelector<HTMLInputElement>(
-          "[data-image-provider-enabled]",
-        )?.checked ?? false,
-      model:
-        card.querySelector<HTMLInputElement>("[data-image-provider-model]")
-          ?.value.trim() ?? "",
-      priority: Number(
-        card.querySelector<HTMLInputElement>(
-          "[data-image-provider-priority]",
-        )?.value ?? 100,
-      ),
-    }));
-    try {
-      const response = await fetch("/api/admin/image", {
-        method: "PATCH",
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          settings: {
-            enabled: imageEnabledInput?.checked ?? false,
-            standardPoints: Number(imageStandardInput?.value),
-            hdPoints: Number(imageHdInput?.value),
-            studioPoints: Number(imageStudioInput?.value),
-            queueJumpPoints: Number(imageJumpInput?.value),
-            dailyJobLimit: Number(imageDailyInput?.value),
-            monthlyBudgetCents: Math.round(
-              Number(imageBudgetInput?.value ?? 0) * 100,
-            ),
-          },
-          providers,
-        }),
-      });
-      const payload = (await response.json()) as {
-        settings?: AdminImageConfig;
-        providers?: AdminImageProvider[];
-        error?: string;
-      };
-      if (!response.ok || !payload.settings) {
-        throw new Error(payload.error || "生图控制保存失败。");
-      }
-      fillImageConfig(payload.settings, payload.providers ?? []);
-      setImageConfigMessage("生图控制已保存。", "success");
-    } catch (error) {
-      setImageConfigMessage(
-        error instanceof Error ? error.message : "生图控制保存失败。",
-        "error",
-      );
-    } finally {
-      imageConfigSubmit.disabled = false;
-    }
-  });
-
   publicationList?.addEventListener("click", async (event) => {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
       "[data-publication-id]",
@@ -985,11 +575,7 @@ import "../../styles/admin-story.css";
         return;
       }
       try {
-        await Promise.all([
-          loadSettings(),
-          loadPublications(),
-          loadImageConfig(),
-        ]);
+        await Promise.all([loadSettings(), loadPublications()]);
         gate?.setAttribute("hidden", "");
         content?.removeAttribute("hidden");
       } catch (error) {

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminNav from "../../components/AdminNav.astro";
 import ImageUploader from "../../components/ImageUploader.astro";
 import { getPublishedPosts } from "../../lib/blog";
 import { galleryImages as localGalleryImages } from "../../lib/gallery";
@@ -39,13 +40,7 @@ const staticItems = [
         <h1>图库管理</h1>
         <p>站长上传会直接发布，公共投稿需要在这里审核。</p>
       </div>
-      <div class="admin-gallery-nav">
-        <a href="/admin/comments/">评论审核</a>
-        <a href="/admin/points/">积分管理</a>
-        <a href="/admin/shop/">商城管理</a>
-        <a href="/admin/stories/">互动小说</a>
-        <a href="/account/">返回账户</a>
-      </div>
+      <AdminNav />
     </header>
 
     <p class="admin-gallery-status" data-admin-gallery-status aria-live="polite">

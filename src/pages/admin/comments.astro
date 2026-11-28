@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminNav from "../../components/AdminNav.astro";
 import "../../styles/admin-comments.css";
 ---
 
@@ -16,13 +17,7 @@ import "../../styles/admin-comments.css";
         <h1>评论审核</h1>
         <p>检查最近评论，隐藏违规内容或彻底删除正文。</p>
       </div>
-      <div class="admin-header-links">
-        <a href="/admin/points/">积分管理</a>
-        <a href="/admin/gallery/">图库管理</a>
-        <a href="/admin/shop/">商城管理</a>
-        <a href="/admin/stories/">互动小说</a>
-        <a href="/account/">返回账户</a>
-      </div>
+      <AdminNav />
     </header>
 
     <p class="admin-comments-status" data-admin-status aria-live="polite">

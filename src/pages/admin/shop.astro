@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminNav from "../../components/AdminNav.astro";
 import "../../styles/admin-points.css";
 import "../../styles/admin-shop.css";
 ---
@@ -17,12 +18,7 @@ import "../../styles/admin-shop.css";
         <h1>商城管理</h1>
         <p>管理商品与库存、处理兑换订单，并生成一次性积分码。</p>
       </div>
-      <div class="admin-points-nav">
-        <a href="/admin/comments/">评论审核</a>
-        <a href="/admin/points/">积分管理</a>
-        <a href="/admin/stories/">互动小说</a>
-        <a href="/account/">返回账户</a>
-      </div>
+      <AdminNav />
     </header>
 
     <p class="admin-points-status" data-admin-shop-status aria-live="polite">

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminNav from "../../components/AdminNav.astro";
 import "../../styles/admin-points.css";
 ---
 
@@ -16,13 +17,7 @@ import "../../styles/admin-points.css";
         <h1>积分管理</h1>
         <p>手动增加或扣减用户积分，每次操作都会写入独立流水。</p>
       </div>
-      <div class="admin-points-nav">
-        <a href="/admin/comments/">评论审核</a>
-        <a href="/admin/gallery/">图库管理</a>
-        <a href="/admin/shop/">商城管理</a>
-        <a href="/admin/stories/">互动小说</a>
-        <a href="/account/">返回账户</a>
-      </div>
+      <AdminNav />
     </header>
 
     <p class="admin-points-status" data-admin-points-status aria-live="polite">

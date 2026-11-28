@@ -1,0 +1,201 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminNav from "../../components/AdminNav.astro";
+---
+
+<BaseLayout
+  title="管理后台"
+  description="渔情站长管理后台。"
+  bodyClass="page-admin-index"
+  noindex
+>
+  <div class="container admin-index-shell">
+    <header class="admin-index-header">
+      <div>
+        <p class="eyebrow">ADMIN CONSOLE</p>
+        <h1>管理后台</h1>
+        <p>站内各模块的运营入口，仅站长账号可见。</p>
+      </div>
+      <div class="admin-index-account">
+        <a href="/account/">返回账户</a>
+      </div>
+    </header>
+
+    <AdminNav />
+
+    <p class="admin-index-status" id="admin-index-status" aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-index-denied" id="admin-index-denied" hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-admin-index-gate-title>请先登录</strong>
+      <p data-admin-index-gate-copy>登录站长账号后才能进入管理后台。</p>
+      <a class="button button-primary" href="/login/?next=%2Fadmin%2F" data-admin-index-gate-link>
+        去登录
+      </a>
+    </div>
+
+    <div class="admin-index-grid" id="admin-index-content" hidden>
+      <a class="admin-index-card" href="/admin/stories/">
+        <p class="eyebrow">AI STORY</p>
+        <h2>互动小说管理</h2>
+        <p>回合积分、免费试玩额度、站长 Key 开关，以及公共故事审核。</p>
+      </a>
+      <a class="admin-index-card" href="/admin/image/">
+        <p class="eyebrow">AI IMAGE</p>
+        <h2>生图管理</h2>
+        <p>生图总开关、各类积分定价、供应商优先级与冷却重置、模型测试。</p>
+      </a>
+      <a class="admin-index-card" href="/admin/comments/">
+        <p class="eyebrow">MODERATION</p>
+        <h2>评论审核</h2>
+        <p>检查最近评论，隐藏违规内容或删除正文。</p>
+      </a>
+      <a class="admin-index-card" href="/admin/gallery/">
+        <p class="eyebrow">GALLERY</p>
+        <h2>图库管理</h2>
+        <p>审核公共投稿，管理已发布图片的可见性。</p>
+      </a>
+      <a class="admin-index-card" href="/admin/points/">
+        <p class="eyebrow">POINTS</p>
+        <h2>积分管理</h2>
+        <p>查找用户并手动调整积分余额，操作写入独立流水。</p>
+      </a>
+      <a class="admin-index-card" href="/admin/shop/">
+        <p class="eyebrow">SHOP</p>
+        <h2>商城管理</h2>
+        <p>商品与库存、兑换订单处理、一次性积分码生成。</p>
+      </a>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .admin-index-shell {
+    padding-bottom: 4rem;
+  }
+  .admin-index-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 0.4rem;
+  }
+  .admin-index-header p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .admin-index-account a {
+    color: var(--accent);
+    font-size: 0.85rem;
+  }
+  .admin-index-status {
+    color: var(--muted);
+    min-height: 1.5em;
+  }
+  .admin-index-denied {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.6rem;
+    display: grid;
+    gap: 0.8rem;
+    justify-items: start;
+  }
+  .admin-index-denied strong {
+    font-size: 1.05rem;
+  }
+  .admin-index-denied p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .admin-index-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 0.9rem;
+  }
+  .admin-index-card {
+    display: grid;
+    gap: 0.45rem;
+    align-content: start;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.15rem 1.25rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 140ms ease, transform 140ms ease;
+  }
+  .admin-index-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+  .admin-index-card .eyebrow {
+    color: var(--accent);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .admin-index-card h2 {
+    font-size: 1.02rem;
+    margin: 0;
+  }
+  .admin-index-card p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+    line-height: 1.55;
+  }
+</style>
+
+<script>
+  const statusEl = document.getElementById(
+    "admin-index-status",
+  ) as HTMLElement;
+  const denied = document.getElementById("admin-index-denied") as HTMLElement;
+  const gateTitle = document.querySelector(
+    "[data-admin-index-gate-title]",
+  ) as HTMLElement;
+  const gateCopy = document.querySelector(
+    "[data-admin-index-gate-copy]",
+  ) as HTMLElement;
+  const gateLink = document.querySelector<HTMLAnchorElement>(
+    "[data-admin-index-gate-link]",
+  );
+  const content = document.getElementById("admin-index-content") as HTMLElement;
+
+  fetch("/api/admin/status", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  })
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      if (!data) {
+        gateTitle.textContent = "请先登录";
+        gateCopy.textContent = "登录站长账号后才能进入管理后台。";
+        denied.hidden = false;
+        return;
+      }
+      if (!data.isAdmin) {
+        gateTitle.textContent = "没有管理权限";
+        gateCopy.textContent = "当前账号不是站长。";
+        if (gateLink) gateLink.hidden = true;
+        denied.hidden = false;
+        return;
+      }
+      statusEl.hidden = true;
+      content.hidden = false;
+    })
+    .catch(() => {
+      statusEl.hidden = true;
+      gateTitle.textContent = "无法验证登录状态";
+      gateCopy.textContent = "请刷新页面后重试。";
+      denied.hidden = false;
+    });
+</script>
