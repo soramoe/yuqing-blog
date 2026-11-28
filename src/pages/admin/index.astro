@@ -524,10 +524,18 @@ import AdminNav from "../../components/AdminNav.astro";
     if (el) el.textContent = text;
   };
 
-  const providerBadge = (provider: ProviderLite) => {
+  const providerBadge = (
+    provider: ProviderLite,
+    liveStatus?: string,
+  ) => {
     if (!provider.enabled) return { label: "未启用", state: "off" as const };
+    if (liveStatus === "offline") {
+      return { label: "离线", state: "warn" as const };
+    }
+    if (liveStatus === "cooldown" || provider.cooldownActive) {
+      return { label: "冷却中", state: "warn" as const };
+    }
     if (!provider.configured) return { label: "未配置", state: "off" as const };
-    if (provider.cooldownActive) return { label: "冷却中", state: "warn" as const };
     if (provider.consecutiveFailures > 0) {
       return {
         label: `就绪 · 连错 ${provider.consecutiveFailures}`,
@@ -537,7 +545,10 @@ import AdminNav from "../../components/AdminNav.astro";
     return { label: "就绪", state: "ok" as const };
   };
 
-  const renderModels = (providers: ProviderLite[]) => {
+  const renderModels = (
+    providers: ProviderLite[],
+    liveStatuses: Map<string, string>,
+  ) => {
     modelsEl.replaceChildren();
     const list = providers.filter((provider) =>
       provider.features.split(",").some((item) => item.trim()),
@@ -553,7 +564,7 @@ import AdminNav from "../../components/AdminNav.astro";
       const name = document.createElement("span");
       name.textContent = `${adapterIcon[provider.adapter] ?? "🎨"} ${provider.name}`;
       const badge = document.createElement("span");
-      const status = providerBadge(provider);
+      const status = providerBadge(provider, liveStatuses.get(provider.id));
       badge.className = "admin-dash-badge";
       badge.dataset.state = status.state;
       badge.textContent = status.label;
@@ -729,7 +740,10 @@ import AdminNav from "../../components/AdminNav.astro";
       }
 
       if (image?.providers) {
-        renderModels(image.providers);
+        renderModels(
+          image.providers,
+          new Map((generate?.models ?? []).map((model) => [model.id, model.status])),
+        );
       } else {
         modelsEl.replaceChildren();
         const item = document.createElement("li");
