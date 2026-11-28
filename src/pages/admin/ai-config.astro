@@ -47,8 +47,47 @@ import "../../styles/admin-story.css";
           <div class="admin-image-provider-list" data-ai-provider-list></div>
           <div class="admin-story-form-actions">
             <button type="submit" data-ai-binding-submit>保存模型绑定</button>
+            <button type="button" data-ai-create-toggle>＋ 新增供应商</button>
           </div>
           <p data-ai-binding-message aria-live="polite"></p>
+        </form>
+        <form data-ai-create-form hidden class="admin-ai-create">
+          <div class="admin-ai-provider-fields">
+            <label>
+              <span>名称</span>
+              <input data-ai-new-name maxlength="60" required placeholder="例如：硅基流动图片" />
+            </label>
+            <label>
+              <span>适配器类型</span>
+              <select data-ai-new-adapter>
+                <option value="openai-images" selected>OpenAI 图片兼容（硅基流动等）</option>
+                <option value="dashscope-images">阿里千问（DashScope）</option>
+                <option value="workers-ai">Cloudflare Workers AI</option>
+              </select>
+            </label>
+            <label>
+              <span>API 密钥</span>
+              <input data-ai-new-key type="password" maxlength="300" placeholder="sk-..." />
+            </label>
+            <label>
+              <span>接入地址（可选，留空用官方默认）</span>
+              <input data-ai-new-baseurl maxlength="300" placeholder="https://api.siliconflow.cn/v1" />
+            </label>
+            <label>
+              <span>模型（可在线拉取后点选）</span>
+              <input data-ai-new-model list="ai-new-model-list" maxlength="160" required placeholder="先填密钥后点「拉取模型列表」" />
+              <datalist id="ai-new-model-list"></datalist>
+            </label>
+            <label>
+              <span>优先级（数字越小越优先）</span>
+              <input data-ai-new-priority type="number" min="0" max="10000" value="100" />
+            </label>
+          </div>
+          <div class="admin-story-form-actions">
+            <button type="button" data-ai-pull-models>拉取模型列表</button>
+            <button type="submit" data-ai-create-submit>创建供应商</button>
+          </div>
+          <p data-ai-create-status aria-live="polite"></p>
         </form>
       </section>
 
@@ -280,6 +319,9 @@ import "../../styles/admin-story.css";
     name: string;
     adapter: string;
     model: string;
+    features: string;
+    failureThreshold: number;
+    cooldownSeconds: number;
     enabled: boolean;
     priority: number;
     configured: boolean;
@@ -363,6 +405,42 @@ import "../../styles/admin-story.css";
   );
   const usageUpdated = document.querySelector<HTMLElement>(
     "[data-usage-updated]",
+  );
+  const createForm = document.querySelector<HTMLFormElement>(
+    "[data-ai-create-form]",
+  );
+  const createToggle = document.querySelector<HTMLButtonElement>(
+    "[data-ai-create-toggle]",
+  );
+  const createSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-ai-create-submit]",
+  );
+  const createStatus = document.querySelector<HTMLElement>(
+    "[data-ai-create-status]",
+  );
+  const newNameInput = document.querySelector<HTMLInputElement>(
+    "[data-ai-new-name]",
+  );
+  const newAdapterSelect = document.querySelector<HTMLSelectElement>(
+    "[data-ai-new-adapter]",
+  );
+  const newKeyInput = document.querySelector<HTMLInputElement>(
+    "[data-ai-new-key]",
+  );
+  const newBaseUrlInput = document.querySelector<HTMLInputElement>(
+    "[data-ai-new-baseurl]",
+  );
+  const newModelInput = document.querySelector<HTMLInputElement>(
+    "[data-ai-new-model]",
+  );
+  const newModelList = document.querySelector<HTMLDataListElement>(
+    "#ai-new-model-list",
+  );
+  const newPriorityInput = document.querySelector<HTMLInputElement>(
+    "[data-ai-new-priority]",
+  );
+  const pullModelsBtn = document.querySelector<HTMLButtonElement>(
+    "[data-ai-pull-models]",
   );
 
   let aiProviders: AdminAIProvider[] = [];
@@ -499,10 +577,64 @@ import "../../styles/admin-story.css";
       cdLabel.append(cdSpan, cdInput);
 
       fields.append(failLabel, cdLabel);
-      card.append(header, fields);
+
+      const actions = document.createElement("div");
+      actions.className = "admin-ai-provider-actions";
+      const deleteBtn = document.createElement("button");
+      deleteBtn.type = "button";
+      deleteBtn.textContent = "删除此供应商";
+      deleteBtn.dataset.aiProviderDelete = provider.id;
+      actions.appendChild(deleteBtn);
+      card.append(header, fields, actions);
       providerList.appendChild(card);
     }
   }
+
+  providerList?.addEventListener("click", async (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>(
+      "[data-ai-provider-delete]",
+    );
+    if (!button || button.disabled) return;
+    const id = button.dataset.aiProviderDelete;
+    if (
+      !id ||
+      !window.confirm(
+        "确定删除该供应商？存在生成记录时会被拒绝（可改为停用）。",
+      )
+    ) {
+      return;
+    }
+    button.disabled = true;
+    setBindingMessage("正在删除…");
+    try {
+      const response = await fetch("/api/admin/image", {
+        method: "DELETE",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id }),
+      });
+      const payload = (await response.json()) as {
+        providers?: AdminAIProvider[];
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "删除失败。");
+      }
+      aiProviders = payload.providers ?? [];
+      renderProviders();
+      fillTestModelOptions();
+      setBindingMessage("供应商已删除。", "success");
+    } catch (error) {
+      button.disabled = false;
+      setBindingMessage(
+        error instanceof Error ? error.message : "删除失败。",
+        "error",
+      );
+    }
+  });
 
   function fillTestModelOptions() {
     if (!testModel) return;
@@ -635,6 +767,121 @@ import "../../styles/admin-story.css";
       usageUpdated.textContent = `数据更新于 ${new Date().toLocaleTimeString("zh-CN")}`;
     }
   };
+
+  const setCreateStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!createStatus) return;
+    createStatus.textContent = message;
+    createStatus.dataset.state = state;
+  };
+
+  createToggle?.addEventListener("click", () => {
+    if (!createForm) return;
+    createForm.hidden = !createForm.hidden;
+    if (createToggle) {
+      createToggle.textContent = createForm.hidden ? "＋ 新增供应商" : "收起表单";
+    }
+  });
+
+  pullModelsBtn?.addEventListener("click", async () => {
+    if (!pullModelsBtn) return;
+    const adapter = newAdapterSelect?.value ?? "openai-images";
+    const apiKey = newKeyInput?.value.trim() ?? "";
+    const baseUrl = newBaseUrlInput?.value.trim() ?? "";
+    if (!apiKey) {
+      setCreateStatus("先填 API 密钥再拉取模型列表。", "error");
+      return;
+    }
+    pullModelsBtn.disabled = true;
+    setCreateStatus("正在拉取模型列表…");
+    try {
+      const response = await fetch("/api/admin/image/models", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ adapter, apiKey, baseUrl }),
+      });
+      const payload = (await response.json()) as {
+        models?: Array<{ id: string; ownedBy?: string | null }>;
+        error?: string;
+      };
+      if (!response.ok || !payload.models) {
+        throw new Error(payload.error || "拉取失败。");
+      }
+      if (newModelList) {
+        newModelList.replaceChildren();
+        for (const m of payload.models) {
+          const option = document.createElement("option");
+          option.value = m.id;
+          option.label = m.ownedBy ? `${m.id}（${m.ownedBy}）` : m.id;
+          newModelList.appendChild(option);
+        }
+      }
+      setCreateStatus(
+        `拉取到 ${payload.models.length} 个模型，点模型输入框可从列表选择。`,
+        "success",
+      );
+    } catch (error) {
+      setCreateStatus(
+        error instanceof Error ? error.message : "拉取失败。",
+        "error",
+      );
+    } finally {
+      pullModelsBtn.disabled = false;
+    }
+  });
+
+  createForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!createSubmit) return;
+    const name = newNameInput?.value.trim() ?? "";
+    const adapter = newAdapterSelect?.value ?? "openai-images";
+    const model = newModelInput?.value.trim() ?? "";
+    const apiKey = newKeyInput?.value.trim() ?? "";
+    const baseUrl = newBaseUrlInput?.value.trim() ?? "";
+    const priority = Number(newPriorityInput?.value ?? 100);
+    if (name.length < 2 || model.length < 1) {
+      setCreateStatus("名称和模型名必填。", "error");
+      return;
+    }
+    createSubmit.disabled = true;
+    setCreateStatus("正在创建供应商…");
+    try {
+      const response = await fetch("/api/admin/image", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name, adapter, model, apiKey, baseUrl, priority }),
+      });
+      const payload = (await response.json()) as {
+        providers?: AdminAIProvider[];
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "创建失败。");
+      }
+      aiProviders = payload.providers ?? [];
+      renderProviders();
+      fillTestModelOptions();
+      setCreateStatus(`供应商「${name}」创建成功，已出现在绑定列表。`, "success");
+      if (createForm) createForm.hidden = true;
+    } catch (error) {
+      setCreateStatus(
+        error instanceof Error ? error.message : "创建失败。",
+        "error",
+      );
+    } finally {
+      createSubmit.disabled = false;
+    }
+  });
 
   bindingForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -812,3 +1059,44 @@ import "../../styles/admin-story.css";
       gate?.removeAttribute("hidden");
     });
 </script>
+
+<style is:global>
+  .admin-ai-create {
+    border-top: 1px dashed var(--border);
+    padding-top: 1rem;
+    margin-top: 0.6rem;
+  }
+  .admin-ai-create[hidden] {
+    display: none;
+  }
+  .admin-ai-provider-actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+  }
+  .admin-ai-provider-actions button {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-danger, #e07a5f);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .admin-ai-provider-actions button:hover {
+    border-color: var(--color-danger, #e07a5f);
+  }
+  .admin-ai-provider-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  [data-ann-form-status][data-state="error"],
+  [data-ai-create-status][data-state="error"],
+  [data-ai-binding-message][data-state="error"] {
+    color: var(--color-danger, #e07a5f);
+  }
+  [data-ai-create-status][data-state="success"],
+  [data-ai-binding-message][data-state="success"] {
+    color: #7ec699;
+  }
+</style>

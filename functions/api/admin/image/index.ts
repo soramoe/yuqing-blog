@@ -426,11 +426,97 @@ export const onRequestPatch: PagesFunction<Env> = async ({
   });
 };
 
+// 新增供应商：写入一行 provider 配置，后台与前台自动出现
+export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const authorized = await authorize(request, env);
+  if ("error" in authorized) return authorized.error;
+
+  const input = await parseBody(request);
+  if (!input) return json({ error: "请求内容格式无效。" }, 400);
+
+  const name = typeof input.name === "string" ? input.name.trim() : "";
+  const adapter = typeof input.adapter === "string" ? input.adapter.trim() : "";
+  const model = typeof input.model === "string" ? input.model.trim() : "";
+  const features = typeof input.features === "string" ? input.features.trim() : "image_studio,admin_test";
+  const apiKey = typeof input.apiKey === "string" ? input.apiKey.trim().slice(0, 300) : "";
+  const baseUrl = typeof input.baseUrl === "string" ? input.baseUrl.trim().slice(0, 300) : "";
+  const priority = integer(input.priority, 0, 10000, 100);
+
+  const allowedAdapters = new Set([
+    "colab-sdxl",
+    "workers-ai",
+    "dashscope-images",
+    "openai-images",
+  ]);
+  if (name.length < 2 || name.length > 60) {
+    return json({ error: "供应商名称需要 2 到 60 个字符。" }, 400);
+  }
+  if (!allowedAdapters.has(adapter)) {
+    return json({ error: "适配器类型无效。" }, 400);
+  }
+  if (model.length < 1 || model.length > 160) {
+    return json({ error: "模型名需要 1 到 160 个字符。" }, 400);
+  }
+
+  const id = crypto.randomUUID();
+  const now = Date.now();
+  try {
+    await env.DB.prepare(
+      `INSERT INTO image_provider
+        (id, name, adapter, model, features, api_key, base_url,
+         enabled, priority, daily_job_limit, monthly_budget_cents,
+         reserve_cost_cents, actual_cost_cents, allow_paid_overage,
+         failure_threshold, cooldown_seconds, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, 100, 5000, 0, 0, 1, 3, 600, ?)`,
+    )
+      .bind(id, name, adapter, model, features, apiKey, baseUrl, priority, now)
+      .run();
+  } catch {
+    return json({ error: "供应商创建失败，请稍后重试。" }, 500);
+  }
+  const providers = await listImageProviders(env.DB);
+  return json({
+    ok: true,
+    providers: providers.map((provider) => providerStatus(env, provider)),
+  }, 201);
+};
+
+// 删除供应商：有关联生成记录时拒绝（可改为停用）
+export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
+  const authorized = await authorize(request, env);
+  if ("error" in authorized) return authorized.error;
+
+  const input = await parseBody(request);
+  if (!input) return json({ error: "请求内容格式无效。" }, 400);
+  const id = typeof input.id === "string" ? input.id.trim() : "";
+  if (!/^[a-zA-Z0-9-]{8,80}$/.test(id)) {
+    return json({ error: "供应商编号无效。" }, 400);
+  }
+  try {
+    const result = await env.DB.prepare(
+      "DELETE FROM image_provider WHERE id = ?",
+    )
+      .bind(id)
+      .run();
+    if (!result.meta.changes) {
+      return json({ error: "供应商不存在。" }, 404);
+    }
+  } catch {
+    return json(
+      { error: "该模型存在关联的生成记录，无法删除；建议改为停用。" },
+      409,
+    );
+  }
+  return json({ ok: true, providers: await listImageProviders(env.DB) });
+};
+
 export const onRequest: PagesFunction<Env> = (context) => {
   if (context.request.method === "GET") return onRequestGet(context);
   if (context.request.method === "PATCH") return onRequestPatch(context);
+  if (context.request.method === "POST") return onRequestPost(context);
+  if (context.request.method === "DELETE") return onRequestDelete(context);
   return new Response("Method Not Allowed", {
     status: 405,
-    headers: { Allow: "GET, PATCH" },
+    headers: { Allow: "GET, PATCH, POST, DELETE" },
   });
 };
