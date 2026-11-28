@@ -37,6 +37,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         <span id="price-chip" class="ai-chip" hidden>
           本次消耗 <strong id="price-value">–</strong> 积分
         </span>
+        <a href="/my-images/" class="ai-chip">我的生图历史 →</a>
       </div>
 
       <form id="gen-form" class="ai-form">
@@ -441,8 +442,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         const crowded = !data.offline && (data.busy || (data.waiting ?? 0) > 0);
         if (crowded) {
           const vipNote = (data.vip ?? 0) > 0 ? `（含 ${data.vip} 位插队）` : "";
+          const jumpPrice = (jumpFee ?? 0) > 0 ? ` · 插队 ${jumpFee} 积分可优先` : "";
           queueLine.textContent =
-            `🎨 GPU 忙碌中 · 前方排队 ${data.waiting ?? 0} 人${vipNote}`;
+            `🎨 GPU 忙碌中 · 前方排队 ${data.waiting ?? 0} 人${vipNote}${jumpPrice}`;
           queueLine.hidden = false;
         } else {
           queueLine.hidden = true;

@@ -1,0 +1,228 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout
+  title="我的生图历史"
+  description="查看你在 AI 生图页的全部生成记录。"
+  bodyClass="page-my-images"
+  noindex
+>
+  <main class="mi-shell">
+    <p class="eyebrow">MY GENERATIONS</p>
+    <div class="mi-head">
+      <h1>我的生图历史</h1>
+      <a href="/ai-image/" class="text-link">← 回到生图页</a>
+    </div>
+    <p class="mi-status" data-mi-status aria-live="polite">正在加载…</p>
+
+    <div class="mi-denied" data-mi-gate hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong>请先登录</strong>
+      <p>登录后才能查看你的生图记录。</p>
+      <a class="button button-primary" href="/login/?next=%2Fmy-images%2F">去登录</a>
+    </div>
+
+    <div class="mi-grid" data-mi-list hidden></div>
+  </main>
+</BaseLayout>
+
+<style>
+  .mi-shell {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 1.25rem 4rem;
+  }
+  .eyebrow {
+    color: var(--accent);
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 0.4rem;
+  }
+  .mi-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0;
+  }
+  .mi-head a {
+    white-space: nowrap;
+  }
+  .mi-status {
+    color: var(--muted);
+    min-height: 1.5em;
+  }
+  .mi-denied {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.6rem;
+    display: grid;
+    gap: 0.8rem;
+    justify-items: start;
+  }
+  .mi-denied strong {
+    font-size: 1.05rem;
+  }
+  .mi-denied p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .mi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 0.9rem;
+  }
+  .mi-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+    display: grid;
+    align-content: start;
+  }
+  .mi-card img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    cursor: pointer;
+  }
+  .mi-card .mi-thumb-placeholder {
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    color: var(--muted);
+    font-size: 1.6rem;
+    background: color-mix(in srgb, var(--border) 30%, transparent);
+  }
+  .mi-card .mi-info {
+    padding: 0.6rem 0.8rem 0.8rem;
+    display: grid;
+    gap: 0.25rem;
+  }
+  .mi-card .mi-prompt {
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .mi-card .mi-meta {
+    font-size: 0.7rem;
+    color: var(--muted);
+    opacity: 0.85;
+  }
+  .mi-card[data-status="failed"] {
+    opacity: 0.65;
+  }
+  .mi-card .mi-fail {
+    color: var(--bad, #e07a5f);
+    font-size: 0.72rem;
+  }
+</style>
+
+<script>
+  const statusEl = document.querySelector(
+    "[data-mi-status]",
+  ) as HTMLElement;
+  const gate = document.querySelector("[data-mi-gate]") as HTMLElement;
+  const listEl = document.querySelector("[data-mi-list]") as HTMLElement;
+
+  interface Item {
+    id: string;
+    status: string;
+    prompt: string;
+    pointsCost: number;
+    errorMessage: string | null;
+    width: number | null;
+    height: number | null;
+    createdAt: number;
+    url: string | null;
+  }
+
+  function render(items: Item[]) {
+    statusEl.hidden = true;
+    listEl.hidden = false;
+    listEl.replaceChildren();
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.className = "mi-card";
+      empty.innerHTML =
+        '<div class="mi-thumb-placeholder">🎨</div><div class="mi-info"><div class="mi-prompt">还没有生成记录，去生图页画第一张吧。</div></div>';
+      listEl.appendChild(empty);
+      return;
+    }
+    for (const item of items) {
+      const card = document.createElement("div");
+      card.className = "mi-card";
+      card.dataset.status = item.status;
+
+      if (item.status === "succeeded" && item.url) {
+        const img = document.createElement("img");
+        img.src = item.url;
+        img.alt = item.prompt;
+        img.loading = "lazy";
+        img.title = "点击查看原图";
+        img.addEventListener("click", () => window.open(item.url!, "_blank"));
+        card.appendChild(img);
+      } else {
+        const placeholder = document.createElement("div");
+        placeholder.className = "mi-thumb-placeholder";
+        placeholder.textContent =
+          item.status === "failed" ? "❌" : item.status === "processing" ? "⏳" : "🕐";
+        card.appendChild(placeholder);
+      }
+
+      const info = document.createElement("div");
+      info.className = "mi-info";
+      const promptEl = document.createElement("div");
+      promptEl.className = "mi-prompt";
+      promptEl.textContent = item.prompt;
+      promptEl.title = item.prompt;
+      info.appendChild(promptEl);
+
+      if (item.status === "failed" && item.errorMessage) {
+        const fail = document.createElement("div");
+        fail.className = "mi-fail";
+        fail.textContent = item.errorMessage.slice(0, 60);
+        info.appendChild(fail);
+      }
+
+      const meta = document.createElement("div");
+      meta.className = "mi-meta";
+      meta.textContent =
+        `${new Date(item.createdAt).toLocaleString("zh-CN")} · ` +
+        `${item.width ? item.width + "×" + item.height + " · " : ""}` +
+        `${item.pointsCost} 积分`;
+      info.appendChild(meta);
+      card.appendChild(info);
+      listEl.appendChild(card);
+    }
+  }
+
+  fetch("/api/ai-image/mine", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  })
+    .then(async (response) => {
+      if (response.status === 401) {
+        statusEl.hidden = true;
+        gate.hidden = false;
+        return;
+      }
+      const data = (await response.json()) as { items?: Item[] };
+      render(data.items ?? []);
+    })
+    .catch(() => {
+      statusEl.textContent = "加载失败，请刷新重试。";
+    });
+</script>
