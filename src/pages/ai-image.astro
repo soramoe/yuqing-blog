@@ -478,6 +478,13 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     unconfigured: "未配置",
   };
 
+  const adapterIcon: Record<string, string> = {
+    "colab-sdxl": "🚀",
+    "workers-ai": "⚡",
+    "dashscope-images": "🌊",
+    "openai-images": "🎨",
+  };
+
   function renderModels() {
     modelGrid.replaceChildren();
     const usable = models.filter((m) => m.status !== "unconfigured");
@@ -495,10 +502,26 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     }
     for (const m of models) {
       if (m.status === "unconfigured") continue;
+      const selected = m.id === selectedModelId;
+
       const card = document.createElement("button");
       card.type = "button";
-      card.className = "ai-model-card" + (m.id === selectedModelId ? " selected" : "");
+      card.className = "ai-model-card" + (selected ? " selected" : "");
       card.disabled = m.status === "offline";
+      card.title =
+        m.status === "ready"
+          ? "点击选择此模型"
+          : m.status === "cooldown"
+            ? "冷却中，恢复后可选"
+            : "当前不可用";
+
+      const icon = document.createElement("span");
+      icon.className = "ai-model-icon";
+      icon.textContent = adapterIcon[m.adapter] ?? "🎨";
+      icon.setAttribute("aria-hidden", "true");
+
+      const body = document.createElement("span");
+      body.className = "ai-model-body";
 
       const nameRow = document.createElement("span");
       nameRow.className = "ai-model-name";
@@ -513,7 +536,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       const idRow = document.createElement("span");
       idRow.className = "ai-model-id";
       idRow.textContent = m.model;
-      card.append(nameRow, idRow);
+      body.append(nameRow, idRow);
+
+      const check = document.createElement("span");
+      check.className = "ai-model-check";
+      check.textContent = "✓";
+      check.hidden = !selected;
+
+      card.append(icon, body, check);
 
       card.addEventListener("click", () => {
         selectedModelId = m.id;
@@ -755,3 +785,76 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     }
   });
 </script>
+
+<style is:global>
+  /* 模型卡片由 JS 动态创建，样式需全局生效 */
+  .ai-model-card {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 0.75rem 0.9rem;
+    cursor: pointer;
+    transition: border-color 140ms ease, box-shadow 140ms ease,
+      transform 140ms ease;
+  }
+  .ai-model-card:hover:not(:disabled) {
+    border-color: var(--text);
+    transform: translateY(-1px);
+  }
+  .ai-model-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+  }
+  .ai-model-card:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .ai-model-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+  .ai-model-body {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1;
+  }
+  .ai-model-name {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-weight: 650;
+    font-size: 0.88rem;
+  }
+  .ai-model-id {
+    font-size: 0.68rem;
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ai-model-check {
+    position: absolute;
+    top: -7px;
+    right: -6px;
+    display: grid;
+    place-items: center;
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 999px;
+    background: var(--accent);
+    color: var(--on-accent, #fff);
+    font-size: 0.65rem;
+    font-weight: 700;
+  }
+  .ai-model-check[hidden] {
+    display: none;
+  }
+</style>
