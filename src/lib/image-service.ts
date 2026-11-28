@@ -399,10 +399,17 @@ export async function createAndRunImageJob(
         now,
       )
       .run();
-  } catch {
+  } catch (error) {
     const raced = await existingJob(env.DB, input.userId, input.requestId);
     if (raced) throw new ImageServiceError("该生图请求已经存在。", 409);
-    throw new ImageServiceError("生图任务创建失败。", 500);
+    // 临时诊断：把底层 SQLite 错误透出，定位入库失败原因后可去掉
+    const detail =
+      error instanceof Error ? error.message.slice(0, 200) : String(error);
+    console.error("[image-job] insert failed:", error);
+    throw new ImageServiceError(
+      `生图任务创建失败（${detail || "未知错误"}）。`,
+      500,
+    );
   }
 
   let balance = 0;
