@@ -455,6 +455,8 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     "workers-ai",
     "dashscope-images",
     "openai-images",
+    "ark-images",
+    "bigmodel-image",
   ]);
   if (name.length < 2 || name.length > 60) {
     return json({ error: "供应商名称需要 2 到 60 个字符。" }, 400);

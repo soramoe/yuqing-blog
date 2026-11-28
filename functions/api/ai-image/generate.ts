@@ -3,9 +3,14 @@ import { createAuth } from "../../../src/lib/auth";
 import {
   createAndRunImageJob,
   ImageServiceError,
+  isImageAspectRatio,
 } from "../../../src/lib/image-service";
 import { getImageSettings, listImageProviders } from "../../../src/lib/image-settings";
-import { isProviderConfigured } from "../../../src/lib/image-providers";
+import {
+  isProviderConfigured,
+  providerNeedsEnglishPrompt,
+  providerSupportsInitImage,
+} from "../../../src/lib/image-providers";
 import { notifyColabDown } from "../../../src/lib/system-notify";
 import { gtxTranslate, translateImagePrompt } from "../../../src/lib/translate";
 
@@ -20,6 +25,24 @@ const json = (body: unknown, status = 200) =>
 
 const safeText = (value: unknown, maximum: number) =>
   typeof value === "string" ? value.trim().slice(0, maximum) : "";
+
+// 参考图走 JSON body 传 data URL：页面限制 8MB 原图，base64 后约 10.7MB 字符
+const MAX_INIT_IMAGE_CHARS = 12_000_000;
+const INIT_IMAGE_PATTERN = /^data:image\/(png|jpeg|webp);base64,/i;
+
+const parseInitImage = (value: unknown) => {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (
+    raw.length < 64 ||
+    raw.length > MAX_INIT_IMAGE_CHARS ||
+    !INIT_IMAGE_PATTERN.test(raw)
+  ) {
+    return null;
+  }
+  return raw;
+};
 
 const colabBase = (env: Env) =>
   env.IMAGE_COLAB_URL?.trim().replace(/\/+$/, "") ?? "";
@@ -167,6 +190,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
         model: p.model,
         adapter: p.adapter,
         status,
+        supportsInitImage: providerSupportsInitImage(p.adapter),
       };
     });
   const provider = await env.DB.prepare(
@@ -221,9 +245,11 @@ export const onRequestPost: PagesFunction<Env> = async ({
   const prompt2 = safeText(input.prompt_2, 800);
   const negativePrompt = safeText(input.negative_prompt, 500);
   const quality = input.quality === "hd" ? "hd" : "standard";
-  const ratio = ["1:1", "4:5", "16:9"].includes(String(input.aspectRatio))
-    ? (String(input.aspectRatio) as "1:1" | "4:5" | "16:9")
+  // 与 image-service 共用同一份比例白名单（含 auto：不传宽高，走模型默认）
+  const ratio = isImageAspectRatio(input.aspectRatio)
+    ? input.aspectRatio
     : "1:1";
+  const initImage = parseInitImage(input.init_image);
 
   if (!/^[a-zA-Z0-9-]{8,80}$/.test(requestId)) {
     return json({ error: "生图请求标识无效。" }, 400);
@@ -231,9 +257,16 @@ export const onRequestPost: PagesFunction<Env> = async ({
   if (prompt.length < 6) {
     return json({ error: "主体描述至少 6 个字。" }, 400);
   }
+  if (initImage === null) {
+    return json(
+      { error: "参考图格式无效（仅支持 8MB 以内的 PNG/JPG/WebP）。" },
+      400,
+    );
+  }
 
   // 用户自选模型：校验其存在且对生图开放
   const model = safeText(input.model, 80);
+  let chosenAdapter = "";
   if (model) {
     const providers = await listImageProviders(env.DB);
     const chosen = providers.find(
@@ -248,10 +281,21 @@ export const onRequestPost: PagesFunction<Env> = async ({
         400,
       );
     }
+    chosenAdapter = chosen.adapter;
   }
 
-  // 插队：预扣插队积分（生成失败自动退回），并在请求头标记 VIP 通道
-  const jump = input.jump === true;
+  // 参考图只发给支持 img2img 的适配器；其余模型按纯文生图处理并在结果里提示
+  const initSupported = !chosenAdapter || providerSupportsInitImage(chosenAdapter);
+  const effectiveInitImage = initSupported ? initImage : "";
+  const initNote =
+    initImage && !initSupported
+      ? "参考图已忽略：当前模型不支持图生图。"
+      : "";
+
+  // 插队：预扣插队积分（生成失败自动退回），并在请求头标记 VIP 通道。
+  // 插队只对 Colab 队列有意义：选了云端模型时直接忽略，避免白扣积分
+  const jump =
+    input.jump === true && (!chosenAdapter || chosenAdapter === "colab-sdxl");
   const settings = await getImageSettings(env.DB);
   const jumpFee = jump ? settings.queueJumpPoints : 0;
   if (jumpFee > 0) {
@@ -268,12 +312,17 @@ export const onRequestPost: PagesFunction<Env> = async ({
     }
   }
 
-  // 中文 → SDXL 风格英文提示词（Workers AI 智能改写优先，直译兜底）
-  const [enPrompt, enPrompt2, enNegative] = await Promise.all([
-    translateImagePrompt(env, prompt),
-    prompt2 ? translateImagePrompt(env, prompt2) : Promise.resolve(""),
-    negativePrompt ? gtxTranslate(negativePrompt) : Promise.resolve(""),
-  ]);
+  // 中文 → 英文提示词（Workers AI 智能改写优先，直译兜底）。
+  // 原生中文模型（方舟 Seedream / 智谱 GLM）直接用原文，跳过翻译以省时省额度
+  const needsEnglish =
+    !chosenAdapter || providerNeedsEnglishPrompt(chosenAdapter);
+  const [enPrompt, enPrompt2, enNegative] = needsEnglish
+    ? await Promise.all([
+        translateImagePrompt(env, prompt),
+        prompt2 ? translateImagePrompt(env, prompt2) : Promise.resolve(""),
+        negativePrompt ? gtxTranslate(negativePrompt) : Promise.resolve(""),
+      ])
+    : ["", "", ""];
 
   try {
     const result = await createAndRunImageJob(env, {
@@ -282,6 +331,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
       feature: "image_studio",
       providerId: model || undefined,
       prompt,
+      initImage: effectiveInitImage || undefined,
       englishPrompt: enPrompt,
       prompt2: enPrompt2,
       negativePrompt: enNegative,
@@ -290,6 +340,17 @@ export const onRequestPost: PagesFunction<Env> = async ({
       permission: "private",
       jump,
     });
+    // 未指定模型时由路由器选模型：若最终选到不支持图生图的适配器，同样给出提示
+    const note = [
+      initNote,
+      effectiveInitImage &&
+      result.adapter &&
+      !providerSupportsInitImage(result.adapter)
+        ? "参考图已忽略：当前模型不支持图生图。"
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
     return json(
       {
         jobId: result.id,
@@ -301,6 +362,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
         providerId: result.providerId,
         providerName: result.providerName,
         translated: enPrompt,
+        note: note || undefined,
         jumpFee: jumpFee || undefined,
       },
       201,

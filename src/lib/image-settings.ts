@@ -15,6 +15,14 @@ export type ImageProviderAdapter =
   | "ark-images"
   | "bigmodel-image";
 
+// 读取 provider 时只做校验、不做改写：未知的适配器保持原样（不会被路由），
+// 绝不能回落成某个真实适配器，否则请求会被发到别家服务商。
+const toAdapter = (value: string | null | undefined): ImageProviderAdapter => {
+  const normalized = value?.trim() ?? "";
+  // 历史数据：适配器列为空时按最早接入的千问处理
+  return (normalized || "dashscope-images") as ImageProviderAdapter;
+};
+
 export interface ImageSettings {
   enabled: boolean;
   pointValueCents: number;
@@ -222,14 +230,7 @@ export async function listImageProviders(db: D1Database) {
     (row): ImageProviderConfig => ({
       id: row.id,
       name: row.name,
-      adapter:
-        row.adapter === "workers-ai"
-          ? "workers-ai"
-          : row.adapter === "openai-images"
-            ? "openai-images"
-            : row.adapter === "colab-sdxl"
-              ? "colab-sdxl"
-              : "dashscope-images",
+      adapter: toAdapter(row.adapter),
       model: row.model,
       features: row.features ?? "",
       apiKey: row.apiKey ?? "",

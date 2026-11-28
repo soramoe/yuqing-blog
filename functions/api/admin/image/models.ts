@@ -101,6 +101,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
         ? base
         : `${base}/models`;
       models = await pullModelList(endpoint, apiKey);
+    } else if (adapter === "ark-images") {
+      // 方舟的模型列表混合了文本/视频/3D 模型，这里只保留生图（seedream）系列
+      const base = (
+        rawBaseUrl || "https://ark.cn-beijing.volces.com/api/v3"
+      ).replace(/\/+$/, "");
+      const all = await pullModelList(
+        base.endsWith("/models") ? base : `${base}/models`,
+        apiKey,
+      );
+      models = all.filter((m) => m.id.includes("seedream"));
+      if (!models.length) throw new Error("接口没有返回生图模型");
+    } else if (adapter === "bigmodel-image") {
+      // 智谱不提供模型列表接口，给出可直接选用的常用模型
+      models = [{ id: "glm-image", ownedBy: "zhipu" }];
     } else {
       return json(
         { error: "该适配器不支持在线拉取模型列表，请手动填写模型名。" },

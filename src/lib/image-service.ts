@@ -37,6 +37,8 @@ export interface ImageJobResult {
   status: "succeeded";
   providerId: string;
   providerName: string;
+  /** 实际出图的适配器；旧任务（无记录）时为 undefined */
+  adapter?: string;
   model: string;
   r2Key: string;
   contentType: string;
@@ -78,6 +80,15 @@ const allowedRatios = [
   "21:9",
   "auto",
 ] as const;
+
+export type ImageAspectRatio = (typeof allowedRatios)[number];
+
+// 供 API 层复用同一份比例白名单，避免前后端各存一份导致漂移
+export const isImageAspectRatio = (
+  value: unknown,
+): value is ImageAspectRatio =>
+  typeof value === "string" &&
+  (allowedRatios as readonly string[]).includes(value);
 
 const dimensions = (
   quality: ImageQuality,
@@ -521,6 +532,7 @@ export async function createAndRunImageJob(
       status: "succeeded",
       providerId: generated.providerId,
       providerName: generated.providerName,
+      adapter: generated.adapter,
       model: generated.model,
       r2Key,
       contentType: generated.contentType,

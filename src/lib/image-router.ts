@@ -24,6 +24,7 @@ export interface ImageRoutingResult {
   height: number;
   providerId: string;
   providerName: string;
+  adapter: string;
   model: string;
   attempts: number;
 }
@@ -320,6 +321,7 @@ export async function routeImageGeneration(
         ...result,
         providerId: provider.id,
         providerName: provider.name,
+        adapter: provider.adapter,
         model: provider.model,
         attempts: attempted,
       };

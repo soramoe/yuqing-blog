@@ -103,7 +103,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
               </label>
             </div>
             <label>
-              参考图（可选，上传后按参考图+提示词生图；当前仅 Colab 模型支持）
+              参考图（可选，上传后按参考图+提示词生图；当前 Colab / 火山方舟模型支持）
               <input id="ref-image" type="file" accept="image/png,image/jpeg,image/webp" hidden />
               <span
                 id="ref-drop"
@@ -544,6 +544,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     model: string;
     adapter: string;
     status: "ready" | "cooldown" | "offline" | "unconfigured";
+    supportsInitImage?: boolean;
   }
 
   interface BatchSlot {
@@ -673,7 +674,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     const current = models.find((m) => m.id === selectedModelId);
     modelHint.hidden = false;
     modelHint.textContent = current
-      ? `当前模型 ${current.model}${current.status === "cooldown" ? " · 冷却中，稍后可生成" : ""}`
+      ? `当前模型 ${current.model}` +
+        (current.supportsInitImage ? " · 支持参考图" : " · 不支持参考图（将忽略）") +
+        (current.status === "cooldown" ? " · 冷却中，稍后可生成" : "")
       : "";
     updateJumpVisibility();
   }

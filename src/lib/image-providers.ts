@@ -142,6 +142,25 @@ const glmSize = (width?: number, height?: number) => {
 const stripDataUrl = (value: string) =>
   value.includes(",") ? value.slice(value.indexOf(",") + 1) : value;
 
+// 生成完整接口地址：后台填的可能是基础地址，也可能是带 /images/generations 的完整地址
+const imagesEndpoint = (baseUrl: string | undefined, fallbackBase: string) => {
+  const base = (baseUrl?.trim() || fallbackBase).replace(/\/+$/, "");
+  return base.endsWith("/images/generations")
+    ? base
+    : `${base}/images/generations`;
+};
+
+// 支持参考图（img2img）的适配器；其余适配器会忽略参考图按纯文字生成
+const IMG2IMG_ADAPTERS = new Set(["colab-sdxl", "ark-images"]);
+const needsEnglishPromptAdapters = new Set(["colab-sdxl", "workers-ai"]);
+
+export const providerSupportsInitImage = (adapter: string) =>
+  IMG2IMG_ADAPTERS.has(adapter);
+
+// 只有 SDXL / Flux 这类英文模型需要先把中文改写成英文；原生中文模型直接用原文
+export const providerNeedsEnglishPrompt = (adapter: string) =>
+  needsEnglishPromptAdapters.has(adapter);
+
 const detectContentType = (bytes: Uint8Array, fallback = "") => {
   if (
     bytes.length >= 8 &&
@@ -579,6 +598,10 @@ async function generateWithColab(
     height: request.height,
     steps: request.quality === "hd" ? 40 : 30,
     guidance: 6.0,
+    // 参考图：v3 管线接受 data URL 或纯 base64，有参考图时走 img2img
+    ...(request.initImage
+      ? { init_image: request.initImage, strength: 0.55 }
+      : {}),
   });
 
   // Cloudflare 边缘到 ngrok 偶发瞬断（GET 正常、POST 被瞬拒），自动重试 3 次；
@@ -683,15 +706,16 @@ async function generateWithArk(
       false,
     );
   }
-  const base = (
-    provider.baseUrl?.trim() ||
-    "https://ark.cn-beijing.volces.com/api/v3"
-  ).replace(/\/+$/, "");
+  // 接入地址既可填基础地址，也可直接粘贴完整的 /images/generations 接口地址
+  const endpoint = imagesEndpoint(
+    provider.baseUrl,
+    "https://ark.cn-beijing.volces.com/api/v3",
+  );
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 300_000);
   try {
-    const response = await fetch(`${base}/images/generations`, {
+    const response = await fetch(endpoint, {
       method: "POST",
       signal: controller.signal,
       headers: {
@@ -789,14 +813,15 @@ async function generateWithBigModel(
       false,
     );
   }
-  const base = (
-    provider.baseUrl?.trim() || "https://open.bigmodel.cn/api/paas/v4"
-  ).replace(/\/+$/, "");
+  const endpoint = imagesEndpoint(
+    provider.baseUrl,
+    "https://open.bigmodel.cn/api/paas/v4",
+  );
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 300_000);
   try {
-    const response = await fetch(`${base}/images/generations`, {
+    const response = await fetch(endpoint, {
       method: "POST",
       signal: controller.signal,
       headers: {
