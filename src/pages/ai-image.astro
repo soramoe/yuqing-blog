@@ -4,7 +4,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <BaseLayout
   title="AI 生图"
-  description="选择模型，输入中文提示词，自动翻译成英文后生成图片。消耗积分。"
+  description="选择模型，输入中文提示词，可选参考图与批量生成。消耗积分，失败自动退回。"
   bodyClass="page-ai-image"
   noindex
 >
@@ -12,7 +12,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     <p class="eyebrow">AI IMAGE STUDIO</p>
     <h1>AI 生图</h1>
     <p class="ai-lead">
-      中文自动翻译成英文。选择模型、填写提示词即可生成，失败自动退积分。
+      中文自动翻译（Colab/云模型均适配）。左侧配置，右侧出图。失败自动退积分。
     </p>
 
     <div id="login-card" class="ai-card" hidden>
@@ -33,76 +33,126 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           积分余额 <strong id="balance-value">–</strong>
         </span>
         <span id="price-chip" class="ai-chip" hidden>
-          本次消耗 <strong id="price-value">–</strong> 积分
+          单张 <strong id="price-value">–</strong> 积分
         </span>
         <a href="/my-images/" class="ai-chip ai-link">我的生图历史 →</a>
       </div>
 
-      <section class="ai-section">
-        <div class="ai-section-head">
-          <p class="ai-section-label">选择模型</p>
-          <span id="service-badge-mini" class="ai-mini-status"></span>
+      <div class="ai-layout">
+        <!-- ============ 左：配置 ============ -->
+        <div class="ai-left">
+          <section class="ai-section">
+            <div class="ai-section-head">
+              <p class="ai-section-label">选择模型</p>
+              <span id="service-badge-mini" class="ai-mini-status"></span>
+            </div>
+            <div id="model-grid" class="ai-model-grid" hidden></div>
+          </section>
+
+          <form id="gen-form" class="ai-form ai-card">
+            <label>
+              主体描述（必填）
+              <textarea id="prompt" rows="3" maxlength="800" required placeholder="例如：一只橘白色的猫穿着古代官服，站在雪后的江南石桥上，手里捧着发光的红灯笼"></textarea>
+            </label>
+            <label>
+              第二提示词（可选，写给 SDXL 第二文本编码器）
+              <input id="prompt2" maxlength="800" placeholder="例如：电影感构图，细致的光影层次" />
+            </label>
+            <label>
+              负面提示词（可选）
+              <input id="negative" maxlength="500" placeholder="例如：模糊，低质量，多余的手指" />
+            </label>
+            <div class="ai-grid">
+              <label>
+                清晰度
+                <select id="quality">
+                  <option value="standard" selected>1K 标准</option>
+                  <option value="hd">2K 高清</option>
+                </select>
+              </label>
+              <label>
+                生成张数（1~4）
+                <select id="batch">
+                  <option value="1" selected>1 张</option>
+                  <option value="2">2 张</option>
+                  <option value="3">3 张</option>
+                  <option value="4">4 张</option>
+                </select>
+              </label>
+            </div>
+            <div class="ai-grid">
+              <label>
+                画面比例
+                <select id="ratio">
+                  <option value="1:1" selected>1:1 方形</option>
+                  <option value="16:9">16:9 横版</option>
+                  <option value="9:16">9:16 竖版</option>
+                  <option value="4:3">4:3 横版</option>
+                  <option value="3:4">3:4 竖版</option>
+                  <option value="21:9">21:9 超宽</option>
+                  <option value="auto">自动（由提示词决定）</option>
+                </select>
+              </label>
+              <label id="jump-wrap" class="ai-jump" hidden>
+                插队优先生成
+                <span class="ai-jump-inner">
+                  <input id="jump" type="checkbox" />
+                  <span>消耗 <strong data-jump-fee>–</strong> 积分</span>
+                </span>
+              </label>
+            </div>
+            <label>
+              参考图（可选，上传后按参考图+提示词生图；当前仅 Colab 模型支持）
+              <input id="ref-image" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+              <span
+                id="ref-drop"
+                class="ai-ref-drop"
+                tabindex="0"
+                role="button"
+              >点击或拖入参考图（PNG/JPG/WebP，≤8MB）</span>
+              <span id="ref-preview" class="ai-ref-preview" hidden>
+                <img data-ref-thumb alt="参考图预览" />
+                <button type="button" data-ref-clear class="ai-ref-clear">移除</button>
+              </span>
+            </label>
+            <label class="ai-jump ai-gallery-check">
+              <input id="gallery-check" type="checkbox" />
+              <span>生成后上传到站内图库（公开可见）</span>
+            </label>
+            <div class="ai-submit-row">
+              <button id="submit" class="button button-primary" type="submit">
+                开始生成
+              </button>
+              <span id="queue-line" class="ai-queue" hidden></span>
+            </div>
+          </form>
+
+          <p id="status" class="ai-status">正在检查服务状态…</p>
+          <p id="translated-line" class="ai-translated" hidden></p>
         </div>
-        <div id="model-grid" class="ai-model-grid" hidden></div>
-      </section>
 
-      <form id="gen-form" class="ai-form ai-card">
-        <label>
-          主体描述（必填）
-          <input id="prompt" maxlength="800" placeholder="例如：一只橘白色的猫穿着古代官服，站在雪后的江南石桥上" required />
-        </label>
-        <label>
-          第二提示词（可选，写给 SDXL 的第二个文本编码器）
-          <input id="prompt2" maxlength="800" placeholder="例如：电影感构图，细致的光影层次" />
-        </label>
-        <label>
-          负面提示词（可选，不想出现的东西）
-          <input id="negative" maxlength="500" placeholder="例如：模糊，低质量，多余的手指" />
-        </label>
-        <div class="ai-grid">
-          <label>
-            画质
-            <select id="quality">
-              <option value="standard" selected>标准</option>
-              <option value="hd">高清</option>
-            </select>
-          </label>
-          <label>
-            比例
-            <select id="ratio">
-              <option value="1:1" selected>1:1 方形</option>
-              <option value="4:5">4:5 竖版</option>
-              <option value="16:9">16:9 横版</option>
-            </select>
-          </label>
+        <!-- ============ 右：结果 ============ -->
+        <div class="ai-right">
+          <section class="ai-section ai-results-panel">
+            <div class="ai-section-head">
+              <p class="ai-section-label">生成结果</p>
+              <span data-batch-progress hidden></span>
+            </div>
+            <div id="result-grid" class="ai-result-grid">
+              <div class="ai-result-empty" data-result-empty>
+                🖼️ 生成的图片会显示在这里
+              </div>
+            </div>
+          </section>
+
+          <section class="ai-section" id="history-section" hidden>
+            <p class="ai-section-label">
+              本次会话
+              <a href="/my-images/" class="ai-history-link">全部历史 →</a>
+            </p>
+            <div id="history" class="ai-history"></div>
+          </section>
         </div>
-        <label id="jump-wrap" class="ai-jump" hidden>
-          <input id="jump" type="checkbox" />
-          <span>
-            插队优先生成（消耗 <strong data-jump-fee>–</strong> 积分，
-            <span class="ai-muted">生成失败自动退回</span>）
-          </span>
-        </label>
-        <div class="ai-submit-row">
-          <button id="submit" class="button button-primary" type="submit">生成</button>
-          <span id="queue-line" class="ai-queue" hidden></span>
-        </div>
-      </form>
-
-      <p id="status" class="ai-status">正在检查服务状态…</p>
-      <p id="translated-line" class="ai-translated" hidden></p>
-
-      <div id="result" class="ai-result" hidden>
-        <img id="result-img" alt="生成结果" />
-        <p id="result-meta" class="ai-muted"></p>
-      </div>
-
-      <div id="history-wrap" hidden>
-        <p class="ai-section-label">
-          本次会话
-          <a href="/my-images/" class="ai-history-link">全部历史 →</a>
-        </p>
-        <div id="history" class="ai-history"></div>
       </div>
     </div>
   </main>
@@ -110,7 +160,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <style>
   .ai-shell {
-    max-width: 780px;
+    max-width: 1180px;
     margin: 0 auto;
     padding: 0 1.25rem 4rem;
   }
@@ -185,8 +235,19 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     text-decoration: none;
     color: var(--accent);
   }
+  .ai-layout {
+    display: grid;
+    grid-template-columns: minmax(340px, 430px) 1fr;
+    gap: 1.4rem;
+    align-items: start;
+  }
+  @media (max-width: 1023px) {
+    .ai-layout {
+      grid-template-columns: 1fr;
+    }
+  }
   .ai-section {
-    margin-bottom: 1.2rem;
+    margin-bottom: 0;
   }
   .ai-section-head {
     display: flex;
@@ -207,42 +268,53 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
   .ai-model-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.7rem;
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
   }
   .ai-model-card {
-    text-align: left;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
     border: 1px solid var(--border);
     border-radius: 12px;
     background: var(--surface);
-    padding: 0.85rem 1rem;
+    padding: 0.75rem 0.9rem;
     cursor: pointer;
-    display: grid;
-    gap: 0.3rem;
-    color: var(--text);
-    font: inherit;
+    transition: border-color 140ms ease, box-shadow 140ms ease;
   }
-  .ai-model-card:hover {
+  .ai-model-card:hover:not(:disabled) {
     border-color: var(--text);
   }
   .ai-model-card.selected {
     border-color: var(--accent);
     box-shadow: 0 0 0 1px var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
   }
   .ai-model-card:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
   }
-  .ai-model-card .ai-model-name {
+  .ai-model-icon {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+  .ai-model-body {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+    flex: 1;
+  }
+  .ai-model-name {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
     font-weight: 650;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
   }
-  .ai-model-card .ai-model-id {
-    font-size: 0.7rem;
+  .ai-model-id {
+    font-size: 0.68rem;
     color: var(--muted);
     font-family: Consolas, monospace;
     overflow: hidden;
@@ -276,7 +348,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     border-radius: 14px;
     background: var(--surface);
     padding: 1.4rem;
-    margin-bottom: 0.8rem;
   }
   .ai-form label {
     display: grid;
@@ -284,7 +355,8 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     font-size: 0.85rem;
     color: var(--muted);
   }
-  .ai-form input,
+  .ai-form textarea,
+  .ai-form input:not([type="checkbox"]):not([type="file"]),
   .ai-form select {
     padding: 0.62rem 0.85rem;
     border: 1px solid var(--border);
@@ -292,8 +364,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     background: var(--background);
     color: var(--text);
     font: inherit;
+    resize: vertical;
   }
-  .ai-form input:focus,
+  .ai-form textarea:focus,
+  .ai-form input:not([type="checkbox"]):not([type="file"]):focus,
   .ai-form select:focus {
     outline: none;
     border-color: var(--accent);
@@ -304,19 +378,64 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     gap: 0.9rem;
   }
   .ai-jump {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    color: var(--text);
     cursor: pointer;
+    align-content: start;
+  }
+  .ai-jump-inner {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--text);
+    font-size: 0.85rem;
   }
   .ai-jump input {
     width: auto;
   }
   .ai-jump[hidden] {
     display: none !important;
+  }
+  .ai-gallery-check {
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    color: var(--text);
+    font-size: 0.85rem;
+  }
+  .ai-gallery-check input {
+    width: auto;
+  }
+  .ai-ref-drop {
+    padding: 0.7rem 0.85rem;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+  }
+  .ai-ref-drop:hover {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+  .ai-ref-preview {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .ai-ref-preview img {
+    width: 72px;
+    height: 72px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+  .ai-ref-clear {
+    border: 0;
+    background: transparent;
+    color: var(--bad, #e07a5f);
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0.2rem;
   }
   .ai-submit-row {
     display: flex;
@@ -346,27 +465,86 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     line-height: 1.6;
     margin: -0.3rem 0 0.8rem;
   }
-  .ai-result {
-    margin-top: 1.2rem;
-    border: 1px solid var(--border);
+  .ai-results-panel {
+    min-height: 320px;
+  }
+  .ai-result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.9rem;
+  }
+  .ai-result-empty {
+    border: 1px dashed var(--border);
     border-radius: 14px;
-    overflow: hidden;
-    background: var(--surface);
-  }
-  .ai-result img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-  .ai-result p {
-    margin: 0;
-    padding: 0.7rem 1rem;
-    font-size: 0.8rem;
-    border-top: 1px solid var(--border);
-  }
-  .ai-muted {
+    padding: 2.4rem 1rem;
+    display: grid;
+    place-items: center;
     color: var(--muted);
     font-size: 0.85rem;
+  }
+  .ai-result-slot {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface);
+    display: grid;
+    align-content: start;
+  }
+  .ai-result-slot .slot-image-wrap {
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    background: color-mix(in srgb, var(--border) 25%, transparent);
+    color: var(--muted);
+    font-size: 0.8rem;
+    min-height: 160px;
+  }
+  .ai-result-slot .slot-image-wrap img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    cursor: pointer;
+  }
+  .ai-result-slot .slot-image-wrap.loading::after {
+    content: "";
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--accent);
+    border-top-color: transparent;
+    border-radius: 999px;
+    animation: ai-spin 0.8s linear infinite;
+  }
+  @keyframes ai-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .ai-result-slot .slot-info {
+    padding: 0.55rem 0.7rem 0.7rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: grid;
+    gap: 0.2rem;
+  }
+  .ai-result-slot[data-state="failed"] .slot-image-wrap {
+    color: var(--bad, #e07a5f);
+  }
+  .ai-result-slot .slot-actions {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .ai-result-slot .slot-actions button,
+  .ai-result-slot .slot-actions a {
+    font-size: 0.68rem;
+    padding: 0.2rem 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--accent);
+    text-decoration: none;
+    cursor: pointer;
   }
   .ai-section-label {
     font-size: 0.78rem;
@@ -386,6 +564,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+  }
+  .ai-muted {
+    color: var(--muted);
+    font-size: 0.85rem;
   }
 </style>
 
@@ -410,6 +592,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     status: "ready" | "cooldown" | "offline" | "unconfigured";
   }
 
+  interface BatchSlot {
+    index: number;
+    requestId: string;
+    el: HTMLElement;
+    imgWrap: HTMLElement;
+    info: HTMLElement;
+    url: string | null;
+  }
+
   const $ = (id: string) => document.getElementById(id);
   const loginCard = $("login-card") as HTMLElement;
   const app = $("app") as HTMLElement;
@@ -422,21 +613,27 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   const modelGrid = $("model-grid") as HTMLElement;
   const form = document.getElementById("gen-form") as HTMLFormElement;
   const btn = $("submit") as HTMLButtonElement;
-  const promptInput = $("prompt") as HTMLInputElement;
+  const promptInput = $("prompt") as HTMLTextAreaElement;
   const prompt2Input = $("prompt2") as HTMLInputElement;
   const negativeInput = $("negative") as HTMLInputElement;
   const qualitySelect = $("quality") as HTMLSelectElement;
+  const batchSelect = $("batch") as HTMLSelectElement;
   const ratioSelect = $("ratio") as HTMLSelectElement;
   const jumpWrap = $("jump-wrap") as HTMLElement;
   const jumpCheckbox = $("jump") as HTMLInputElement;
   const jumpFeeEl = jumpWrap.querySelector("[data-jump-fee]") as HTMLElement;
+  const refInput = $("ref-image") as HTMLInputElement;
+  const refDrop = $("ref-drop") as HTMLElement;
+  const refPreview = $("ref-preview") as HTMLElement;
+  const refThumb = refPreview.querySelector("img") as HTMLImageElement;
+  const refClear = refPreview.querySelector("[data-ref-clear]") as HTMLButtonElement;
+  const galleryCheck = $("gallery-check") as HTMLInputElement;
   const queueLine = $("queue-line") as HTMLElement;
   const statusEl = $("status") as HTMLElement;
   const translatedLine = $("translated-line") as HTMLElement;
-  const resultWrap = $("result") as HTMLElement;
-  const resultImg = $("result-img") as HTMLImageElement;
-  const resultMeta = $("result-meta") as HTMLElement;
-  const historyWrap = $("history-wrap") as HTMLElement;
+  const resultGrid = $("result-grid") as HTMLElement;
+  const resultEmpty = document.querySelector("[data-result-empty]") as HTMLElement;
+  const historyWrap = $("history-section") as HTMLElement;
   const historyEl = $("history") as HTMLElement;
 
   const history: string[] = [];
@@ -445,9 +642,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   let jumpFee: number | null = null;
   let models: ModelInfo[] = [];
   let selectedModelId: string | null = null;
+  let refDataUrl: string | null = null;
   let generating = false;
   let genTimer: number | undefined;
-  let tunnelOk = false;
 
   const setStatus = (text: string) => {
     statusEl.textContent = text;
@@ -467,7 +664,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     badge.dataset.state = state;
     badge.textContent = text;
     if (miniStatus) {
-      miniStatus.textContent = state === "online" ? "● 在线" : state === "cooldown" ? "● 冷却中" : state === "busy" ? "● 忙碌" : "● 检查中";
+      miniStatus.textContent =
+        state === "online"
+          ? "● 在线"
+          : state === "cooldown"
+            ? "● 冷却中"
+            : state === "busy"
+              ? "● 忙碌"
+              : "● 检查中";
     }
   };
 
@@ -496,7 +700,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       return;
     }
     modelGrid.hidden = false;
-    // 当前选择的模型若已不在列表中，回退到第一个可用模型
     if (!models.some((m) => m.id === selectedModelId)) {
       const firstReady = models.find((m) => m.status === "ready");
       selectedModelId = (firstReady ?? usable[0]).id;
@@ -560,11 +763,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     jumpWrap.hidden = !usingColab || generating || (jumpFee ?? 0) <= 0;
   }
 
-  // 排队状态：仅 Colab 模型有队列
   async function refreshQueue() {
     if (selectedModelId !== "colab-sdxl") {
       queueLine.hidden = true;
-      jumpWrap.hidden = true;
       return;
     }
     try {
@@ -594,7 +795,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     }
   }
 
-  // 服务状态 + 模型列表：30 秒自动刷新
   async function refreshService() {
     try {
       const response = await fetch("/api/ai-image/generate", {
@@ -616,7 +816,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         jumpFeeEl.textContent = String(data.queueJumpPoints);
       }
       models = data.models ?? [];
-      tunnelOk = data.ok;
       renderModels();
       void refreshQueue();
       if (!data.enabled) {
@@ -629,14 +828,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         models.length > 0 && models.every((m) => m.status === "cooldown");
       if (anyReady) {
         setBadge("online", "● 服务在线");
-        setStatus("选择模型，填好提示词，点「生成」开始。");
+        setStatus("选择模型，填好提示词，点「开始生成」。");
       } else if (allCooldown && models.length > 0) {
         const secs = data.cooldownSeconds ?? 0;
         setBadge(
           "cooldown",
           `● 冷却中${secs ? `（约 ${Math.ceil(secs / 60)} 分钟）` : ""}`,
         );
-        setStatus("模型连续失败进入冷却保护，稍后自动恢复，可让站长在后台重置。");
+        setStatus("模型连续失败进入冷却保护，稍后自动恢复。");
       } else {
         setBadge("busy", "● 服务正忙");
         setStatus("模型暂时都不可用，稍后再来看看（积分不会白扣）。");
@@ -658,16 +857,282 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     historyEl.prepend(img);
   }
 
-  // 会话门：未登录显示登录引导
-  const sessionPromise = fetch("/api/auth/get-session", {
-    credentials: "same-origin",
-    headers: { Accept: "application/json" },
-  })
-    .then((response) => (response.ok ? response.json() : null))
-    .catch(() => null);
+  // ---------- 参考图 ----------
+  function setRefImage(dataUrl: string | null) {
+    refDataUrl = dataUrl;
+    if (dataUrl) {
+      refThumb.src = dataUrl;
+      refPreview.hidden = false;
+      refDrop.hidden = true;
+    } else {
+      refPreview.hidden = true;
+      refDrop.hidden = false;
+      refInput.value = "";
+    }
+  }
 
+  refInput.addEventListener("change", () => {
+    const file = refInput.files?.[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) {
+      setStatus("参考图过大，请压缩到 8MB 以内。");
+      refInput.value = "";
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setRefImage(String(reader.result));
+    reader.readAsDataURL(file);
+  });
+
+  refClear.addEventListener("click", () => setRefImage(null));
+
+  ["dragover", "dragenter"].forEach((name) =>
+    refDrop.addEventListener(name, (e) => {
+      e.preventDefault();
+      refDrop.style.borderColor = "var(--accent)";
+    }),
+  );
+  ["dragleave", "drop"].forEach((name) =>
+    refDrop.addEventListener(name, (e) => {
+      e.preventDefault();
+      refDrop.style.borderColor = "";
+    }),
+  );
+  refDrop.addEventListener("drop", (e) => {
+    const file = e.dataTransfer?.files?.[0];
+    if (!file || !/^image\//.test(file.type)) return;
+    if (file.size > 8 * 1024 * 1024) {
+      setStatus("参考图过大，请压缩到 8MB 以内。");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setRefImage(String(reader.result));
+    reader.readAsDataURL(file);
+  });
+
+  // ---------- 批量生成 ----------
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (generating) return;
+    const prompt = promptInput.value.trim();
+    if (prompt.length < 6) {
+      setStatus("主体描述至少 6 个字。");
+      return;
+    }
+    if (!selectedModelId) {
+      setStatus("先选择一个模型。");
+      return;
+    }
+    generating = true;
+    btn.disabled = true;
+    const count = Number(batchSelect.value);
+    const usingColab = selectedModelId === "colab-sdxl";
+    const startedAt = Date.now();
+    genTimer = window.setInterval(() => {
+      const elapsed = Math.round((Date.now() - startedAt) / 1000);
+      setStatus(
+        `🎨 批量生成中… 已等待 ${elapsed} 秒` +
+          (usingColab ? "（含排队）" : ""),
+      );
+    }, 1000);
+
+    resultGrid.replaceChildren();
+    resultEmpty?.remove();
+    translatedLine.hidden = true;
+
+    const slots: BatchSlot[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const slot = document.createElement("div");
+      slot.className = "ai-result-slot";
+      slot.dataset.state = "pending";
+      const wrap = document.createElement("div");
+      wrap.className = "slot-image-wrap loading";
+      wrap.textContent = `第 ${i + 1} 张`;
+      const info = document.createElement("div");
+      info.className = "slot-info";
+      info.textContent = "排队等待…";
+      slot.append(wrap, info);
+      resultGrid.appendChild(slot);
+      slots.push({
+        index: i,
+        requestId: crypto.randomUUID(),
+        el: slot,
+        imgWrap: wrap,
+        info,
+        url: null,
+      });
+    }
+
+    void refreshQueue();
+
+    const tasks = slots.map((slot) =>
+      fetch("/api/ai-image/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          requestId: slot.requestId,
+          model: selectedModelId,
+          prompt,
+          prompt_2: prompt2Input.value.trim(),
+          negative_prompt: negativeInput.value.trim(),
+          quality: qualitySelect.value,
+          aspectRatio: ratioSelect.value,
+          init_image: refDataUrl ?? undefined,
+          jump: usingColab && jumpCheckbox.checked,
+        }),
+      })
+        .then(async (response) => {
+          const payload = (await response.json()) as {
+            error?: string;
+            code?: string;
+            balance?: number;
+            pointsCost?: number;
+            jobId?: string;
+            url?: string;
+            translated?: string;
+            providerName?: string;
+            note?: string;
+          };
+          if (typeof payload.balance === "number") setBalance(payload.balance);
+          if (!response.ok || !payload.url) {
+            slot.el.dataset.state = "failed";
+            slot.imgWrap.classList.remove("loading");
+            slot.imgWrap.textContent = "❌";
+            slot.info.textContent =
+              payload.error?.slice(0, 60) ?? "生成失败（积分已退回）";
+            return;
+          }
+          if (payload.translated && slot.index === 0) {
+            translatedLine.textContent = "已翻译为：" + payload.translated;
+            translatedLine.hidden = false;
+          }
+          slot.url = payload.url;
+          slot.el.dataset.state = "done";
+          slot.imgWrap.classList.remove("loading");
+          slot.imgWrap.replaceChildren();
+          const img = document.createElement("img");
+          img.src = payload.url;
+          img.alt = `第 ${slot.index + 1} 张`;
+          img.loading = "lazy";
+          img.addEventListener("click", () => window.open(payload.url!, "_blank"));
+          slot.imgWrap.appendChild(img);
+          const actions = document.createElement("div");
+          actions.className = "slot-actions";
+          const open = document.createElement("a");
+          open.href = payload.url;
+          open.target = "_blank";
+          open.rel = "noopener";
+          open.textContent = "原图";
+          actions.appendChild(open);
+          const upload = document.createElement("button");
+          upload.type = "button";
+          upload.textContent = galleryCheck.checked ? "上传图库中…" : "上传到图库";
+          upload.disabled = Boolean(galleryCheck.checked);
+          if (galleryCheck.checked) {
+            void uploadToGallery(payload.url!, prompt, slot.index, upload, null);
+          } else {
+            upload.addEventListener("click", () => {
+              upload.disabled = true;
+              upload.textContent = "上传中…";
+              void uploadToGallery(payload.url!, prompt, slot.index, upload, null);
+            });
+          }
+          const meta = document.createElement("span");
+          meta.className = "slot-info";
+          meta.textContent =
+            `${payload.providerName ?? ""} · ${payload.pointsCost ?? "–"} 积分` +
+            (payload.note ? ` · ${payload.note}` : "");
+          slot.info.append(meta);
+          slot.el.querySelector(".slot-info")?.after(actions);
+        })
+        .catch(() => {
+          slot.el.dataset.state = "failed";
+          slot.imgWrap.classList.remove("loading");
+          slot.imgWrap.textContent = "❌";
+          slot.info.textContent = "网络异常，请稍后重试。";
+        }),
+    );
+
+    await Promise.allSettled(tasks);
+    window.clearInterval(genTimer);
+    genTimer = undefined;
+    generating = false;
+    btn.disabled = false;
+    const done = slots.filter((s) => s.url).length;
+    setStatus(
+      done === count
+        ? `✅ 全部完成（${done}/${count}）`
+        : `完成 ${done}/${count}，失败部分积分已退回。`,
+    );
+    void refreshService();
+    void refreshQueue();
+  });
+
+  async function uploadToGallery(
+    url: string,
+    prompt: string,
+    index: number,
+    button?: HTMLButtonElement,
+  ) {
+    try {
+      const blob = await (await fetch(url, { credentials: "same-origin" })).blob();
+      const bitmap = await createImageBitmap(blob);
+      const variants = new Map<number, Blob>();
+      for (const width of [480, 960, 1920]) {
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, width / bitmap.width);
+        canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+        canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        const webp = await new Promise<Blob | null>((resolve) =>
+          canvas.toBlob(resolve, "image/webp", 0.86),
+        );
+        if (webp) variants.set(width, webp);
+      }
+      const data = new FormData();
+      data.append(
+        "title",
+        (prompt.slice(0, 60) || `AI 生图 · ${new Date().toLocaleDateString("zh-CN")}`) +
+          (index > 0 ? ` · ${index + 1}` : ""),
+      );
+      data.append("width", String(bitmap.width));
+      data.append("height", String(bitmap.height));
+      data.append("visibility", "public");
+      for (const [width, webp] of variants) {
+        data.append(`variant-${width}`, webp, `variant-${width}.webp`);
+      }
+      const response = await fetch("/api/gallery/upload", {
+        method: "POST",
+        credentials: "same-origin",
+        body: data,
+      });
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(payload?.error ?? `上传失败（HTTP ${response.status}）`);
+      }
+      if (button) button.textContent = "已上传到图库 ✓";
+      setStatus("已上传到站内图库。");
+    } catch (error) {
+      if (button) button.disabled = false;
+      setStatus(
+        error instanceof Error ? error.message : "图库上传失败。",
+      );
+    }
+  }
+
+  // ---------- 初始化 ----------
   async function init() {
-    const session = await sessionPromise;
+    const session = await fetch("/api/auth/get-session", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .catch(() => null);
+
     if (!session?.user) {
       loginCard.hidden = false;
       statusEl.hidden = true;
@@ -689,173 +1154,4 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
 
   void init();
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const prompt = promptInput.value.trim();
-    if (prompt.length < 6) {
-      setStatus("主体描述至少 6 个字。");
-      return;
-    }
-    if (!selectedModelId) {
-      setStatus("先选择一个模型。");
-      return;
-    }
-    btn.disabled = true;
-    generating = true;
-    const startedAt = Date.now();
-    genTimer = window.setInterval(() => {
-      const elapsed = Math.round((Date.now() - startedAt) / 1000);
-      setStatus(
-        `🎨 生成中… 已等待 ${elapsed} 秒` +
-          (selectedModelId === "colab-sdxl" ? "（含排队）" : ""),
-      );
-    }, 1000);
-    translatedLine.hidden = true;
-    resultWrap.hidden = true;
-    const usingColab = selectedModelId === "colab-sdxl";
-    try {
-      const response = await fetch("/api/ai-image/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
-          requestId: crypto.randomUUID(),
-          model: selectedModelId,
-          prompt,
-          prompt_2: prompt2Input.value.trim(),
-          negative_prompt: negativeInput.value.trim(),
-          quality: qualitySelect.value,
-          aspectRatio: ratioSelect.value,
-          jump: usingColab && jumpCheckbox.checked,
-        }),
-      });
-      const data = (await response.json()) as {
-        error?: string;
-        code?: string;
-        balance?: number;
-        pointsCost?: number;
-        jobId?: string;
-        url?: string;
-        translated?: string;
-        providerName?: string;
-        jumpFee?: number;
-      };
-      if (response.status === 401) {
-        app.hidden = true;
-        loginCard.hidden = false;
-        return;
-      }
-      if (!response.ok) {
-        setStatus(
-          {
-            insufficient: "积分不足啦 — 每日签到可以攒积分。",
-            unavailable: "所选模型暂时不可用（积分没有扣），可换个模型试试。",
-            bad_model: "所选模型不存在或未开放。",
-          }[data.code ?? ""] ??
-            data.error ??
-            "生成失败，稍后再试。",
-        );
-        if (typeof data.balance === "number") setBalance(data.balance);
-        void refreshService();
-        return;
-      }
-      if (typeof data.balance === "number") setBalance(data.balance);
-      if (data.translated) {
-        translatedLine.textContent = "已翻译为：" + data.translated;
-        translatedLine.hidden = false;
-      }
-      if (typeof data.url === "string") {
-        resultImg.src = data.url;
-        resultWrap.hidden = false;
-        addToHistory(data.url);
-        resultMeta.textContent =
-          `${data.providerName ?? ""} · 消耗 ${data.pointsCost ?? "–"} 积分` +
-          (data.jumpFee ? ` · 插队 ${data.jumpFee} 积分` : "") +
-          ` · 余额 ${data.balance ?? "–"}`;
-      }
-      setStatus("✅ 完成");
-    } catch {
-      setStatus("😞 生成失败，稍后再试。");
-    } finally {
-      btn.disabled = false;
-      generating = false;
-      window.clearInterval(genTimer);
-      genTimer = undefined;
-      void refreshQueue();
-    }
-  });
 </script>
-
-<style is:global>
-  /* 模型卡片由 JS 动态创建，样式需全局生效 */
-  .ai-model-card {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--surface);
-    padding: 0.75rem 0.9rem;
-    cursor: pointer;
-    transition: border-color 140ms ease, box-shadow 140ms ease,
-      transform 140ms ease;
-  }
-  .ai-model-card:hover:not(:disabled) {
-    border-color: var(--text);
-    transform: translateY(-1px);
-  }
-  .ai-model-card.selected {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
-    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
-  }
-  .ai-model-card:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-  .ai-model-icon {
-    font-size: 1.3rem;
-    line-height: 1;
-  }
-  .ai-model-body {
-    display: grid;
-    gap: 0.15rem;
-    min-width: 0;
-    flex: 1;
-  }
-  .ai-model-name {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    font-weight: 650;
-    font-size: 0.88rem;
-  }
-  .ai-model-id {
-    font-size: 0.68rem;
-    color: var(--muted);
-    font-family: Consolas, monospace;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .ai-model-check {
-    position: absolute;
-    top: -7px;
-    right: -6px;
-    display: grid;
-    place-items: center;
-    width: 1.2rem;
-    height: 1.2rem;
-    border-radius: 999px;
-    background: var(--accent);
-    color: var(--on-accent, #fff);
-    font-size: 0.65rem;
-    font-weight: 700;
-  }
-  .ai-model-check[hidden] {
-    display: none;
-  }
-</style>

@@ -19,6 +19,8 @@ export interface CreateImageJobInput {
   /** 用户自选的模型（provider id） */
   providerId?: string;
   prompt: string;
+  /** 参考图（data URL），仅支持 img2img 的适配器使用 */
+  initImage?: string;
   englishPrompt?: string;
   /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
   prompt2?: string;
@@ -66,22 +68,41 @@ const allowedFeatures: ImageFeature[] = [
   "image_studio",
   "admin_test",
 ];
-const allowedRatios = ["1:1", "4:5", "16:9"] as const;
+const allowedRatios = [
+  "1:1",
+  "4:5",
+  "16:9",
+  "9:16",
+  "4:3",
+  "3:4",
+  "21:9",
+  "auto",
+] as const;
 
 const dimensions = (
   quality: ImageQuality,
   aspectRatio: (typeof allowedRatios)[number],
-) => {
+): { width: number; height: number } | null => {
+  // auto：不传尺寸，交给模型/适配器按其默认处理
+  if (aspectRatio === "auto") return null;
   const table = {
     standard: {
       "1:1": [1024, 1024],
       "4:5": [864, 1080],
       "16:9": [1280, 720],
+      "9:16": [720, 1280],
+      "4:3": [1152, 864],
+      "3:4": [864, 1152],
+      "21:9": [1344, 576],
     },
     hd: {
-      "1:1": [1328, 1328],
-      "4:5": [1056, 1320],
-      "16:9": [1536, 864],
+      "1:1": [1536, 1536],
+      "4:5": [1248, 1560],
+      "16:9": [1920, 1088],
+      "9:16": [1088, 1920],
+      "4:3": [1536, 1152],
+      "3:4": [1152, 1536],
+      "21:9": [1920, 832],
     },
   } as const;
   const [width, height] = table[quality][aspectRatio];
@@ -407,7 +428,10 @@ export async function createAndRunImageJob(
     .bind(balance, Date.now(), Date.now(), jobId)
     .run();
 
-  const { width, height } = dimensions(quality, ratio);
+  const { width, height } = dimensions(quality, ratio) ?? {
+    width: 0,
+    height: 0,
+  };
   try {
     const generated = await routeImageGeneration(env, jobId, {
       feature: input.feature,
@@ -415,10 +439,11 @@ export async function createAndRunImageJob(
       prompt,
       englishPrompt: englishPrompt ?? undefined,
       prompt2: input.prompt2?.trim().slice(0, 2000),
+      initImage: input.initImage?.trim() || undefined,
       jump: input.jump === true,
       negativePrompt,
-      width,
-      height,
+      width: width || undefined,
+      height: height || undefined,
       quality,
     });
     await env.DB.prepare(

@@ -33,14 +33,17 @@ export interface ImageGenerationRequest {
   /** 用户自选的模型（provider id）；指定时路由只调用该模型 */
   providerId?: string;
   prompt: string;
+  /** 参考图（data URL）；仅支持 img2img 的适配器使用（colab-sdxl） */
+  initImage?: string;
   englishPrompt?: string;
   /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
   prompt2?: string;
   /** 排队插队（VIP 通道），仅 colab-sdxl 适配器使用 */
   jump?: boolean;
   negativePrompt: string;
-  width: number;
-  height: number;
+  /** 未指定尺寸（auto）时为 undefined，适配器按各自默认处理 */
+  width?: number;
+  height?: number;
   quality: ImageQuality;
 }
 
@@ -136,8 +139,8 @@ const detectContentType = (bytes: Uint8Array, fallback = "") => {
 
 const normalizeBinary = async (
   value: unknown,
-  width: number,
-  height: number,
+  width?: number,
+  height?: number,
 ): Promise<ImageBinaryResult> => {
   let bytes: Uint8Array;
   let contentType = "";
@@ -193,11 +196,21 @@ const normalizeBinary = async (
       true,
     );
   }
+  // auto 尺寸模式：调用方未传宽高时，从 PNG IHDR 头直接读出真实尺寸
+  let finalWidth = width;
+  let finalHeight = height;
+  if ((!finalWidth || !finalHeight) && detectContentType(bytes) === "image/png") {
+    if (bytes.length >= 24) {
+      const view = new DataView(bytes.buffer, bytes.byteOffset);
+      finalWidth = view.getUint32(16);
+      finalHeight = view.getUint32(20);
+    }
+  }
   return {
     bytes,
     contentType: detectContentType(bytes, contentType),
-    width,
-    height,
+    width: finalWidth || width || 1024,
+    height: finalHeight || height || 1024,
   };
 };
 
