@@ -505,70 +505,92 @@ async function generateWithColab(
     ? await gtxTranslate(request.negativePrompt)
     : "";
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 150_000);
-  let response: Response;
-  try {
-    response = await fetch(`${baseUrl}/generate`, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": env.IMAGE_COLAB_KEY?.trim() ?? "",
-        "ngrok-skip-browser-warning": "1",
-      },
-      body: JSON.stringify({
-        prompt,
-        prompt_2: request.prompt2?.trim()
-          ? await translateToEnglish(request.prompt2)
-          : undefined,
-        negative_prompt: negativePrompt || undefined,
-        width: request.width,
-        height: request.height,
-        steps: request.quality === "hd" ? 40 : 30,
-        guidance: 6.0,
-      }),
-    });
-  } catch {
-    throw new ImageProviderError(
-      controller.signal.aborted
-        ? "Colab 生图响应超时，GPU 可能掉线了。"
-        : "Colab GPU 服务无法连接。",
-      controller.signal.aborted ? "timeout" : "provider-unavailable",
-      true,
-    );
-  } finally {
-    clearTimeout(timeout);
+  const body = JSON.stringify({
+    prompt,
+    prompt_2: request.prompt2?.trim()
+      ? await translateImagePrompt(env, request.prompt2)
+      : undefined,
+    negative_prompt: negativePrompt || undefined,
+    width: request.width,
+    height: request.height,
+    steps: request.quality === "hd" ? 40 : 30,
+    guidance: 6.0,
+  });
+
+  // Cloudflare 边缘到 ngrok 偶发瞬断（GET 正常、POST 被瞬拒），自动重试 3 次
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 150_000);
+    try {
+      const response = await fetch(`${baseUrl}/generate`, {
+        method: "POST",
+        signal: controller.signal,
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": env.IMAGE_COLAB_KEY?.trim() ?? "",
+          "ngrok-skip-browser-warning": "1",
+        },
+        body,
+      });
+
+      if (!response.ok) {
+        throw new ImageProviderError(
+          response.status === 429
+            ? "Colab GPU 一次只能画一张，请稍等几秒再试。"
+            : response.status === 401
+              ? "Colab 上游密钥不匹配。"
+              : `Colab 生图服务返回 HTTP ${response.status}。`,
+          response.status === 429
+            ? "rate-limited"
+            : response.status === 401
+              ? "not-configured"
+              : "provider-unavailable",
+          response.status === 429 || response.status >= 500,
+        );
+      }
+
+      const payload = (await response.json().catch(() => null)) as {
+        images?: string[];
+      } | null;
+      const base64 = payload?.images?.[0];
+      if (!base64) {
+        throw new ImageProviderError(
+          "Colab 没有返回图片。",
+          "invalid-response",
+          true,
+        );
+      }
+      return normalizeBinary(
+        { b64_json: base64 },
+        request.width,
+        request.height,
+      );
+    } catch (error) {
+      if (error instanceof ImageProviderError) throw error;
+      lastError = error;
+      if (controller.signal.aborted) {
+        throw new ImageProviderError(
+          "Colab 生图响应超时，GPU 可能掉线了。",
+          "timeout",
+          true,
+        );
+      }
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+      }
+    } finally {
+      clearTimeout(timeout);
+    }
   }
 
-  if (!response.ok) {
-    throw new ImageProviderError(
-      response.status === 429
-        ? "Colab GPU 一次只能画一张，请稍等几秒再试。"
-        : response.status === 401
-          ? "Colab 上游密钥不匹配。"
-          : `Colab 生图服务返回 HTTP ${response.status}。`,
-      response.status === 429
-        ? "rate-limited"
-        : response.status === 401
-          ? "not-configured"
-          : "provider-unavailable",
-      response.status === 429 || response.status >= 500,
-    );
-  }
-
-  const payload = (await response.json().catch(() => null)) as {
-    images?: string[];
-  } | null;
-  const base64 = payload?.images?.[0];
-  if (!base64) {
-    throw new ImageProviderError(
-      "Colab 没有返回图片。",
-      "invalid-response",
-      true,
-    );
-  }
-  return normalizeBinary({ b64_json: base64 }, request.width, request.height);
+  const detail =
+    lastError instanceof Error ? lastError.message : String(lastError ?? "");
+  throw new ImageProviderError(
+    `Colab GPU 服务连接失败（${detail.slice(0, 90)}），已自动重试 3 次。`,
+    "provider-unavailable",
+    true,
+  );
 }
 
 export async function generateWithProvider(
