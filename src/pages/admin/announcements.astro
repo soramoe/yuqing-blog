@@ -1,0 +1,620 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminNav from "../../components/AdminNav.astro";
+---
+
+<BaseLayout
+  title="公告管理"
+  description="新建、编辑、上下线和删除全站公告。"
+  bodyClass="page-admin-announcements"
+  noindex
+>
+  <div class="container ann-shell">
+    <header class="ann-header">
+      <div>
+        <p class="eyebrow">ANNOUNCEMENTS</p>
+        <h1>公告管理</h1>
+        <p>公告会按优先级展示在站点顶部；「指定页面」只在对应路径显示。</p>
+      </div>
+    </header>
+
+    <AdminNav />
+
+    <p class="ann-status" data-ann-status aria-live="polite">正在验证权限…</p>
+
+    <div class="ann-denied" data-ann-gate hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-ann-gate-title>请先登录</strong>
+      <p data-ann-gate-copy>登录站长账号后才能管理公告。</p>
+      <a class="button button-primary" href="/login/?next=%2Fadmin%2Fannouncements%2F" data-ann-gate-link>
+        登录站长账号
+      </a>
+    </div>
+
+    <div class="ann-content" data-ann-content hidden>
+      <section class="ann-card">
+        <div class="ann-card-heading">
+          <div>
+            <p class="eyebrow" data-ann-form-mode>NEW</p>
+            <h2 data-ann-form-title>新建公告</h2>
+          </div>
+          <button type="button" class="ann-mini" data-ann-cancel-edit hidden>
+            取消编辑
+          </button>
+        </div>
+        <form class="ann-form" data-ann-form>
+          <label>
+            <span>标题（2~80 字）</span>
+            <input name="title" maxlength="80" required placeholder="例如：AI 生图功能上线" />
+          </label>
+          <label>
+            <span>内容（2~500 字）</span>
+            <textarea name="body" rows="3" maxlength="500" required placeholder="写清楚公告的内容和影响范围"></textarea>
+          </label>
+          <div class="ann-grid">
+            <label>
+              <span>类型</span>
+              <select name="type">
+                <option value="info">通知</option>
+                <option value="success">活动</option>
+                <option value="warning">提醒</option>
+                <option value="maintenance">维护</option>
+              </select>
+            </label>
+            <label>
+              <span>展示位置</span>
+              <select name="placement">
+                <option value="site" selected>全站显示</option>
+                <option value="points">仅积分页</option>
+                <option value="shop">仅商城页</option>
+                <option value="custom">指定页面</option>
+              </select>
+            </label>
+            <label>
+              <span>优先级（0~100，越大越靠前）</span>
+              <input name="priority" type="number" min="0" max="100" value="0" />
+            </label>
+            <label>
+              <span>开始时间（可选）</span>
+              <input name="startsAt" type="datetime-local" />
+            </label>
+            <label>
+              <span>结束时间（可选，过期自动隐藏）</span>
+              <input name="endsAt" type="datetime-local" />
+            </label>
+            <label data-ann-target-wrap hidden>
+              <span>指定页面路径（如 /points/）</span>
+              <input name="targetPath" maxlength="200" placeholder="/points/" />
+            </label>
+          </div>
+          <label>
+            <span>链接地址（可选，站内路径或 HTTPS）</span>
+            <input name="linkUrl" maxlength="500" placeholder="https://xhz6.com/ai-image/" />
+          </label>
+          <label>
+            <span>链接文字（可选，默认「查看详情」）</span>
+            <input name="linkText" maxlength="40" placeholder="去试试" />
+          </label>
+          <div class="ann-form-actions">
+            <button type="submit" data-ann-submit>发布公告</button>
+          </div>
+          <p data-ann-form-status aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="ann-card">
+        <div class="ann-card-heading">
+          <div>
+            <p class="eyebrow">ALL</p>
+            <h2>公告列表</h2>
+          </div>
+        </div>
+        <ul class="ann-list" data-ann-list></ul>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .ann-shell {
+    padding-bottom: 4rem;
+  }
+  .ann-header {
+    margin-bottom: 0.6rem;
+  }
+  h1 {
+    font-size: 2rem;
+    margin: 0 0 0.4rem;
+  }
+  .ann-header p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .ann-status {
+    color: var(--muted);
+    min-height: 1.5em;
+  }
+  .ann-denied {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.6rem;
+    display: grid;
+    gap: 0.8rem;
+    justify-items: start;
+  }
+  .ann-denied strong {
+    font-size: 1.05rem;
+  }
+  .ann-denied p {
+    margin: 0;
+    color: var(--muted);
+  }
+  .ann-card {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface);
+    padding: 1.3rem 1.4rem;
+    margin-bottom: 1.2rem;
+  }
+  .ann-card-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .ann-card h2 {
+    font-size: 1.1rem;
+    margin: 0 0 0.2rem;
+  }
+  .ann-mini {
+    border: 0;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.8rem;
+    padding: 0.2rem 0.3rem;
+  }
+  .ann-form {
+    display: grid;
+    gap: 0.85rem;
+  }
+  .ann-form label {
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.82rem;
+    color: var(--muted);
+  }
+  .ann-form input,
+  .ann-form select,
+  .ann-form textarea {
+    padding: 0.55rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--background);
+    color: var(--text);
+    font: inherit;
+  }
+  .ann-form input:focus,
+  .ann-form select:focus,
+  .ann-form textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .ann-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.8rem;
+  }
+  .ann-form-actions {
+    display: flex;
+    gap: 0.6rem;
+  }
+  .ann-form button {
+    cursor: pointer;
+  }
+  .ann-form button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ann-form [data-ann-form-status] {
+    min-height: 1.2em;
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+  .ann-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.7rem;
+  }
+  .ann-item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--background);
+    padding: 0.85rem 1rem;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .ann-item header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .ann-item strong {
+    font-size: 0.92rem;
+  }
+  .ann-tag {
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.68rem;
+  }
+  .ann-item[data-state="live"] .ann-tag[data-role="state"] {
+    color: #7ec699;
+    border-color: rgb(83 160 112 / 45%);
+  }
+  .ann-item p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.83rem;
+    line-height: 1.6;
+  }
+  .ann-item time {
+    color: var(--muted);
+    font-size: 0.72rem;
+    opacity: 0.8;
+  }
+  .ann-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+  }
+  .ann-actions button {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .ann-actions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .ann-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+</style>
+
+<script>
+  const $ = (id: string) => document.getElementById(id);
+  const statusEl = $("ann-status") as HTMLElement;
+  const gate = $("ann-gate") as HTMLElement;
+  const gateTitle = document.querySelector(
+    "[data-ann-gate-title]",
+  ) as HTMLElement;
+  const gateCopy = document.querySelector(
+    "[data-ann-gate-copy]",
+  ) as HTMLElement;
+  const gateLink = document.querySelector<HTMLAnchorElement>(
+    "[data-ann-gate-link]",
+  );
+  const content = $("ann-content") as HTMLElement;
+  const form = document.querySelector<HTMLFormElement>("[data-ann-form]");
+  const formMode = $("ann-form-mode") as HTMLElement;
+  const formTitle = $("ann-form-title") as HTMLElement;
+  const cancelEditBtn = document.querySelector<HTMLButtonElement>(
+    "[data-ann-cancel-edit]",
+  );
+  const formStatus = document.querySelector<HTMLElement>(
+    "[data-ann-form-status]",
+  );
+  const submitBtn = document.querySelector<HTMLButtonElement>(
+    "[data-ann-submit]",
+  );
+  const listEl = $("ann-list") as HTMLElement;
+  const targetWrap = $("ann-target-wrap") as HTMLElement;
+
+  interface AnnouncementItem {
+    id: string;
+    title: string;
+    body: string;
+    type: string;
+    placement: string;
+    priority: number;
+    targetPath: string | null;
+    linkUrl: string | null;
+    linkText: string | null;
+    active: boolean;
+    startsAt: number | null;
+    endsAt: number | null;
+    createdAt: number;
+    updatedAt: number;
+  }
+
+  let editingId: string | null = null;
+
+  const placementLabel: Record<string, string> = {
+    site: "全站",
+    points: "积分页",
+    shop: "商城页",
+    custom: "指定页面",
+  };
+  const typeLabel: Record<string, string> = {
+    info: "通知",
+    success: "活动",
+    warning: "提醒",
+    maintenance: "维护",
+  };
+
+  function stateOf(item: AnnouncementItem): { label: string; live: boolean } {
+    const now = Date.now();
+    if (!item.active) return { label: "已下线", live: false };
+    if (item.startsAt && item.startsAt > now)
+      return { label: "待开始", live: false };
+    if (item.endsAt && item.endsAt <= now)
+      return { label: "已过期", live: false };
+    return { label: "生效中", live: true };
+  }
+
+  function setFormStatus(text: string, state: "idle" | "error" | "success") {
+    if (!formStatus) return;
+    formStatus.textContent = text;
+    formStatus.dataset.state = state;
+  }
+
+  function setFormMode(mode: "new" | "edit", item?: AnnouncementItem) {
+    editingId = mode === "edit" && item ? item.id : null;
+    if (mode === "edit" && item) {
+      formMode.textContent = "EDIT";
+      formTitle.textContent = `编辑公告：${item.title}`;
+      if (cancelEditBtn) cancelEditBtn.hidden = false;
+      if (submitBtn) submitBtn.textContent = "保存修改";
+    } else {
+      formMode.textContent = "NEW";
+      formTitle.textContent = "新建公告";
+      if (cancelEditBtn) cancelEditBtn.hidden = true;
+      if (submitBtn) submitBtn.textContent = "发布公告";
+      form?.reset();
+      updateTargetVisibility();
+    }
+    setFormStatus("");
+  }
+
+  cancelEditBtn?.addEventListener("click", () => setFormMode("new"));
+
+  function updateTargetVisibility() {
+    if (!form || !targetWrap) return;
+    const select = form.elements.namedItem("placement") as HTMLSelectElement;
+    targetWrap.hidden = select.value !== "custom";
+  }
+  form
+    ?.elements.namedItem("placement")
+    ?.addEventListener("change", updateTargetVisibility);
+
+  const toInputValue = (ts: number | null) => {
+    if (!ts) return "";
+    const d = new Date(ts - new Date().getTimezoneOffset() * 60_000);
+    return d.toISOString().slice(0, 16);
+  };
+
+  function fillForm(item: AnnouncementItem) {
+    if (!form) return;
+    const set = (name: string, value: string) => {
+      const el = form.elements.namedItem(name) as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | HTMLSelectElement;
+      if (el) (el as HTMLInputElement).value = value;
+    };
+    set("title", item.title);
+    set("body", item.body);
+    set("type", item.type);
+    set("placement", item.targetPath ? "custom" : item.placement);
+    set("priority", String(item.priority));
+    set("targetPath", item.targetPath ?? "");
+    set("linkUrl", item.linkUrl ?? "");
+    set("linkText", item.linkText ?? "");
+    set("startsAt", toInputValue(item.startsAt));
+    set("endsAt", toInputValue(item.endsAt));
+    updateTargetVisibility();
+  }
+
+  async function loadAnnouncements() {
+    const response = await fetch("/api/admin/announcements", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (response.status === 401 || response.status === 403) {
+      statusEl.hidden = true;
+      gate.hidden = false;
+      if (response.status === 403) {
+        gateTitle.textContent = "没有管理权限";
+        gateCopy.textContent = "当前账号不是站长。";
+        if (gateLink) gateLink.hidden = true;
+      }
+      return false;
+    }
+    const data = (await response.json()) as { announcements: AnnouncementItem[] };
+    statusEl.hidden = true;
+    content.hidden = false;
+    render(data.announcements ?? []);
+    return true;
+  }
+
+  function render(items: AnnouncementItem[]) {
+    listEl.replaceChildren();
+    if (!items.length) {
+      const empty = document.createElement("li");
+      empty.className = "ann-item";
+      empty.textContent = "还没有公告，用上面的表单创建第一条。";
+      listEl.appendChild(empty);
+      return;
+    }
+    for (const item of items) {
+      const state = stateOf(item);
+      const li = document.createElement("li");
+      li.className = "ann-item";
+      li.dataset.state = state.live ? "live" : "off";
+
+      const header = document.createElement("header");
+      const title = document.createElement("strong");
+      title.textContent = item.title;
+      const typeTag = document.createElement("span");
+      typeTag.className = "ann-tag";
+      typeTag.textContent = typeLabel[item.type] ?? item.type;
+      const placeTag = document.createElement("span");
+      placeTag.className = "ann-tag";
+      placeTag.textContent = placementLabel[item.placement] ?? item.placement;
+      const stateTag = document.createElement("span");
+      stateTag.className = "ann-tag";
+      stateTag.dataset.role = "state";
+      stateTag.textContent = state.label;
+      header.append(title, typeTag, placeTag, stateTag);
+
+      const body = document.createElement("p");
+      body.textContent = item.body;
+      const time = document.createElement("time");
+      const window_ =
+        item.startsAt || item.endsAt
+          ? `展示窗口：${item.startsAt ? new Date(item.startsAt).toLocaleString("zh-CN") : "不限"} ~ ${item.endsAt ? new Date(item.endsAt).toLocaleString("zh-CN") : "不限"}`
+          : "长期展示";
+      time.textContent =
+        `${window_} · 优先级 ${item.priority} · 更新于 ` +
+        new Date(item.updatedAt).toLocaleString("zh-CN");
+      li.append(header, body, time);
+
+      const actions = document.createElement("div");
+      actions.className = "ann-actions";
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.textContent = item.active ? "下线" : "上线";
+      toggle.addEventListener("click", () =>
+        void toggleAnnouncement(item.id, !item.active),
+      );
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.textContent = "编辑";
+      edit.addEventListener("click", () => {
+        fillForm(item);
+        setFormMode("edit", item);
+        form?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      const del = document.createElement("button");
+      del.type = "button";
+      del.textContent = "删除";
+      del.addEventListener("click", () => {
+        if (!window.confirm(`确定删除公告「${item.title}」？此操作不可恢复。`))
+          return;
+        void deleteAnnouncement(item.id);
+      });
+      actions.append(toggle, edit, del);
+      li.appendChild(actions);
+      listEl.appendChild(li);
+    }
+  }
+
+  async function send(url: string, method: string, body?: unknown) {
+    const response = await fetch(url, {
+      method,
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        ...(body ? { "Content-Type": "application/json" } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const payload = (await response.json()) as {
+      announcements?: AnnouncementItem[];
+      error?: string;
+    };
+    if (!response.ok) throw new Error(payload.error || "操作失败。");
+    render(payload.announcements ?? []);
+  }
+
+  async function toggleAnnouncement(id: string, active: boolean) {
+    try {
+      await send("/api/admin/announcements", "PATCH", { id, active });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "操作失败。");
+    }
+  }
+
+  async function deleteAnnouncement(id: string) {
+    try {
+      await send("/api/admin/announcements", "DELETE", { id });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "删除失败。");
+    }
+  }
+
+  form?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!form) return;
+    const value = (name: string) => {
+      const el = form.elements.namedItem(name) as HTMLInputElement;
+      return el ? el.value.trim() : "";
+    };
+    const payload: Record<string, unknown> = {
+      title: value("title"),
+      body: value("body"),
+      type: value("type"),
+      placement: value("placement"),
+      priority: Number(value("priority") || 0),
+      linkUrl: value("linkUrl"),
+      linkText: value("linkText"),
+      startsAt: value("startsAt")
+        ? new Date(value("startsAt")).getTime()
+        : null,
+      endsAt: value("endsAt") ? new Date(value("endsAt")).getTime() : null,
+    };
+    if (payload.placement === "custom") {
+      payload.targetPath = value("targetPath");
+    }
+    if (editingId) {
+      payload.id = editingId;
+    }
+    if (submitBtn) submitBtn.disabled = true;
+    setFormStatus(editingId ? "正在保存修改…" : "正在发布…");
+    try {
+      await send("/api/admin/announcements", editingId ? "PATCH" : "POST", payload);
+      setFormStatus(editingId ? "修改已保存。" : "公告已发布。", "success");
+      setFormMode("new");
+    } catch (error) {
+      setFormStatus(
+        error instanceof Error ? error.message : "操作失败，请稍后重试。",
+        "error",
+      );
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  });
+
+  fetch("/api/auth/get-session", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  })
+    .then((response) => (response.ok ? response.json() : null))
+    .then(async (data) => {
+      if (!data?.user) {
+        statusEl.hidden = true;
+        gate.hidden = false;
+        return;
+      }
+      await loadAnnouncements();
+    })
+    .catch(() => {
+      statusEl.hidden = true;
+      gate.hidden = false;
+    });
+</script>

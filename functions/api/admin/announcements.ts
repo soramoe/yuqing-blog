@@ -112,7 +112,8 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   const input = await parseBody(request);
   if (!input) return json({ error: "请求内容格式无效。" }, 400);
 
-  if (request.method === "PATCH") {
+  // PATCH 仅带 {id, active} 时做上下线切换；带 title 等完整字段时走下方全量编辑
+  if (request.method === "PATCH" && input.title === undefined) {
     const id = typeof input.id === "string" ? input.id.trim() : "";
     if (!id || typeof input.active !== "boolean") {
       return json({ error: "公告状态参数无效。" }, 400);
@@ -210,8 +211,48 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   }
 
   const now = Date.now();
-  const id = crypto.randomUUID();
   const storedPlacement = placement === "custom" ? "site" : placement;
+  const linkTextFinal = linkText || (linkUrl ? "查看详情" : null);
+
+  if (request.method === "PATCH") {
+    // 全量编辑：active 缺省时保持原上下线状态
+    const editId = typeof input.id === "string" ? input.id.trim() : "";
+    if (!/^[a-zA-Z0-9-]{8,80}$/.test(editId)) {
+      return json({ error: "公告编号无效。" }, 400);
+    }
+    const activeValue =
+      typeof input.active === "boolean" ? (input.active ? 1 : 0) : null;
+    const updated = await env.DB.prepare(
+      `UPDATE site_announcement
+       SET title = ?, body = ?, type = ?, placement = ?, priority = ?,
+           target_path = ?, link_url = ?, link_text = ?,
+           starts_at = ?, ends_at = ?,
+           active = COALESCE(?, active), updated_at = ?
+       WHERE id = ?`,
+    )
+      .bind(
+        title,
+        body,
+        type,
+        storedPlacement,
+        priority,
+        targetPath,
+        linkUrl || null,
+        linkTextFinal,
+        startsAt,
+        endsAt,
+        activeValue,
+        now,
+        editId,
+      )
+      .run();
+    if (!updated.meta.changes) {
+      return json({ error: "公告不存在。" }, 404);
+    }
+    return json({ ok: true, announcements: await listAnnouncements(env.DB) });
+  }
+
+  const id = crypto.randomUUID();
   await env.DB.prepare(
     `INSERT INTO site_announcement
       (id, title, body, type, placement, priority, target_path,
@@ -228,7 +269,7 @@ export const onRequest: PagesFunction<Env> = async (context) => {
       priority,
       targetPath,
       linkUrl || null,
-      linkText || (linkUrl ? "查看详情" : null),
+      linkTextFinal,
       startsAt,
       endsAt,
       access.userId,
@@ -239,6 +280,6 @@ export const onRequest: PagesFunction<Env> = async (context) => {
 
   return json(
     { ok: true, announcements: await listAnnouncements(env.DB) },
-    201,
+    request.method === "POST" ? 201 : 200,
   );
 };
