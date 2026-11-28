@@ -341,7 +341,7 @@ async function generateWithDashScope(
         parameters: {
           negative_prompt: request.negativePrompt || undefined,
           n: 1,
-          size: `${request.width}*${request.height}`,
+          size: `${request.width ?? 1024}*${request.height ?? 1024}`,
           prompt_extend: false,
           watermark: false,
         },
@@ -459,7 +459,7 @@ async function generateWithOpenAiImages(
         model: provider.model,
         prompt: request.prompt,
         negative_prompt: request.negativePrompt || undefined,
-        image_size: `${request.width}x${request.height}`,
+        image_size: `${request.width ?? 1024}x${request.height ?? 1024}`,
         batch_size: 1,
         num_inference_steps: request.quality === "hd" ? 35 : 20,
       }),
@@ -675,7 +675,7 @@ async function generateWithArk(
         // Seedream 原生理解中文，直接用原文（比翻译成英文更贴合描述）
         prompt: request.prompt,
         response_format: "b64_json",
-        size: `${request.width}x${request.height}`,
+        size: `${request.width ?? 1024}x${request.height ?? 1024}`,
         watermark: false,
       }),
     });
