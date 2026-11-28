@@ -84,6 +84,23 @@ STORY_AI_MODEL=deepseek-flash
 
 其中 `STORY_AI_API_KEY` 应使用加密 Secret。未配置时，页面会自动切换到用户自己的 Key 模式。
 
+## AI 生图
+
+`/ai-image/` 提供登录用户使用积分的 AI 生图工作台，支持模型选择、1K/2K、比例与自动尺寸、参考图（方舟 img2img）、批量生成和站内图库上传；历史记录位于 `/my-images/`。
+
+当前维护的生图适配器为 `workers-ai`（Cloudflare Workers AI）、`dashscope-images`（阿里千问）、`openai-images`（OpenAI 兼容，如硅基流动）、`ark-images`（火山方舟 Seedream）和 `bigmodel-image`（智谱 GLM）。原自建 Colab SDXL 管线及其排队/插队、提示词翻译、掉线探活已下线；`colab-sdxl` 数据行保留但停用，仅用于维持历史生成记录的关联。
+
+生图开关、积分定价、每日限额与月度预算在 `/admin/image/` 管理；供应商适配器、API 密钥绑定与用量在 `/admin/ai-config/` 管理。云端模型密钥可以直接绑定在 D1 `image_provider`，也可以使用 Pages 环境变量（见 `.dev.vars.example`）。
+
+部署本次 Colab 移除改动时，先发布代码，再依次执行：
+
+```powershell
+pnpm exec wrangler d1 execute yuqing-auth --remote --file migrations/0030_remove_colab.sql
+pnpm exec wrangler d1 execute yuqing-auth --remote --file migrations/0031_drop_queue_jump_points.sql
+```
+
+`0031` 会删除 `image_setting.queue_jump_points`，必须在不再引用该列的代码部署后执行。更完整的架构、端点与运维说明见 `AI生图改动.md`。
+
 ## 部署
 
 推荐部署到 Cloudflare Pages：
