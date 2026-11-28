@@ -16,6 +16,7 @@
 | 环节 | 约定 |
 |---|---|
 | features 白名单 | `image_provider.features` 决定能力：`image_studio`=AI 生图页可用，`story_chapter`=互动小说可用，`admin_test`=后台可测试。路由时只挑 `enabled=1` 且含目标 feature 的供应商 |
+| 开关层级 | `image_setting.enabled` 是总开关（所有生图）；`image_setting.story_enabled` 是**互动小说插画独立开关**，仅在总开关开启时生效。关闭后 `/api/story/illustration` 在调用场景改写 LLM 前直接 503，`/api/story/status` 的 `imageGenerationEnabled` 变为 false（前台隐藏插画选项）。后台在「生图控制」页单独勾选 |
 | 指定模型 | 前端传 `model`（即 provider id）时**只**调用该供应商，并给出精确错误（不存在 / 冷却中 / 未绑定密钥） |
 | 积分 | 每张图按 `image_setting.studio_points` 扣（当前 500）；VIP 插队另扣 `queue_jump_points`（当前 60）；`chargeImageJob` / `refundImageJob` 原子扣退（point_account + point_transaction） |
 | 翻译 | `src/lib/translate.ts` 三级级联：Workers AI llama-3.3-70b 智能改写 → DeepSeek（`IMAGE_TRANSLATE_API_KEY`，与 `STORY_AI_API_KEY` 隔离）→ gtx 直译兜底。系统提示含 **anthropomorphic 拟人动物保护规则**（防止把猫画成人）。只有 `providerNeedsEnglishPrompt`（colab-sdxl / workers-ai）才翻译，原生中文模型直接用原文 |
@@ -55,6 +56,8 @@
 
 **全站生图挂掉的根因（2026-11-28 下午定位）**：`015a2b5` 给 `image_job` 的 INSERT 列清单加了 `english_prompt`，但 VALUES 没补对应的 `?` → `D1_ERROR: 15 values for 16 columns`，**从那次部署起任何模型、任何用户都在建任务时 500**，前端只显示「生图任务创建失败。」且 D1 里无任何 `image_job` / `image_attempt` 记录（所以容易误判成供应商问题）。`335b393` 先临时把底层错误透到前端用于定位，`cdbba19` 补回占位符并恢复通用文案（保留 `console.error`）。修复后已用前台「火山方舟 Seedream」真实出图验证：job `7160ae13…`、1280×720、9.2s、扣 500 积分、`image_asset` 落库成功，方舟的「安全体验模式」限制当前也已解除（直调 200）。
 
+**互动小说生图独立开关（2026-11-28 下午）**：`e4d303e` + 迁移 `0028`。`image_setting` 新增 `story_enabled`（默认 1）；后台「生图控制」页新增「互动小说生图」开关（总开关关闭时置灰）。关闭后：`/api/story/illustration` 在 LLM 场景改写之前就 503、服务层对 `story_chapter` 二次校验、`/api/story/status` 的 `imageGenerationEnabled` 置 false（前台隐藏插画选项）。迁移同时给现有的 `image_studio` 供应商补了 `story_chapter` 能力——此前白名单里**没有任何启用的 story_chapter 供应商**，小说插画本来是无模型可用的。
+
 > 同日另有 deals 数据巡检合并（PR #2 等），与生图无关。
 
 ## 4. 今天完成但不在 git 里的改动
@@ -81,7 +84,9 @@
 | ark-seedream | ark-images | doubao-seedream-5-5-261028 | 1 | **image_studio**, admin_test | **SET** ✅（`base_url` 直接填了完整 `/api/v3/images/generations`） |
 | glm-image | bigmodel-image | glm-image | 1 | **image_studio**, admin_test | **SET** ✅（已绑定智谱密钥） |
 
-`image_setting`（id=global）：`enabled=1`，`studio_points=500`，`standard_points=500`，`hd_points=1000`，`queue_jump_points=60`，`daily_job_limit=100`，`monthly_budget_cents=5000`，`point_value_cents=1`。
+`image_setting`（id=global）：`enabled=1`，`story_enabled=1`，`studio_points=500`，`standard_points=500`，`hd_points=1000`，`queue_jump_points=60`，`daily_job_limit=100`，`monthly_budget_cents=5000`，`point_value_cents=1`。
+
+已开放的三个供应商（colab-sdxl / ark-seedream / glm-image）features 均已追加 `story_chapter`（0028 迁移），互动小说插画会按优先级依次尝试 Colab → 方舟 → GLM。
 
 ## 6. 端点地图
 
@@ -121,7 +126,7 @@ src/types/worker-env.d.ts         functions 用的全局 Env（无 astro 类型�
 functions/api/ai-image/*.ts       generate / mine / queue
 functions/api/admin/image/*.ts    index（CRUD）/ models（拉列表）/ cooldown（清零）
 functions/tsconfig.json           functions 独立类型检查（ES2022 + workers-types，无 DOM）
-migrations/0023-0026*.sql         notification、english_prompt、api_key/base_url/features、ark 行
+migrations/0023-0028*.sql         notification、english_prompt、api_key/base_url/features、ark/GLM 行、story_enabled + story_chapter
 public/_headers                   安全响应头（X-Frame-Options 等）
 C:\Users\14055\.zcode\workspace\default\generate.py            本地生图客户端（调 /api/ai-image/generate）
 C:\Users\14055\.zcode\workspace\default\colab-oneclick-v3.py   Colab v3 格子备份
@@ -140,6 +145,7 @@ C:\Users\14055\.zcode\workspace\default\colab-probe-worker\    定时探活 Work
 - **前后端字段脱节**：页面新增字段（`init_image`、新比例）必须同步改 `functions/api/ai-image/generate.ts` 的白名单/解析，脚本层 `image-service.ts` 支持不代表 API 层会转发——曾因此让参考图和 6 种比例静默失效。改页面表单时先看 API 的入参白名单。
 - **SQL 占位符与列数**：给 `INSERT` 加列时务必同步补 `?`（`015a2b5` 加 `english_prompt` 漏了一个，导致全站生图 500 且无任何日志行）。现象：前端「生图任务创建失败。」、D1 无 job/attempt——先数 VALUES 个数，别怀疑供应商。
 - **排障入口**：D1 `image_job`/`image_attempt` 无记录 = 请求没走到路由（常见于入库失败、参数 400、401/403）；有 attempt 无 asset = 供应商侧失败。`console.error` 已加在入库 catch 里。
+- **迁移顺序与记录**：新代码若 SELECT 了新列，必须**先应用迁移再部署**（老代码忽略新列，反序会 500）。另外 `d1_migrations` 里**没有 0027**（GLM 那行当时是手工 SQL 写入的），直接跑 `wrangler d1 migrations apply` 会在 0027 重复 INSERT 处失败；后续迁移用 `wrangler d1 execute --remote --file migrations/00xx.sql` 手工执行并自行登记。
 - **云端供应商 base_url**：后台可能填基础地址，也可能填完整 `/images/generations`（方舟行就是完整地址）；适配器统一走 `imagesEndpoint()` 拼接，别再手写 `${base}/images/generations`。
 
 ## 10. 常用验证命令
