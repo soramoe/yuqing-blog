@@ -3,7 +3,6 @@ import type {
   ImageProviderConfig,
   ImageQuality,
 } from "./image-settings";
-import { gtxTranslate, translateImagePrompt } from "./translate";
 
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
 
@@ -21,8 +20,6 @@ export interface ImageProviderEnv {
   IMAGE_QWEN_BASE_URL?: string;
   IMAGE_SILICONFLOW_API_KEY?: string;
   IMAGE_SILICONFLOW_BASE_URL?: string;
-  IMAGE_COLAB_URL?: string;
-  IMAGE_COLAB_KEY?: string;
   IMAGE_BIGMODEL_API_KEY?: string;
   STORY_AI_API_KEY?: string;
   STORY_AI_BASE_URL?: string;
@@ -34,13 +31,9 @@ export interface ImageGenerationRequest {
   /** 用户自选的模型（provider id）；指定时路由只调用该模型 */
   providerId?: string;
   prompt: string;
-  /** 参考图（data URL）；仅支持 img2img 的适配器使用（colab-sdxl） */
+  /** 参考图（data URL）；仅支持 img2img 的适配器（ark-images）使用 */
   initImage?: string;
   englishPrompt?: string;
-  /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
-  prompt2?: string;
-  /** 排队插队（VIP 通道），仅 colab-sdxl 适配器使用 */
-  jump?: boolean;
   negativePrompt: string;
   /** 未指定尺寸（auto）时为 undefined，适配器按各自默认处理 */
   width?: number;
@@ -81,9 +74,6 @@ export function isProviderConfigured(
     return Boolean(
       provider.apiKey?.trim() || env.IMAGE_QWEN_API_KEY?.trim(),
     );
-  }
-  if (provider.adapter === "colab-sdxl") {
-    return Boolean(env.IMAGE_COLAB_URL?.trim());
   }
   if (provider.adapter === "ark-images") {
     return Boolean(provider.apiKey?.trim());
@@ -151,15 +141,9 @@ const imagesEndpoint = (baseUrl: string | undefined, fallbackBase: string) => {
 };
 
 // 支持参考图（img2img）的适配器；其余适配器会忽略参考图按纯文字生成
-const IMG2IMG_ADAPTERS = new Set(["colab-sdxl", "ark-images"]);
-const needsEnglishPromptAdapters = new Set(["colab-sdxl", "workers-ai"]);
-
+const IMG2IMG_ADAPTERS = new Set(["ark-images"]);
 export const providerSupportsInitImage = (adapter: string) =>
   IMG2IMG_ADAPTERS.has(adapter);
-
-// 只有 SDXL / Flux 这类英文模型需要先把中文改写成英文；原生中文模型直接用原文
-export const providerNeedsEnglishPrompt = (adapter: string) =>
-  needsEnglishPromptAdapters.has(adapter);
 
 const detectContentType = (bytes: Uint8Array, fallback = "") => {
   if (
@@ -563,135 +547,6 @@ async function generateWithOpenAiImages(
   );
 }
 
-// 站长在 Colab 上自建的 SDXL 管线：英文提示词 + GPU 锁（并发时返回 429）
-async function generateWithColab(
-  env: ImageProviderEnv,
-  provider: ImageProviderConfig,
-  request: ImageGenerationRequest,
-) {
-  const baseUrl = env.IMAGE_COLAB_URL?.trim().replace(/\/+$/, "");
-  if (!baseUrl) {
-    throw new ImageProviderError(
-      `${provider.name} 的服务地址尚未配置。`,
-      "not-configured",
-      false,
-    );
-  }
-  // Colab 管线只认英文；优先使用现成英文提示词，否则走智能改写链路
-  // 用户没填负面提示词时，自动带一组 SDXL 标准负面，提升出图稳定性
-  const DEFAULT_NEGATIVE =
-    "lowres, blurry, bad anatomy, extra limbs, text, watermark, signature, jpeg artifacts";
-  const prompt =
-    request.englishPrompt?.trim() ||
-    (await translateImagePrompt(env, request.prompt));
-  const negativePrompt = request.negativePrompt
-    ? await gtxTranslate(request.negativePrompt)
-    : DEFAULT_NEGATIVE;
-
-  const body = JSON.stringify({
-    prompt,
-    prompt_2: request.prompt2?.trim()
-      ? await translateImagePrompt(env, request.prompt2)
-      : undefined,
-    negative_prompt: negativePrompt || undefined,
-    width: request.width,
-    height: request.height,
-    steps: request.quality === "hd" ? 40 : 30,
-    guidance: 6.0,
-    // 参考图：v3 管线接受 data URL 或纯 base64，有参考图时走 img2img
-    ...(request.initImage
-      ? { init_image: request.initImage, strength: 0.55 }
-      : {}),
-  });
-
-  // Cloudflare 边缘到 ngrok 偶发瞬断（GET 正常、POST 被瞬拒），自动重试 3 次；
-  // 但排队等待可能长达数分钟，只有快速失败（<15 秒）才值得重试
-  let lastError: unknown = null;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 300_000);
-    const startedAt = Date.now();
-    try {
-      const response = await fetch(`${baseUrl}/generate`, {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": env.IMAGE_COLAB_KEY?.trim() ?? "",
-          "ngrok-skip-browser-warning": "1",
-          "x-queue-jump": request.jump ? "1" : "0",
-        },
-        body,
-      });
-
-      if (!response.ok) {
-        throw new ImageProviderError(
-          response.status === 429
-            ? "排队已满或 GPU 忙，请稍等几秒再试。"
-            : response.status === 401
-              ? "Colab 上游密钥不匹配。"
-              : `Colab 生图服务返回 HTTP ${response.status}。`,
-          response.status === 429
-            ? "rate-limited"
-            : response.status === 401
-              ? "not-configured"
-              : "provider-unavailable",
-          response.status === 429 || response.status >= 500,
-        );
-      }
-
-      const payload = (await response.json().catch(() => null)) as {
-        images?: string[];
-      } | null;
-      const base64 = payload?.images?.[0];
-      if (!base64) {
-        throw new ImageProviderError(
-          "Colab 没有返回图片。",
-          "invalid-response",
-          true,
-        );
-      }
-      return normalizeBinary(
-        { b64_json: base64 },
-        request.width,
-        request.height,
-      );
-    } catch (error) {
-      if (error instanceof ImageProviderError) throw error;
-      lastError = error;
-      if (controller.signal.aborted) {
-        throw new ImageProviderError(
-          "Colab 生图响应超时，GPU 可能掉线了。",
-          "timeout",
-          true,
-        );
-      }
-      // 只有快速失败（连接瞬断）才重试；排队等待后失败不重试，避免重复生成
-      const elapsed = Date.now() - startedAt;
-      if (elapsed > 15_000 || attempt >= 3) {
-        const detail =
-          lastError instanceof Error ? lastError.message : String(lastError);
-        throw new ImageProviderError(
-          `Colab GPU 服务连接失败（${detail.slice(0, 90)}），已自动重试 ${attempt} 次。`,
-          "provider-unavailable",
-          true,
-        );
-      }
-      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
-    } finally {
-      clearTimeout(timeout);
-    }
-  }
-
-  const detail =
-    lastError instanceof Error ? lastError.message : String(lastError ?? "");
-  throw new ImageProviderError(
-    `Colab GPU 服务连接失败（${detail.slice(0, 90)}），已自动重试 3 次。`,
-    "provider-unavailable",
-    true,
-  );
-}
-
 // 火山方舟（豆包 Seedream）：原生中文无需翻译；支持参考图（image）；无负面词/seed/guidance 参数
 async function generateWithArk(
   env: ImageProviderEnv,
@@ -911,8 +766,6 @@ export async function generateWithProvider(
       return generateWithDashScope(env, provider, request);
     case "openai-images":
       return generateWithOpenAiImages(env, provider, request);
-    case "colab-sdxl":
-      return generateWithColab(env, provider, request);
     case "ark-images":
       return generateWithArk(env, provider, request);
     case "bigmodel-image":

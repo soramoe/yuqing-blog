@@ -22,10 +22,6 @@ export interface CreateImageJobInput {
   /** 参考图（data URL），仅支持 img2img 的适配器使用 */
   initImage?: string;
   englishPrompt?: string;
-  /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
-  prompt2?: string;
-  /** 排队插队（VIP 通道），仅 colab-sdxl 适配器使用 */
-  jump?: boolean;
   negativePrompt?: string;
   quality: ImageQuality;
   aspectRatio?: string;
@@ -370,7 +366,7 @@ export async function createAndRunImageJob(
   }
 
   const jobId = crypto.randomUUID();
-  // image_studio 走站长自己的 Colab GPU，单独计价；其余沿用标准/高清价
+  // image_studio（AI 生图页）单独计价；其余沿用标准/高清价
   // AI 生图按清晰度分别计价（1K/2K）；章节插画沿用标准/高清价
   const pointsCost =
     input.feature === "image_studio"
@@ -457,9 +453,7 @@ export async function createAndRunImageJob(
       providerId: input.providerId,
       prompt,
       englishPrompt: englishPrompt ?? undefined,
-      prompt2: input.prompt2?.trim().slice(0, 2000),
       initImage: input.initImage?.trim() || undefined,
-      jump: input.jump === true,
       negativePrompt,
       width: width || undefined,
       height: height || undefined,

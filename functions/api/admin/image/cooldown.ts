@@ -30,7 +30,7 @@ const authorize = async (request: Request, env: Env) => {
 };
 
 // 一键清零所有图片供应商的连续失败计数与冷却锁。
-// 用于：Colab 重启恢复后，服务已活但冷却还没过期的情况。
+// 用于：供应商已经恢复，但连续失败触发的冷却还没过期的情况。
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const authorized = await authorize(request, env);
   if ("response" in authorized) return authorized.response;

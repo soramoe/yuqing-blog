@@ -4,6 +4,7 @@ import { isCommentAdmin } from "../../../../src/lib/comment-admin";
 import { chinaDateKey } from "../../../../src/lib/points";
 import {
   getImageSettings,
+  isSupportedImageAdapter,
   listImageProviders,
   sanitizeImageSettings,
   type ImageProviderConfig,
@@ -37,6 +38,10 @@ const authorize = async (request: Request, env: Env) => {
 
 const maskKey = (value: string) =>
   value ? `${value.slice(0, 4)}***（${value.length} 字符）` : "";
+
+// 适配器已下线的供应商（如 colab-sdxl）不在后台展示，避免被重新启用
+const activeProviders = (providers: ImageProviderConfig[]) =>
+  providers.filter((provider) => isSupportedImageAdapter(provider.adapter));
 
 const providerStatus = (
   env: Env,
@@ -144,7 +149,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   ]);
   return json({
     settings,
-    providers: providers.map((provider) => providerStatus(env, provider)),
+    providers: activeProviders(providers).map((provider) =>
+      providerStatus(env, provider),
+    ),
     usage,
     today: todayStats,
     recentAttempts,
@@ -201,9 +208,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({
       env.DB.prepare(
         `INSERT INTO image_setting
           (id, enabled, story_enabled, point_value_cents, standard_points,
-           hd_points, studio_points, studio_hd_points, queue_jump_points,
+           hd_points, studio_points, studio_hd_points,
            daily_job_limit, monthly_budget_cents, updated_by, updated_at)
-         VALUES ('global', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         VALUES ('global', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            enabled = excluded.enabled,
            story_enabled = excluded.story_enabled,
@@ -212,7 +219,6 @@ export const onRequestPatch: PagesFunction<Env> = async ({
            hd_points = excluded.hd_points,
            studio_points = excluded.studio_points,
            studio_hd_points = excluded.studio_hd_points,
-           queue_jump_points = excluded.queue_jump_points,
            daily_job_limit = excluded.daily_job_limit,
            monthly_budget_cents = excluded.monthly_budget_cents,
            updated_by = excluded.updated_by,
@@ -225,7 +231,6 @@ export const onRequestPatch: PagesFunction<Env> = async ({
         nextSettings.hdPoints,
         nextSettings.studioPoints,
         nextSettings.studioHdPoints,
-        nextSettings.queueJumpPoints,
         nextSettings.dailyJobLimit,
         nextSettings.monthlyBudgetCents,
         authorized.session.user.id,
@@ -254,7 +259,8 @@ export const onRequestPatch: PagesFunction<Env> = async ({
     const incoming = rawProvider as Record<string, unknown>;
     const id = typeof incoming.id === "string" ? incoming.id : "";
     const before = beforeProviders.find((provider) => provider.id === id);
-    if (!before) continue;
+    // 适配器已下线的遗留供应商不允许通过 PATCH 重新启用
+    if (!before || !isSupportedImageAdapter(before.adapter)) continue;
     const next = {
       name:
         typeof incoming.name === "string"
@@ -431,7 +437,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({
   return json({
     ok: true,
     settings,
-    providers: providers.map((provider) => providerStatus(env, provider)),
+    providers: activeProviders(providers).map((provider) =>
+      providerStatus(env, provider),
+    ),
     usage,
     today: todayStats,
     recentAttempts,
@@ -454,18 +462,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const baseUrl = typeof input.baseUrl === "string" ? input.baseUrl.trim().slice(0, 300) : "";
   const priority = integer(input.priority, 0, 10000, 100);
 
-  const allowedAdapters = new Set([
-    "colab-sdxl",
-    "workers-ai",
-    "dashscope-images",
-    "openai-images",
-    "ark-images",
-    "bigmodel-image",
-  ]);
   if (name.length < 2 || name.length > 60) {
     return json({ error: "供应商名称需要 2 到 60 个字符。" }, 400);
   }
-  if (!allowedAdapters.has(adapter)) {
+  if (!isSupportedImageAdapter(adapter)) {
     return json({ error: "适配器类型无效。" }, 400);
   }
   if (model.length < 1 || model.length > 160) {
@@ -491,7 +491,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const providers = await listImageProviders(env.DB);
   return json({
     ok: true,
-    providers: providers.map((provider) => providerStatus(env, provider)),
+    providers: activeProviders(providers).map((provider) =>
+      providerStatus(env, provider),
+    ),
   }, 201);
 };
 

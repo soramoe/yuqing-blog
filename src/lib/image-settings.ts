@@ -3,7 +3,6 @@ export const IMAGE_STANDARD_POINTS = 20;
 export const IMAGE_HD_POINTS = 32;
 export const IMAGE_STUDIO_POINTS = 40;
 export const IMAGE_STUDIO_HD_POINTS = 1000;
-export const IMAGE_QUEUE_JUMP_POINTS = 60;
 
 export type ImageQuality = "standard" | "hd";
 export type ImageFeature = "story_chapter" | "image_studio" | "admin_test";
@@ -12,7 +11,6 @@ export type ImageProviderAdapter =
   | "workers-ai"
   | "dashscope-images"
   | "openai-images"
-  | "colab-sdxl"
   | "ark-images"
   | "bigmodel-image";
 
@@ -24,6 +22,19 @@ const toAdapter = (value: string | null | undefined): ImageProviderAdapter => {
   return (normalized || "dashscope-images") as ImageProviderAdapter;
 };
 
+// 仍在维护的适配器。不在列表里的（如已下线的 colab-sdxl）不会被路由，也不出现在后台；
+// 其数据行保留在库里，只为维持历史生成记录的关联。
+export const IMAGE_PROVIDER_ADAPTERS: readonly ImageProviderAdapter[] = [
+  "workers-ai",
+  "dashscope-images",
+  "openai-images",
+  "ark-images",
+  "bigmodel-image",
+];
+
+export const isSupportedImageAdapter = (adapter: string) =>
+  (IMAGE_PROVIDER_ADAPTERS as readonly string[]).includes(adapter);
+
 export interface ImageSettings {
   enabled: boolean;
   /** 互动小说章节插画独立开关：总开关关闭时仍然整体不开放 */
@@ -34,7 +45,6 @@ export interface ImageSettings {
   studioPoints: number;
   /** 「AI 生图」2K 单价；1K 使用 studioPoints */
   studioHdPoints: number;
-  queueJumpPoints: number;
   dailyJobLimit: number;
   monthlyBudgetCents: number;
   updatedAt: number | null;
@@ -74,7 +84,6 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   hdPoints: IMAGE_HD_POINTS,
   studioPoints: IMAGE_STUDIO_POINTS,
   studioHdPoints: IMAGE_STUDIO_HD_POINTS,
-  queueJumpPoints: IMAGE_QUEUE_JUMP_POINTS,
   dailyJobLimit: 100,
   monthlyBudgetCents: 5000,
   updatedAt: null,
@@ -133,12 +142,6 @@ export function sanitizeImageSettings(value: unknown): ImageSettings {
       10000,
       IMAGE_STUDIO_HD_POINTS,
     ),
-    queueJumpPoints: clampInteger(
-      input.queueJumpPoints,
-      0,
-      10000,
-      IMAGE_QUEUE_JUMP_POINTS,
-    ),
     dailyJobLimit: clampInteger(input.dailyJobLimit, 1, 5000, 100),
     monthlyBudgetCents: clampInteger(
       input.monthlyBudgetCents,
@@ -162,7 +165,6 @@ export async function getImageSettings(db: D1Database) {
         hd_points AS hdPoints,
         studio_points AS studioPoints,
         studio_hd_points AS studioHdPoints,
-        queue_jump_points AS queueJumpPoints,
         daily_job_limit AS dailyJobLimit,
         monthly_budget_cents AS monthlyBudgetCents,
         updated_at AS updatedAt,
@@ -178,7 +180,6 @@ export async function getImageSettings(db: D1Database) {
       hdPoints: number;
       studioPoints: number;
       studioHdPoints: number;
-      queueJumpPoints: number;
       dailyJobLimit: number;
       monthlyBudgetCents: number;
       updatedAt: number;
@@ -193,7 +194,6 @@ export async function getImageSettings(db: D1Database) {
     hdPoints: Number(row.hdPoints),
     studioPoints: Number(row.studioPoints),
     studioHdPoints: Number(row.studioHdPoints),
-    queueJumpPoints: Number(row.queueJumpPoints),
     dailyJobLimit: Number(row.dailyJobLimit),
     monthlyBudgetCents: Number(row.monthlyBudgetCents),
     updatedAt: Number(row.updatedAt),

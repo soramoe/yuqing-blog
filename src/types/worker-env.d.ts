@@ -25,12 +25,6 @@ interface Env {
   IMAGE_QWEN_BASE_URL?: string;
   IMAGE_SILICONFLOW_API_KEY?: string;
   IMAGE_SILICONFLOW_BASE_URL?: string;
-  /** Colab SDXL 上游：ngrok 固定域名，如 https://xxxx.ngrok-free.app */
-  IMAGE_COLAB_URL?: string;
-  /** 与 Colab 端 API_KEY 一致的上游密钥 */
-  IMAGE_COLAB_KEY?: string;
   /** 智谱 GLM（bigmodel.cn）生图密钥；供应商行绑定 api_key 时可留空 */
   IMAGE_BIGMODEL_API_KEY?: string;
-  /** 生图提示词改写专用的 DeepSeek 密钥；未设置时回退 STORY_AI_API_KEY */
-  IMAGE_TRANSLATE_API_KEY?: string;
 }

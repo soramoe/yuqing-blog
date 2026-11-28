@@ -1,6 +1,7 @@
 import { chinaDateKey } from "./points";
 import {
   getImageSettings,
+  isSupportedImageAdapter,
   listImageProviders,
   type ImageProviderConfig,
   type ImageSettings,
@@ -266,7 +267,11 @@ export async function routeImageGeneration(
   // 用户指定模型时：先单独校验该模型的状态，给出精确的错误提示
   if (request.providerId) {
     const chosen = providers.find((p) => p.id === request.providerId);
-    if (!chosen || !chosen.enabled) {
+    if (
+      !chosen ||
+      !chosen.enabled ||
+      !isSupportedImageAdapter(chosen.adapter)
+    ) {
       throw new ImageRoutingError("所选模型不存在或已下线。", 0);
     }
     if (
@@ -288,6 +293,8 @@ export async function routeImageGeneration(
   const errors: string[] = [];
   for (const provider of providers) {
     if (!provider.enabled) continue;
+    // 适配器已下线（如 colab-sdxl）的遗留行不再参与路由，即使被手工启用
+    if (!isSupportedImageAdapter(provider.adapter)) continue;
     if (!providerSupportsFeature(provider, request.feature)) continue;
     if (
       request.providerId &&

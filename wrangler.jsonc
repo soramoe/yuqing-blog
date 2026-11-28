@@ -4,10 +4,7 @@
   "pages_build_output_dir": "./dist",
   "compatibility_date": "2026-10-28",
   "compatibility_flags": ["nodejs_compat"],
-  // 普通文本变量（机密类在 Cloudflare 仪表板里管理）
-  "vars": {
-    "IMAGE_COLAB_URL": "https://concerned-composer-lumpiness.ngrok-free.dev"
-  },
+  // 机密类变量在 Cloudflare 仪表板里管理；本地开发用的变量写在 .dev.vars
   "d1_databases": [
     {
       "binding": "DB",

@@ -23,7 +23,6 @@ export const imageSetting = sqliteTable("image_setting", {
   studioPoints: integer("studio_points").default(120).notNull(),
   /** 「AI 生图」2K 高清单价（1K 使用 studio_points） */
   studioHdPoints: integer("studio_hd_points").default(1000).notNull(),
-  queueJumpPoints: integer("queue_jump_points").default(60).notNull(),
   dailyJobLimit: integer("daily_job_limit").default(100).notNull(),
   monthlyBudgetCents: integer("monthly_budget_cents")
     .default(5000)
