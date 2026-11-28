@@ -3,6 +3,11 @@
 @import "components.css";
 @import "home.css";
 
+/* hidden 属性优先于任何作者 display 声明（修复状态行无法隐藏的问题） */
+[hidden] {
+  display: none !important;
+}
+
 /* 旧名别名，指向 design-system.css 的语义令牌。
    tools.css 在 body.page-tools 作用域内直接覆盖这些名字，浅色主题不受影响。 */
 :root {

@@ -116,6 +116,22 @@ import "../../styles/admin-story.css";
         <div class="usage-bars" data-usage-bars></div>
       </section>
 
+      <section class="admin-story-settings admin-recent-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">LIVE CALLS</p>
+            <h2>最近调用（实时）</h2>
+          </div>
+          <span data-usage-updated>–</span>
+        </div>
+        <table class="recent-attempts-table">
+          <thead>
+            <tr><th>时间</th><th>供应商</th><th>模型</th><th>结果</th><th>耗时</th></tr>
+          </thead>
+          <tbody data-recent-attempts></tbody>
+        </table>
+      </section>
+
       <section class="admin-story-settings admin-image-test-panel">
         <div class="admin-story-section-heading">
           <div>
@@ -280,6 +296,17 @@ import "../../styles/admin-story.css";
     }>;
   }
 
+  interface RecentAttempt {
+    providerId: string;
+    providerName: string | null;
+    model: string | null;
+    status: string;
+    errorCode: string | null;
+    errorMessage: string | null;
+    durationMs: number;
+    createdAt: number;
+  }
+
   const setImageConfigMessage = (
     message = "",
     state: "idle" | "error" | "success" = "idle",
@@ -436,11 +463,46 @@ import "../../styles/admin-story.css";
     }
   };
 
+  const renderRecentAttempts = (rows: RecentAttempt[]) => {
+    const table = document.querySelector("[data-recent-attempts]");
+    if (!table) return;
+    table.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 5;
+      cell.textContent = "还没有调用记录。";
+      empty.appendChild(cell);
+      table.appendChild(empty);
+      return;
+    }
+    for (const row of rows) {
+      const tr = document.createElement("tr");
+      tr.className = "recent-row " + (row.status === "succeeded" ? "ok" : "bad");
+      const time = document.createElement("td");
+      time.textContent = new Date(row.createdAt).toLocaleString("zh-CN");
+      const provider = document.createElement("td");
+      provider.textContent = row.providerName ?? row.providerId;
+      const model = document.createElement("td");
+      model.textContent = row.model ?? "–";
+      const state = document.createElement("td");
+      state.textContent =
+        row.status === "succeeded"
+          ? "✅ 成功"
+          : `❌ ${(row.errorMessage ?? "失败").slice(0, 50)}`;
+      const duration = document.createElement("td");
+      duration.textContent = `${(row.durationMs / 1000).toFixed(1)}s`;
+      tr.append(time, provider, model, state, duration);
+      table.appendChild(tr);
+    }
+  };
+
   const fillImageConfig = (
     settings: AdminImageConfig,
     providers: AdminImageProvider[],
     today?: UsageToday | null,
     usage?: UsageRow[],
+    recentAttempts?: RecentAttempt[],
   ) => {
     imageConfigProviders = providers;
     if (imageEnabledInput) imageEnabledInput.checked = settings.enabled;
@@ -464,6 +526,8 @@ import "../../styles/admin-story.css";
       imageConfigStatus.textContent = settings.enabled ? "生图已开启" : "生图已关闭";
     }
     renderImageProviders();
+    renderUsage(today ?? null, usage ?? [], providers);
+    renderRecentAttempts(recentAttempts ?? []);
   };
 
   // Colab 重启恢复后，清零所有图片供应商的失败计数与冷却锁，立刻恢复可用
@@ -513,6 +577,7 @@ import "../../styles/admin-story.css";
       payload.providers ?? [],
       payload.today ?? null,
       payload.usage ?? [],
+      payload.recentAttempts ?? [],
     );
   };
 
@@ -636,6 +701,7 @@ import "../../styles/admin-story.css";
         payload.providers ?? [],
         payload.today ?? null,
         payload.usage ?? [],
+        payload.recentAttempts ?? [],
       );
       setImageConfigMessage("生图控制已保存。", "success");
     } catch (error) {
@@ -661,6 +727,20 @@ import "../../styles/admin-story.css";
         await loadImageConfig();
         gate?.setAttribute("hidden", "");
         content?.removeAttribute("hidden");
+        // 实时监控：每 15 秒自动刷新用量与最近调用；正在编辑输入框时跳过
+        window.setInterval(() => {
+          const active = document.activeElement;
+          const editing =
+            active instanceof HTMLInputElement ||
+            active instanceof HTMLTextAreaElement ||
+            active instanceof HTMLSelectElement;
+          if (editing) return;
+          void loadImageConfig().catch(() => undefined);
+          const updated = document.querySelector("[data-usage-updated]");
+          if (updated) {
+            updated.textContent = `数据更新于 ${new Date().toLocaleTimeString("zh-CN")}`;
+          }
+        }, 15_000);
       } catch (error) {
         const requestError = error as Error & { status?: number };
         if (requestError.status === 403) {
@@ -748,5 +828,39 @@ import "../../styles/admin-story.css";
     color: var(--muted);
     font-family: Consolas, monospace;
     white-space: nowrap;
+  }
+</style>
+
+<style is:global>
+  /* 最近调用表由 JS 动态创建，样式需全局生效 */
+  .recent-attempts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .recent-attempts-table th {
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .recent-attempts-table td {
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 220px;
+  }
+  .recent-row.bad td {
+    color: #e2a355;
+  }
+  .recent-row.bad td:nth-child(4) {
+    color: var(--bad, #e07a5f);
+  }
+  .recent-row.ok td:nth-child(4) {
+    color: #7ec699;
   }
 </style>

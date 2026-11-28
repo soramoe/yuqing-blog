@@ -85,7 +85,7 @@ const listUsage = async (db: D1Database) => {
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const authorized = await authorize(request, env);
   if ("response" in authorized) return authorized.response;
-  const [settings, providers, usage, todayStats] = await Promise.all([
+  const [settings, providers, usage, todayStats, recentAttempts] = await Promise.all([
     getImageSettings(env.DB),
     listImageProviders(env.DB),
     listUsage(env.DB),
@@ -124,12 +124,30 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         })),
       };
     })(),
+    (async () => {
+      const rows = await env.DB.prepare(
+        `SELECT a.provider_id AS providerId, p.name AS providerName,
+           a.model, a.status, a.error_code AS errorCode,
+           substr(a.error_message, 1, 120) AS errorMessage,
+           a.duration_ms AS durationMs, a.created_at AS createdAt
+         FROM image_attempt a
+         LEFT JOIN image_provider p ON p.id = a.provider_id
+         ORDER BY a.created_at DESC
+         LIMIT 12`,
+      ).all();
+      return rows.results.map((row) => ({
+        ...row,
+        durationMs: Number(row.durationMs),
+        createdAt: Number(row.createdAt),
+      }));
+    })(),
   ]);
   return json({
     settings,
     providers: providers.map((provider) => providerStatus(env, provider)),
     usage,
     today: todayStats,
+    recentAttempts,
   });
 };
 
