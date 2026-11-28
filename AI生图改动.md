@@ -1,30 +1,39 @@
-# AI 生图改动（2026-11-28 交接文档）
+# AI 生图改动（2026-11-28 交接文档，2026-11-29 更新）
 
 > **读者**：接手本项目的 AI 助手 / 开发者。读完本文即可继续开发，无需考古对话记录。
 > **项目**：xhz6.com 博客（Astro，Cloudflare Pages + D1 + R2），仓库 `soramoe/yuqing-blog`，main 分支推送即自动部署 Pages。
-> **本文覆盖**：2026-11-28 当天完成的全部 AI 生图系统改动（42+1 个 commit）+ Colab 侧改动 + 生产环境实况 + 待办与坑。
-> **密钥零容忍**：本文不含任何密钥。Colab `API_KEY`、ngrok authtoken 在 Colab 笔记本格子代码内；云端模型密钥在 D1 `image_provider.api_key` / Pages 环境变量。
+> **本文覆盖**：2026-11-28 当天完成的全部 AI 生图系统改动（42+1 个 commit）+ Colab 侧改动 + 生产环境实况 + 待办与坑；2026-11-29 补充 **Colab 完全移除**。
+> **密钥零容忍**：本文不含任何密钥。云端模型密钥在 D1 `image_provider.api_key` / Pages 环境变量。
 
 ---
 
 ## 0. 系统一句话架构
 
-用户在 `/ai-image/`（登录 + 积分墙）提交中文提示词 → `POST /api/ai-image/generate` 预扣积分并落 `image_job` → `src/lib/image-service.ts` 调 `image-router.ts` 按 **features 白名单** 选择供应商适配器 → 适配器（Colab SDXL 或云端 API）出图 → 存 R2 `ai/images/` → 失败自动退积分；Colab 掉线时站内信 + Resend 邮件通知管理员（另有 15 分钟一次的定时探活 Worker）。
+用户在 `/ai-image/`（登录 + 积分墙）提交中文提示词 → `POST /api/ai-image/generate` 预扣积分并落 `image_job` → `src/lib/image-service.ts` 调 `image-router.ts` 按 **features 白名单** 选择供应商适配器 → 云端适配器出图 → 存 R2 `ai/images/` → 失败自动退积分。
 
-## 1. 请求链路关键约定
+## 0.5 2026-11-29：Colab 已完全移除（当前状态以此节为准）
+
+Colab SDXL 自建管线、排队/付费插队、提示词翻译、掉线站内信与定时探活 Worker 已整体下线。**下文与 Colab 相关的内容仅作历史记录。**
+
+- 适配器：仅保留 `workers-ai` / `dashscope-images` / `openai-images` / `ark-images` / `bigmodel-image`（`IMAGE_PROVIDER_ADAPTERS`）。`colab-sdxl` 已从类型、路由、后台新增表单和前台模型列表中移除；后台供应商列表与 PATCH 也会过滤/拒绝对应的遗留行。
+- 已删除：`src/lib/translate.ts`、`src/lib/system-notify.ts`、`functions/api/ai-image/queue.ts`、`functions/api/ai-image/health.ts`、`colab-probe-worker/`，以及 `IMAGE_COLAB_URL` / `IMAGE_COLAB_KEY` / `IMAGE_TRANSLATE_API_KEY` 环境变量。
+- 提示词：AI 生图页的方舟 Seedream / 智谱 GLM 原生理解中文，直接传原文；互动小说插画的英文提示词由 `createSceneBrief` 自行生成，与已删除的翻译模块无关。
+- 数据：`image_provider` 的 `colab-sdxl` 行**保留**（维持 `image_attempt` 历史关联）但 `enabled=0`；`image_setting.queue_jump_points` 删除（迁移 `0030` / `0031`）。
+- 后台首页仪表盘不再显示「Colab 生图服务」卡片，生图状态以剩余供应商的探活/冷却结果为准。
+- **部署顺序：先部署本批代码，再执行 `0030`、`0031` 迁移。** `0031` 会删除 `queue_jump_points`，旧代码仍会 SELECT 该列，顺序反了会 500。`0030` 可重复执行；`0031` 只需执行一次。生产环境如还配置了 `IMAGE_COLAB_*` / `IMAGE_TRANSLATE_API_KEY`，部署后从 Pages 环境变量中删除。
+
+## 1. 请求链路关键约定（2026-11-28 历史约定，Colab 相关已作废）
 
 | 环节 | 约定 |
 |---|---|
 | features 白名单 | `image_provider.features` 决定能力：`image_studio`=AI 生图页可用，`story_chapter`=互动小说可用，`admin_test`=后台可测试。路由时只挑 `enabled=1` 且含目标 feature 的供应商 |
 | 开关层级 | `image_setting.enabled` 是总开关（所有生图）；`image_setting.story_enabled` 是**互动小说插画独立开关**，仅在总开关开启时生效。关闭后 `/api/story/illustration` 在调用场景改写 LLM 前直接 503，`/api/story/status` 的 `imageGenerationEnabled` 变为 false（前台隐藏插画选项）。后台在「生图控制」页单独勾选 |
 | 指定模型 | 前端传 `model`（即 provider id）时**只**调用该供应商，并给出精确错误（不存在 / 冷却中 / 未绑定密钥） |
-| 积分 | 「AI 生图」按清晰度分别计价：1K = `studio_points`（当前 500），2K = `studio_hd_points`（当前 1000）；互动小说插画 1K/2K = `standard_points`/`hd_points`；VIP 插队另扣 `queue_jump_points`（60）。`chargeImageJob` / `refundImageJob` 原子扣退（point_account + point_transaction） |
-| 翻译 | `src/lib/translate.ts` 三级级联：Workers AI llama-3.3-70b 智能改写 → DeepSeek（`IMAGE_TRANSLATE_API_KEY`，与 `STORY_AI_API_KEY` 隔离）→ gtx 直译兜底。系统提示含 **anthropomorphic 拟人动物保护规则**（防止把猫画成人）。只有 `providerNeedsEnglishPrompt`（colab-sdxl / workers-ai）才翻译，原生中文模型直接用原文 |
-| Colab API 契约 | `POST {colab}/generate`，header `x-api-key` + `x-queue-jump`（"1"=VIP）；请求体 `{prompt, prompt_2, init_image, strength, negative_prompt, width, height, steps, guidance, seed}`；响应 `{images:[base64]}`；3 次重试仅针对 <15s 的快速失败 |
-| Colab 排队 | 侧 GenQueue `max_queue=4`，VIP 优先；`GET {colab}/queue` 返回 `{busy,waiting,vip}`，经 `/api/ai-image/queue` 透传给前端 |
+| 积分 | 「AI 生图」按清晰度分别计价：1K = `studio_points`（当前 500），2K = `studio_hd_points`（当前 1000）；互动小说插画 1K/2K = `standard_points`/`hd_points`。`chargeImageJob` / `refundImageJob` 原子扣退（point_account + point_transaction） |
+| 提示词 | AI 生图页的方舟 Seedream / 智谱 GLM 原生理解中文，直接传原文；互动小说插画由 `createSceneBrief` 生成中英双语画面描述，英文经 `englishPrompt` 下发给需要英文的适配器（如 Workers AI），不再走单独的翻译链路 |
 | 冷却熔断 | `image_provider.consecutive_failures / cooldown_until`，达到 `failure_threshold` 后冷却 `cooldown_seconds`；后台一键清零 |
 | 密钥脱敏 | 管理端点返回 provider 时剥掉 apiKey，给 `hasApiKey` + `apiKeyMasked` |
-| 参考图 | 仅 Colab / 方舟支持 img2img（`init_image` data URL，页面限 8MB、API 限 12M 字符，`strength` 默认 0.55）；其余模型回退纯文生图并在响应 `note` 标注「参考图已忽略」 |
+| 参考图 | 仅方舟支持 img2img（`init_image` data URL，页面限 8MB、API 限 12M 字符）；其余模型回退纯文生图并在响应 `note` 标注「参考图已忽略」 |
 
 ## 2. 尺寸表（image-service.ts，auto=不传宽高走模型默认）
 
@@ -64,13 +73,15 @@
 
 ## 4. 今天完成但不在 git 里的改动
 
-1. **Colab 笔记本 `yuyueyu.ipynb` 一键启动格 → v3**（已写入并保存到 Drive）：
+> 以下 Colab 侧内容已于 2026-11-29 整体下线，仅保留作历史记录。
+
+1. **Colab 笔记本 `yuyueyu.ipynb` 一键启动格 → v3**（已写入并保存到 Drive，现已停用）：
    - 新增 `init_image`（data URL / 纯 base64）+ `strength` → 有参考图走 img2img，无则文生图
    - 新增 `GET /queue` 排队状态端点
    - `GenQueue`：最多 4 人排队，VIP（`x-queue-jump`）插到最前，普通请求最长等 300s
    - 208 行语法校验通过；**本地备份**：`C:\Users\14055\.zcode\workspace\default\colab-oneclick-v3.py`
    - ⚠️ **尚未运行**（GPU 额度用完，见 §7）
-2. **探活 Worker 已部署**：`yuqing-probe.lwmoonmoe.workers.dev`，cron `*/15`，绑 D1，6 小时去重，掉线时站内信+邮件。
+2. **探活 Worker 已部署**（已下线）：`yuqing-probe.lwmoonmoe.workers.dev`，cron `*/15`，绑 D1，6 小时去重，掉线时站内信+邮件。仓库内 `colab-probe-worker/` 已删除；如线上 Worker 仍存在，可在 Cloudflare 控制台删除。
 3. **生产 D1 运维操作**（通过后台 UI / 迁移）：0023-0026 迁移已执行；火山方舟密钥已由站长绑定、模型已切到 `doubao-seedream-5-5-261028`；`studio_points` 由 40 调为 500。
 
 ## 5. 生产环境实况（2026-11-28 经 wrangler 直查远程 D1）
@@ -82,32 +93,33 @@
 | cloudflare-workers-ai | workers-ai | @cf/black-forest-labs/flux-1-schnell | **0** | story_chapter, admin_test | EMPTY（env 兜底） |
 | qwen-image | dashscope-images | qwen-image-2.1-turbo | **0** | story_chapter, admin_test | EMPTY |
 | siliconflow-image | openai-images | Qwen/Qwen-Image | **0** | story_chapter, admin_test | EMPTY |
-| colab-sdxl | colab-sdxl | sd_xl_base_1.0 | 1 | **image_studio**, admin_test | EMPTY（走 `IMAGE_COLAB_URL`/`IMAGE_COLAB_KEY` 环境变量） |
+| colab-sdxl | colab-sdxl | sd_xl_base_1.0 | **0**（0030 迁移后停用，行保留供历史关联） | image_studio, admin_test | EMPTY（环境变量已移除） |
 | ark-seedream | ark-images | doubao-seedream-5-5-261028 | 1 | **image_studio**, admin_test | **SET** ✅（`base_url` 直接填了完整 `/api/v3/images/generations`） |
 | glm-image | bigmodel-image | glm-image | 1 | **image_studio**, admin_test | **SET** ✅（已绑定智谱密钥） |
 
-`image_setting`（id=global）：`enabled=1`，`story_enabled=0`（站长已在后台关闭互动小说插画），`studio_points=500`，`studio_hd_points=1000`，`standard_points=500`，`hd_points=1000`，`queue_jump_points=60`，`daily_job_limit=100`，`monthly_budget_cents=5000`，`point_value_cents=1`。
+`image_setting`（id=global）：`enabled=1`，`story_enabled=0`（站长已在后台关闭互动小说插画），`studio_points=500`，`studio_hd_points=1000`，`standard_points=500`，`hd_points=1000`，`daily_job_limit=100`，`monthly_budget_cents=5000`，`point_value_cents=1`。原 `queue_jump_points=60` 已由迁移 `0031` 删除。
 
-已开放的三个供应商（colab-sdxl / ark-seedream / glm-image）features 均已追加 `story_chapter`（0028 迁移），互动小说插画会按优先级依次尝试 Colab → 方舟 → GLM。
+已开放的三个供应商（colab-sdxl / ark-seedream / glm-image）features 均已追加 `story_chapter`（0028 迁移）。2026-11-29 起 colab-sdxl 停用，实际生图在方舟与 GLM 之间按优先级路由。
 
 ## 6. 端点地图
 
-- **前台**：`GET/POST /api/ai-image/generate`（GET=配置+模型列表；POST=生图）、`GET /api/ai-image/mine`（我的历史）、`GET /api/ai-image/queue`（排队状态）、`POST /api/gallery/upload`（图库上传）；页面 `/ai-image/`、`/my-images`、`/notifications`
+- **前台**：`GET/POST /api/ai-image/generate`（GET=配置+模型列表；POST=生图）、`GET /api/ai-image/mine`（我的历史）、`POST /api/gallery/upload`（图库上传）；页面 `/ai-image/`、`/my-images`、`/notifications`
 - **后台**（需站长会话）：`GET/PATCH/POST/DELETE /api/admin/image`（settings 与 providers 拆分提交）、`POST /api/admin/image/models`（按 base_url 拉模型列表）、`POST /api/admin/image/cooldown`（清零冷却）；页面 `/admin/`、`/admin/ai-config/`、`/admin/image/`、公告管理页
-- **Colab**：`GET /health`、`GET /queue`、`POST /generate`；隧道域名 `concerned-composer-lumpiness.ngrok-free.dev`（ngrok 免费版单静态域名，浏览器请求需 `ngrok-skip-browser-warning` 头）
 
-## 7. 当前阻塞与待办（按优先级）
+## 7. 2026-11-29 上线清单（Colab 移除）
 
-1. **Colab GPU 额度用完**（2026-11-28 连接时弹窗「已达到 Colab 的使用量限额」）。额度重置后：
-   打开笔记本 → 右上角「连接 T4」→「全部运行」→ 若弹 Drive 授权点「允许」→ 等输出 **`✅ 全部就绪: <ngrok域名> · 自检出图 (1024, 1024)`** → `curl -H "ngrok-skip-browser-warning: 1" https://concerned-composer-lumpiness.ngrok-free.dev/health` 应返回 `{"ok":true}`。
-   若格子代码丢失：用本地备份 `colab-oneclick-v3.py` 重新粘贴运行。
-2. **v3 从未实际跑过** → 额度恢复后除自检外，补一次带参考图的端到端生图验证（`init_image` + `strength`）。
-3. ~~旧公告「关闭生图…暂时还没调试好」仍在站内横幅展示~~ → **已处理（2026-11-28）**：远程 D1 `site_announcement` 中该行（id `a555d866…`）已置 `active=0`。恢复命令：`UPDATE site_announcement SET active=1 WHERE id='a555d866-1a4b-4641-8555-cb050d637f1d'`。
-4. `IMAGE_COLAB_URL` / `IMAGE_COLAB_KEY` 走环境变量而非 provider 行绑定（colab-sdxl 行 api_key 为空是**正常**的）；如迁移到后台绑定，在 AI 配置页填入即可。
-5. **火山方舟「安全体验模式」额度上限**（2026-11-28 直测确认 `SetLimitExceeded`，模型服务已被暂停）→ 站长到方舟控制台「模型激活」页调整或关闭该模式后生图即恢复；站点侧错误提示已映射为明确文案。
-6. ~~GLM 待绑密钥~~ → **已绑定（2026-11-28 复核 `hasKey=1`）**；直调 BigModel 接口 200 返回图片 URL，但**还没有走过站内生图的端到端**（适配器会二次下载 URL）。入库占位符修复后可直接在前台选 GLM 验证。
-7. ~~本地提交尚未推送~~ → `f6fafef`、`cdbba19` 等均已推送并部署。
-8. **后台「模型测试」面板不按所选模型调用**：`/admin/ai-config/` 会提交 `providerId`，但 `functions/api/admin/image/test.ts` 没有读取它，永远按优先级路由（当前会先撞 Colab）。属独立小 bug，尚未修。
+1. 部署本批代码（main 推送后自动构建 Pages）。
+2. 远程 D1 执行 `migrations/0030_remove_colab.sql`：停用 `colab-sdxl` 供应商行（可重复执行）。
+3. 代码部署完成后，执行 `migrations/0031_drop_queue_jump_points.sql`：删除 `image_setting.queue_jump_points`。**顺序不可反**，旧代码仍会 SELECT 该列。
+4. Cloudflare Pages 环境变量中删除 `IMAGE_COLAB_URL` / `IMAGE_COLAB_KEY` / `IMAGE_TRANSLATE_API_KEY`（如仍存在）。
+5. 如仅服务 Colab 的定时探活 Worker（`yuqing-probe`）不再使用，在 Cloudflare 控制台删除。
+6. 验证：
+   - 前台 `/ai-image/` 模型下拉只剩方舟 / GLM；
+   - 后台首页不再有「Colab 生图服务」卡片；
+   - `GET /api/ai-image/generate` 不再返回 `ok` / `queueJumpPoints` / `failures`；
+   - 后台生图页保存设置成功（确认 INSERT 已不再引用 `queue_jump_points`）。
+
+**已知小 bug（仍未修）**：后台「模型测试」面板会提交 `providerId`，但 `functions/api/admin/image/test.ts` 没有读取它，永远按优先级路由。与 Colab 无关，需要时单独修。
 
 ## 8. 文件地图（全部相对仓库根）
 
@@ -115,40 +127,33 @@
 src/pages/ai-image.astro          生图页（左右布局工作台，~860 行）
 src/pages/my-images.astro         我的生图历史
 src/pages/notifications.astro     站内信
-src/pages/admin/index.astro       后台首页仪表盘（站点/生图/Colab/小说状态 + 最近调用，60s 自动刷新）
+src/pages/admin/index.astro       后台首页仪表盘（站点/生图/小说状态 + 最近调用，60s 自动刷新）
 src/pages/admin/ai-config.astro   AI 配置面板（绑定/新增/拉模型/监控/测试）
 src/pages/admin/image.astro       生图管理（分组：开关 / AI 生图 1K·2K 定价 / 插画定价 / 限额预算）
 src/components/AdminNav.astro     后台统一导航
-src/lib/image-service.ts          任务编排：扣费/翻译/尺寸/落库/退款
-src/lib/image-router.ts           features 白名单路由 + 指定模型精确报错
-src/lib/image-providers.ts        6 个适配器（colab-sdxl / workers-ai / dashscope / openai-images / ark / bigmodel）
+src/lib/image-service.ts          任务编排：扣费/尺寸/落库/退款
+src/lib/image-router.ts           features 白名单路由 + 指定模型精确报错 + 下线适配器跳过
+src/lib/image-providers.ts        5 个适配器（workers-ai / dashscope / openai-images / ark / bigmodel）
 src/lib/image-settings.ts         运营参数默认值与读写（IMAGE_STUDIO_POINTS=40 仅为兜底，实际以 D1 为准）
-src/lib/translate.ts              三级翻译级联 + anthropomorphic 规则
-src/lib/system-notify.ts          站内信 + 邮件（30 分钟去重）
 src/types/worker-env.d.ts         functions 用的全局 Env（无 astro 类型依赖）
-functions/api/ai-image/*.ts       generate / mine / queue
+functions/api/ai-image/*.ts       generate / mine
 functions/api/admin/image/*.ts    index（CRUD）/ models（拉列表）/ cooldown（清零）
 functions/tsconfig.json           functions 独立类型检查（ES2022 + workers-types，无 DOM）
-migrations/0023-0029*.sql         notification、english_prompt、api_key/base_url/features、ark/GLM 行、story_enabled + story_chapter、studio_hd_points
+migrations/0023-0031*.sql         notification、english_prompt、api_key/base_url/features、ark/GLM 行、story_enabled + story_chapter、studio_hd_points；0030 停用 colab-sdxl，0031 删除 queue_jump_points
 public/_headers                   安全响应头（X-Frame-Options 等）
 C:\Users\14055\.zcode\workspace\default\generate.py            本地生图客户端（调 /api/ai-image/generate）
-C:\Users\14055\.zcode\workspace\default\colab-oneclick-v3.py   Colab v3 格子备份
-C:\Users\14055\.zcode\workspace\default\colab-probe-worker\    定时探活 Worker（已部署）
 ```
 
 ## 9. 已踩过的坑（改代码前必读）
 
 - **Astro 作用域样式**：JS 动态创建的元素拿不到 `data-astro-cid`，样式必须放 `<style is:global>`；`global.css` 顶部已有 `[hidden] { display:none !important }`（状态行隐藏靠它）。
 - **后台脚本选择器**：用 `data-*` 属性 + `querySelector`，别混用 `getElementById`（公告管理页曾因此「正在验证权限…」卡死）。
-- **Colab 编辑器是 Monaco**：程序化改格子用 `monaco.editor.getEditors()` 找**挂在 `.cell` 上的编辑器**再 `getModel().setValue()`；直接改 `monaco.editor.getModels()` 会写到影子 model，视图不更新。坐标点击公式：CodeMirror/编辑器 rect `left+120, top+40`。
-- **Colab 自动保存**：运行中的格子会阻塞保存；编辑不受影响（内核在跑的代码与编辑器内容无关）。
-- **ngrok 免费版**：单静态域名；curl 需带 `ngrok-skip-browser-warning` 头。
-- **火山方舟**：原生中文 prompt 直传（不走翻译）、`response_format:"b64_json"`、`watermark:false`；错误详情读取必须 `(await response.text().catch(()=>"")).slice(0,100)`（括号别丢）。
-- **SDXL 拟人陷阱**：拟人动物提示词必须带 anthropomorphic 类关键词，负面词要有默认值。
+- **火山方舟**：原生中文 prompt 直传、`response_format:"b64_json"`、`watermark:false`；错误详情读取必须 `(await response.text().catch(()=>"")).slice(0,100)`（括号别丢）。
+- **已下线的 Colab 坑**（Monaco 改格子、ngrok 头、SDXL 拟人词）随 2026-11-29 移除，仅需在 git 历史中查阅。
 - **前后端字段脱节**：页面新增字段（`init_image`、新比例）必须同步改 `functions/api/ai-image/generate.ts` 的白名单/解析，脚本层 `image-service.ts` 支持不代表 API 层会转发——曾因此让参考图和 6 种比例静默失效。改页面表单时先看 API 的入参白名单。
 - **SQL 占位符与列数**：给 `INSERT` 加列时务必同步补 `?`（`015a2b5` 加 `english_prompt` 漏了一个，导致全站生图 500 且无任何日志行）。现象：前端「生图任务创建失败。」、D1 无 job/attempt——先数 VALUES 个数，别怀疑供应商。
 - **排障入口**：D1 `image_job`/`image_attempt` 无记录 = 请求没走到路由（常见于入库失败、参数 400、401/403）；有 attempt 无 asset = 供应商侧失败。`console.error` 已加在入库 catch 里。
-- **迁移顺序与记录**：新代码若 SELECT 了新列，必须**先应用迁移再部署**（老代码忽略新列，反序会 500）。另外 `d1_migrations` 里**没有 0027**（GLM 那行当时是手工 SQL 写入的），直接跑 `wrangler d1 migrations apply` 会在 0027 重复 INSERT 处失败；后续迁移用 `wrangler d1 execute --remote --file migrations/00xx.sql` 手工执行并自行登记。
+- **迁移顺序与记录**：新代码若 SELECT 了新列，必须**先应用迁移再部署**（老代码忽略新列，反序会 500）；删除列则相反，**先部署不再引用该列的代码，再执行 DROP**（`0031` 即如此）。另外 `d1_migrations` 里**没有 0027**（GLM 那行当时是手工 SQL 写入的），直接跑 `wrangler d1 migrations apply` 会在 0027 重复 INSERT 处失败；后续迁移用 `wrangler d1 execute --remote --file migrations/00xx.sql` 手工执行并自行登记。
 - **云端供应商 base_url**：后台可能填基础地址，也可能填完整 `/images/generations`（方舟行就是完整地址）；适配器统一走 `imagesEndpoint()` 拼接，别再手写 `${base}/images/generations`。
 
 ## 10. 常用验证命令
@@ -157,12 +162,16 @@ C:\Users\14055\.zcode\workspace\default\colab-probe-worker\    定时探活 Work
 # 线上生图页是否为新版（应有 ai-layout 标记）
 curl -sL https://xhz6.com/ai-image/ | grep -c ai-layout
 
-# Colab 隧道是否存活（额度恢复后）
-curl -s -m 15 -H "ngrok-skip-browser-warning: 1" https://concerned-composer-lumpiness.ngrok-free.dev/health
+# Colab 移除迁移（务必先部署代码；0031 必须在 0030 之后）
+npx wrangler d1 execute yuqing-auth --remote --file migrations/0030_remove_colab.sql
+npx wrangler d1 execute yuqing-auth --remote --file migrations/0031_drop_queue_jump_points.sql
 
 # 本地构建
 npm run build
 
-# 查远程 D1 供应商状态
+# 查远程 D1 供应商状态（colab-sdxl 应为 enabled=0）
 npx wrangler d1 execute yuqing-auth --remote --json --command "SELECT id,adapter,enabled,features FROM image_provider"
+
+# 确认插队积分列已删除（应报 no such column）
+npx wrangler d1 execute yuqing-auth --remote --command "SELECT queue_jump_points FROM image_setting LIMIT 1"
 ```
