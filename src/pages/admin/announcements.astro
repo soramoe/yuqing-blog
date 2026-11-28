@@ -297,9 +297,8 @@ import AdminNav from "../../components/AdminNav.astro";
 </style>
 
 <script>
-  const $ = (id: string) => document.getElementById(id);
-  const statusEl = $("ann-status") as HTMLElement;
-  const gate = $("ann-gate") as HTMLElement;
+  const statusEl = document.querySelector<HTMLElement>("[data-ann-status]");
+  const gate = document.querySelector<HTMLElement>("[data-ann-gate]");
   const gateTitle = document.querySelector(
     "[data-ann-gate-title]",
   ) as HTMLElement;
@@ -309,10 +308,12 @@ import AdminNav from "../../components/AdminNav.astro";
   const gateLink = document.querySelector<HTMLAnchorElement>(
     "[data-ann-gate-link]",
   );
-  const content = $("ann-content") as HTMLElement;
+  const content = document.querySelector<HTMLElement>("[data-ann-content]");
   const form = document.querySelector<HTMLFormElement>("[data-ann-form]");
-  const formMode = $("ann-form-mode") as HTMLElement;
-  const formTitle = $("ann-form-title") as HTMLElement;
+  const formMode = document.querySelector<HTMLElement>("[data-ann-form-mode]");
+  const formTitle = document.querySelector<HTMLElement>(
+    "[data-ann-form-title]",
+  );
   const cancelEditBtn = document.querySelector<HTMLButtonElement>(
     "[data-ann-cancel-edit]",
   );
@@ -322,8 +323,10 @@ import AdminNav from "../../components/AdminNav.astro";
   const submitBtn = document.querySelector<HTMLButtonElement>(
     "[data-ann-submit]",
   );
-  const listEl = $("ann-list") as HTMLElement;
-  const targetWrap = $("ann-target-wrap") as HTMLElement;
+  const listEl = document.querySelector<HTMLElement>("[data-ann-list]");
+  const targetWrap = document.querySelector<HTMLElement>(
+    "[data-ann-target-wrap]",
+  );
 
   interface AnnouncementItem {
     id: string;
