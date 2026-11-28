@@ -712,13 +712,29 @@ async function generateWithArk(
       }),
     });
     if (!response.ok) {
-      const detail = (
-        await response.text().catch(() => "")
-      ).slice(0, 100);
+      const raw = await response.text().catch(() => "");
+      let message = "";
+      try {
+        const parsed = JSON.parse(raw) as {
+          error?: { code?: string; message?: string };
+        };
+        if (parsed?.error?.code === "SetLimitExceeded") {
+          message =
+            "火山方舟账户额度已达上限（安全体验模式限制），请到方舟控制台「模型激活」页调整或关闭该模式后重试。";
+        } else if (parsed?.error?.message) {
+          message = `火山方舟生图失败：${parsed.error.message.slice(0, 160)}`;
+        }
+      } catch {
+        // 非 JSON 响应保持通用提示
+      }
+      if (!message) {
+        message =
+          response.status === 429
+            ? "火山方舟请求过于频繁或额度不足。"
+            : `火山方舟生图返回 HTTP ${response.status}（${raw.slice(0, 100)}）。`;
+      }
       throw new ImageProviderError(
-        response.status === 429
-          ? "火山方舟请求过于频繁或额度不足。"
-          : `火山方舟生图返回 HTTP ${response.status}（${detail}）。`,
+        message,
         response.status === 429 ? "rate-limited" : "provider-unavailable",
         response.status === 429 || response.status >= 500,
       );
