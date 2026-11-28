@@ -13,3 +13,4 @@ media-upload/
 .DS_Store
 Thumbs.db
 pnpm-debug.log*
+backups/

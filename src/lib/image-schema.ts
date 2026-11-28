@@ -123,6 +123,7 @@ export const imageJob = sqliteTable(
     feature: text("feature").notNull(),
     sourceId: text("source_id"),
     prompt: text("prompt").notNull(),
+    englishPrompt: text("english_prompt"),
     negativePrompt: text("negative_prompt").default("").notNull(),
     quality: text("quality").default("standard").notNull(),
     aspectRatio: text("aspect_ratio").default("1:1").notNull(),

@@ -27,18 +27,7 @@
   font-size: var(--text-sm);
 }
 
-.admin-gallery-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-}
 
-.admin-gallery-nav a,
-.admin-gallery-gate-actions a {
-  border-bottom: 1px solid currentColor;
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-}
 
 .admin-gallery-status {
   margin: var(--space-5) 0;

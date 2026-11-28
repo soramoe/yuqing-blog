@@ -27,18 +27,8 @@
   font-size: var(--text-sm);
 }
 
-.admin-header-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-}
 
 .admin-comments-header > a,
-.admin-header-links a {
-  border-bottom: 1px solid currentColor;
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-}
 
 .admin-comments-status {
   margin: var(--space-5) 0;

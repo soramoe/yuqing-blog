@@ -253,6 +253,7 @@ export async function createAndRunImageJob(
     throw new ImageServiceError("章节生图缺少章节标识。", 400);
   }
   const prompt = input.prompt.trim().slice(0, 3000);
+  const englishPrompt = input.englishPrompt?.trim().slice(0, 2000) || null;
   const negativePrompt = (input.negativePrompt ?? "").trim().slice(0, 1000);
   if (prompt.length < 6) {
     throw new ImageServiceError("图片描述过短。", 400);
@@ -343,7 +344,7 @@ export async function createAndRunImageJob(
     await env.DB.prepare(
       `INSERT INTO image_job
         (id, request_id, user_id, feature, source_id, prompt,
-         negative_prompt, quality, aspect_ratio, points_cost,
+         english_prompt, negative_prompt, quality, aspect_ratio, points_cost,
          status, permission, attempts, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, 0, ?, ?)`,
     )
@@ -354,6 +355,7 @@ export async function createAndRunImageJob(
         input.feature,
         input.sourceId?.slice(0, 200) ?? null,
         prompt,
+        englishPrompt,
         negativePrompt,
         quality,
         ratio,
@@ -408,7 +410,7 @@ export async function createAndRunImageJob(
     const generated = await routeImageGeneration(env, jobId, {
       feature: input.feature,
       prompt,
-      englishPrompt: input.englishPrompt?.trim().slice(0, 2000),
+      englishPrompt: englishPrompt ?? undefined,
       prompt2: input.prompt2?.trim().slice(0, 2000),
       jump: input.jump === true,
       negativePrompt,

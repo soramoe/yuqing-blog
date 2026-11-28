@@ -27,18 +27,7 @@
   font-size: var(--text-sm);
 }
 
-.admin-points-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-}
 
-.admin-points-nav a,
-.admin-points-denied a {
-  border-bottom: 1px solid currentColor;
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-}
 
 .admin-points-status {
   margin: var(--space-5) 0;

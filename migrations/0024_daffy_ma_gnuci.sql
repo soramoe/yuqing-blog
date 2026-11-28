@@ -1,0 +1,1 @@
+ALTER TABLE `image_job` ADD `english_prompt` text;

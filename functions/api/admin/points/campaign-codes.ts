@@ -146,7 +146,12 @@ export const onRequest: PagesFunction<Env> = async (context) => {
   if (code.length < 2 || code.length > 40) {
     return json({ error: "活动码需要 2 到 40 个字符。" }, 400);
   }
-  if (!Number.isSafeInteger(amount) || amount < 1 || amount > 100_000) {
+  if (
+    amount === null ||
+    !Number.isSafeInteger(amount) ||
+    amount < 1 ||
+    amount > 100_000
+  ) {
     return json({ error: "赠送积分需要是 1 到 100000 的整数。" }, 400);
   }
   if (

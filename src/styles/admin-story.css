@@ -27,23 +27,8 @@
   font-size: var(--text-sm);
 }
 
-.admin-story-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
 
-.admin-story-nav a,
-.admin-story-denied a {
-  border-bottom: 1px solid currentColor;
-  color: var(--color-text-secondary);
-  font-size: var(--text-xs);
-}
 
-.admin-story-nav a:hover,
-.admin-story-denied a:hover {
-  color: var(--color-accent-orange);
-}
 
 .admin-story-status {
   margin: var(--space-5) 0;
