@@ -34,6 +34,8 @@ export interface ImageGenerationRequest {
   englishPrompt?: string;
   /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
   prompt2?: string;
+  /** 排队插队（VIP 通道），仅 colab-sdxl 适配器使用 */
+  jump?: boolean;
   negativePrompt: string;
   width: number;
   height: number;
@@ -520,11 +522,13 @@ async function generateWithColab(
     guidance: 6.0,
   });
 
-  // Cloudflare 边缘到 ngrok 偶发瞬断（GET 正常、POST 被瞬拒），自动重试 3 次
+  // Cloudflare 边缘到 ngrok 偶发瞬断（GET 正常、POST 被瞬拒），自动重试 3 次；
+  // 但排队等待可能长达数分钟，只有快速失败（<15 秒）才值得重试
   let lastError: unknown = null;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 150_000);
+    const timeout = setTimeout(() => controller.abort(), 300_000);
+    const startedAt = Date.now();
     try {
       const response = await fetch(`${baseUrl}/generate`, {
         method: "POST",
@@ -533,6 +537,7 @@ async function generateWithColab(
           "Content-Type": "application/json",
           "x-api-key": env.IMAGE_COLAB_KEY?.trim() ?? "",
           "ngrok-skip-browser-warning": "1",
+          "x-queue-jump": request.jump ? "1" : "0",
         },
         body,
       });
@@ -579,9 +584,18 @@ async function generateWithColab(
           true,
         );
       }
-      if (attempt < 3) {
-        await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
+      // 只有快速失败（连接瞬断）才重试；排队等待后失败不重试，避免重复生成
+      const elapsed = Date.now() - startedAt;
+      if (elapsed > 15_000 || attempt >= 3) {
+        const detail =
+          lastError instanceof Error ? lastError.message : String(lastError);
+        throw new ImageProviderError(
+          `Colab GPU 服务连接失败（${detail.slice(0, 90)}），已自动重试 ${attempt} 次。`,
+          "provider-unavailable",
+          true,
+        );
       }
+      await new Promise((resolve) => setTimeout(resolve, 1500 * attempt));
     } finally {
       clearTimeout(timeout);
     }

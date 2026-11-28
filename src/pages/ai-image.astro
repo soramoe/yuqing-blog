@@ -69,12 +69,20 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             </select>
           </label>
         </div>
+        <label id="jump-wrap" class="ai-jump" hidden>
+          <input id="jump" type="checkbox" />
+          <span>
+            插队优先生成（消耗 <strong data-jump-fee>–</strong> 积分，
+            <span class="ai-muted">生成失败自动退回</span>）
+          </span>
+        </label>
         <button id="submit" class="button button-primary" type="submit">
           生成
         </button>
       </form>
 
       <p id="status" class="ai-status">正在检查服务状态…</p>
+      <p id="queue-line" class="ai-queue" hidden></p>
       <p id="translated-line" class="ai-translated" hidden></p>
 
       <div id="result" class="ai-result" hidden>
@@ -208,6 +216,27 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     color: var(--muted);
     min-height: 1.5em;
   }
+  .ai-queue {
+    color: #e2a355;
+    font-size: 0.82rem;
+    min-height: 1.2em;
+    margin-top: -0.3rem;
+  }
+  .ai-jump {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--text);
+    cursor: pointer;
+  }
+  .ai-jump input {
+    width: auto;
+  }
+  .ai-jump[hidden] {
+    display: none !important;
+  }
   .ai-translated {
     color: var(--muted);
     font-size: 0.78rem;
@@ -264,6 +293,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   const app = $("app") as HTMLElement;
   const statusEl = $("status") as HTMLElement;
   const translatedLine = $("translated-line") as HTMLElement;
+  const queueLine = $("queue-line") as HTMLElement;
+  const jumpWrap = $("jump-wrap") as HTMLElement;
+  const jumpCheckbox = $("jump") as HTMLInputElement;
+  const jumpFeeEl = jumpWrap.querySelector("[data-jump-fee]") as HTMLElement;
   const badge = $("service-badge") as HTMLElement;
   const balanceChip = $("balance-chip") as HTMLElement;
   const balanceValue = $("balance-value") as HTMLElement;
@@ -285,6 +318,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   const history: string[] = [];
   let balance: number | null = null;
   let pointsCost: number | null = null;
+  let jumpFee: number | null = null;
+  let generating = false;
+  let genTimer: number | undefined;
 
   const setStatus = (text: string) => {
     statusEl.textContent = text;
@@ -355,11 +391,16 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           ok: boolean;
           enabled: boolean;
           points: number;
+          queueJumpPoints?: number;
           cooldownSeconds?: number;
         };
         pointsCost = data.points;
         priceValue.textContent = String(data.points);
         priceChip.hidden = false;
+        if (typeof data.queueJumpPoints === "number") {
+          jumpFee = data.queueJumpPoints;
+          jumpFeeEl.textContent = String(data.queueJumpPoints);
+        }
         if (!data.enabled) {
           setBadge("busy", "● 生图未开放");
           setStatus("站长暂时关闭了生图功能。");
@@ -385,6 +426,38 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     await refreshService();
     window.setInterval(() => void refreshService(), 30_000);
 
+    // 排队状态：5 秒轮询一次，有人在画时显示队列并开放插队入口
+    const refreshQueue = async () => {
+      try {
+        const response = await fetch("/api/ai-image/queue", {
+          headers: { Accept: "application/json" },
+        });
+        const data = (await response.json()) as {
+          offline?: boolean;
+          busy?: boolean;
+          waiting?: number;
+          vip?: number;
+        };
+        const crowded = !data.offline && (data.busy || (data.waiting ?? 0) > 0);
+        if (crowded) {
+          const vipNote = (data.vip ?? 0) > 0 ? `（含 ${data.vip} 位插队）` : "";
+          queueLine.textContent =
+            `🎨 GPU 忙碌中 · 前方排队 ${data.waiting ?? 0} 人${vipNote}`;
+          queueLine.hidden = false;
+        } else {
+          queueLine.hidden = true;
+        }
+        jumpWrap.hidden =
+          !crowded || generating || (jumpFee ?? 0) <= 0;
+      } catch {
+        queueLine.hidden = true;
+        jumpWrap.hidden = true;
+      }
+    };
+
+    await refreshQueue();
+    window.setInterval(() => void refreshQueue(), 5000);
+
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const prompt = promptInput.value.trim();
@@ -393,7 +466,13 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         return;
       }
       btn.disabled = true;
-      setStatus("🎨 翻译 + 生成中，一般 30~60 秒…");
+      generating = true;
+      const startedAt = Date.now();
+      genTimer = window.setInterval(() => {
+        const elapsed = Math.round((Date.now() - startedAt) / 1000);
+        setStatus(`🎨 生成中… 已等待 ${elapsed} 秒`);
+      }, 1000);
+      setStatus("🎨 翻译 + 生成中…");
       translatedLine.hidden = true;
       resultWrap.hidden = true;
       try {
@@ -408,6 +487,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             negative_prompt: negativeInput.value.trim(),
             quality: qualitySelect.value,
             aspectRatio: ratioSelect.value,
+            jump: jumpCheckbox.checked,
           }),
         });
         const data = (await response.json()) as {
@@ -418,6 +498,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           jobId?: string;
           url?: string;
           translated?: string;
+          jumpFee?: number;
         };
         if (response.status === 401) {
           app.hidden = true;
@@ -445,14 +526,18 @@ import BaseLayout from "../layouts/BaseLayout.astro";
           resultWrap.hidden = false;
           addToHistory(data.url);
           resultMeta.textContent =
-            `消耗 ${data.pointsCost ?? pointsCost ?? "–"} 积分 · ` +
-            `余额 ${data.balance ?? "–"} · ${data.width}×${data.height}`;
+            `消耗 ${data.pointsCost ?? pointsCost ?? "–"} 积分` +
+            (data.jumpFee ? ` · 插队 ${data.jumpFee} 积分` : "") +
+            ` · 余额 ${data.balance ?? "–"} · ${data.width}×${data.height}`;
         }
         setStatus("✅ 完成");
       } catch {
         setStatus("😞 生成失败，稍后再试。");
       } finally {
         btn.disabled = false;
+        generating = false;
+        window.clearInterval(genTimer);
+        genTimer = undefined;
       }
     });
   })();

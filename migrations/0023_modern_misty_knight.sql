@@ -1,0 +1,1 @@
+ALTER TABLE `image_setting` ADD `queue_jump_points` integer DEFAULT 60 NOT NULL;

@@ -2,6 +2,7 @@ export const IMAGE_POINT_VALUE_CENTS = 1;
 export const IMAGE_STANDARD_POINTS = 20;
 export const IMAGE_HD_POINTS = 32;
 export const IMAGE_STUDIO_POINTS = 120;
+export const IMAGE_QUEUE_JUMP_POINTS = 60;
 
 export type ImageQuality = "standard" | "hd";
 export type ImageFeature = "story_chapter" | "image_studio" | "admin_test";
@@ -18,6 +19,7 @@ export interface ImageSettings {
   standardPoints: number;
   hdPoints: number;
   studioPoints: number;
+  queueJumpPoints: number;
   dailyJobLimit: number;
   monthlyBudgetCents: number;
   updatedAt: number | null;
@@ -51,6 +53,7 @@ export const DEFAULT_IMAGE_SETTINGS: ImageSettings = {
   standardPoints: IMAGE_STANDARD_POINTS,
   hdPoints: IMAGE_HD_POINTS,
   studioPoints: IMAGE_STUDIO_POINTS,
+  queueJumpPoints: IMAGE_QUEUE_JUMP_POINTS,
   dailyJobLimit: 100,
   monthlyBudgetCents: 5000,
   updatedAt: null,
@@ -100,6 +103,12 @@ export function sanitizeImageSettings(value: unknown): ImageSettings {
       10000,
       IMAGE_STUDIO_POINTS,
     ),
+    queueJumpPoints: clampInteger(
+      input.queueJumpPoints,
+      0,
+      10000,
+      IMAGE_QUEUE_JUMP_POINTS,
+    ),
     dailyJobLimit: clampInteger(input.dailyJobLimit, 1, 5000, 100),
     monthlyBudgetCents: clampInteger(
       input.monthlyBudgetCents,
@@ -121,6 +130,7 @@ export async function getImageSettings(db: D1Database) {
         standard_points AS standardPoints,
         hd_points AS hdPoints,
         studio_points AS studioPoints,
+        queue_jump_points AS queueJumpPoints,
         daily_job_limit AS dailyJobLimit,
         monthly_budget_cents AS monthlyBudgetCents,
         updated_at AS updatedAt,
@@ -134,6 +144,7 @@ export async function getImageSettings(db: D1Database) {
       standardPoints: number;
       hdPoints: number;
       studioPoints: number;
+      queueJumpPoints: number;
       dailyJobLimit: number;
       monthlyBudgetCents: number;
       updatedAt: number;
@@ -146,6 +157,7 @@ export async function getImageSettings(db: D1Database) {
     standardPoints: Number(row.standardPoints),
     hdPoints: Number(row.hdPoints),
     studioPoints: Number(row.studioPoints),
+    queueJumpPoints: Number(row.queueJumpPoints),
     dailyJobLimit: Number(row.dailyJobLimit),
     monthlyBudgetCents: Number(row.monthlyBudgetCents),
     updatedAt: Number(row.updatedAt),

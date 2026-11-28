@@ -20,6 +20,8 @@ export interface CreateImageJobInput {
   englishPrompt?: string;
   /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
   prompt2?: string;
+  /** 排队插队（VIP 通道），仅 colab-sdxl 适配器使用 */
+  jump?: boolean;
   negativePrompt?: string;
   quality: ImageQuality;
   aspectRatio?: string;
@@ -408,6 +410,7 @@ export async function createAndRunImageJob(
       prompt,
       englishPrompt: input.englishPrompt?.trim().slice(0, 2000),
       prompt2: input.prompt2?.trim().slice(0, 2000),
+      jump: input.jump === true,
       negativePrompt,
       width,
       height,

@@ -125,15 +125,16 @@ export const onRequestPatch: PagesFunction<Env> = async ({
     env.DB.prepare(
       `INSERT INTO image_setting
         (id, enabled, point_value_cents, standard_points, hd_points,
-         studio_points, daily_job_limit, monthly_budget_cents,
-         updated_by, updated_at)
-       VALUES ('global', ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         studio_points, queue_jump_points, daily_job_limit,
+         monthly_budget_cents, updated_by, updated_at)
+       VALUES ('global', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET
          enabled = excluded.enabled,
          point_value_cents = excluded.point_value_cents,
          standard_points = excluded.standard_points,
          hd_points = excluded.hd_points,
          studio_points = excluded.studio_points,
+         queue_jump_points = excluded.queue_jump_points,
          daily_job_limit = excluded.daily_job_limit,
          monthly_budget_cents = excluded.monthly_budget_cents,
          updated_by = excluded.updated_by,
@@ -144,6 +145,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({
       nextSettings.standardPoints,
       nextSettings.hdPoints,
       nextSettings.studioPoints,
+      nextSettings.queueJumpPoints,
       nextSettings.dailyJobLimit,
       nextSettings.monthlyBudgetCents,
       authorized.session.user.id,

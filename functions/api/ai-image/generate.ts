@@ -23,6 +23,102 @@ const safeText = (value: unknown, maximum: number) =>
 const colabBase = (env: Env) =>
   env.IMAGE_COLAB_URL?.trim().replace(/\/+$/, "") ?? "";
 
+// 插队费：与生图费分开预扣，生成失败自动退回
+async function chargeQueueJump(
+  db: D1Database,
+  userId: string,
+  requestId: string,
+  points: number,
+) {
+  const now = Date.now();
+  const deducted = await db
+    .prepare(
+      `UPDATE point_account SET balance = balance - ?, updated_at = ?
+       WHERE user_id = ? AND balance >= ? RETURNING balance`,
+    )
+    .bind(points, now, userId, points)
+    .first<{ balance: number }>();
+  if (!deducted) {
+    const account = await db
+      .prepare("SELECT balance FROM point_account WHERE user_id = ?")
+      .bind(userId)
+      .first<{ balance: number }>();
+    throw new ImageServiceError(
+      `插队需要 ${points} 积分，余额不足。`,
+      402,
+      Number(account?.balance ?? 0),
+    );
+  }
+  try {
+    await db
+      .prepare(
+        `INSERT INTO point_transaction
+          (id, user_id, amount, type, description, reference_id,
+           balance_after, created_at)
+         VALUES (?, ?, ?, 'queue_jump', ?, ?, ?, ?)`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        userId,
+        -points,
+        `生图插队（${points} 积分）`,
+        `image:jump:${requestId}`,
+        deducted.balance,
+        now,
+      )
+      .run();
+  } catch {
+    await db
+      .prepare(
+        `UPDATE point_account SET balance = balance + ?, updated_at = ?
+         WHERE user_id = ?`,
+      )
+      .bind(points, Date.now(), userId)
+      .run();
+    throw new ImageServiceError("插队积分扣费失败，请稍后重试。", 500);
+  }
+  return Number(deducted.balance);
+}
+
+async function refundQueueJump(
+  db: D1Database,
+  userId: string,
+  requestId: string,
+  points: number,
+) {
+  const now = Date.now();
+  const updated = await db
+    .prepare(
+      `UPDATE point_account SET balance = balance + ?, updated_at = ?
+       WHERE user_id = ? RETURNING balance`,
+    )
+    .bind(points, now, userId)
+    .first<{ balance: number }>();
+  if (!updated) return 0;
+  try {
+    await db
+      .prepare(
+        `INSERT INTO point_transaction
+          (id, user_id, amount, type, description, reference_id,
+           balance_after, created_at)
+         VALUES (?, ?, ?, 'queue_jump_refund', ?, ?, ?, ?)`,
+      )
+      .bind(
+        crypto.randomUUID(),
+        userId,
+        points,
+        "生图插队退款",
+        `image:jump-refund:${requestId}`,
+        updated.balance,
+        now,
+      )
+      .run();
+  } catch {
+    // 余额已恢复，重复引用不重复退款
+  }
+  return Number(updated.balance);
+}
+
 // 探活 + 配置：页面据此显示「服务在线/冷却中/正忙」和本次生图的积分价格
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const settings = await getImageSettings(env.DB);
@@ -59,6 +155,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     configured: Boolean(base),
     enabled: settings.enabled,
     points: settings.studioPoints,
+    queueJumpPoints: settings.queueJumpPoints,
     failures: Number(provider?.failures ?? 0),
     cooldownSeconds,
   });
@@ -106,6 +203,24 @@ export const onRequestPost: PagesFunction<Env> = async ({
     return json({ error: "主体描述至少 6 个字。" }, 400);
   }
 
+  // 插队：预扣插队积分（生成失败自动退回），并在请求头标记 VIP 通道
+  const jump = input.jump === true;
+  const settings = await getImageSettings(env.DB);
+  const jumpFee = jump ? settings.queueJumpPoints : 0;
+  if (jumpFee > 0) {
+    try {
+      await chargeQueueJump(env.DB, session.user.id, requestId, jumpFee);
+    } catch (error) {
+      if (error instanceof ImageServiceError) {
+        return json(
+          { error: error.message, balance: error.balance, code: "insufficient" },
+          error.status,
+        );
+      }
+      return json({ error: "插队扣费失败，请稍后重试。" }, 500);
+    }
+  }
+
   // 中文 → SDXL 风格英文提示词（Workers AI 智能改写优先，直译兜底）
   const [enPrompt, enPrompt2, enNegative] = await Promise.all([
     translateImagePrompt(env, prompt),
@@ -125,6 +240,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
       quality,
       aspectRatio: ratio,
       permission: "private",
+      jump,
     });
     return json(
       {
@@ -135,19 +251,30 @@ export const onRequestPost: PagesFunction<Env> = async ({
         width: result.width,
         height: result.height,
         translated: enPrompt,
+        jumpFee: jumpFee || undefined,
       },
       201,
     );
   } catch (error) {
     if (error instanceof ImageServiceError) {
       // 生成阶段 503 基本就是 Colab 掉线：给站长发站内信 + 邮件（30 分钟去重）
+      let finalBalance = error.balance;
+      if (jumpFee > 0) {
+        // 生图失败：基础积分由服务自动退回，插队费在这里退回
+        finalBalance = await refundQueueJump(
+          env.DB,
+          session.user.id,
+          requestId,
+          jumpFee,
+        );
+      }
       if (error.status === 503 && waitUntil) {
         waitUntil(notifyColabDown(env));
       }
       return json(
         {
           error: error.message,
-          balance: error.balance,
+          balance: finalBalance || error.balance,
           code:
             error.status === 402
               ? "insufficient"
@@ -156,6 +283,18 @@ export const onRequestPost: PagesFunction<Env> = async ({
                 : undefined,
         },
         error.status,
+      );
+    }
+    if (jumpFee > 0) {
+      const refunded = await refundQueueJump(
+        env.DB,
+        session.user.id,
+        requestId,
+        jumpFee,
+      );
+      return json(
+        { error: "生图失败，插队积分已退回。", balance: refunded || undefined },
+        500,
       );
     }
     return json({ error: "生图失败，请稍后重试。" }, 500);
