@@ -1,7 +1,7 @@
 export const IMAGE_POINT_VALUE_CENTS = 1;
 export const IMAGE_STANDARD_POINTS = 20;
 export const IMAGE_HD_POINTS = 32;
-export const IMAGE_STUDIO_POINTS = 120;
+export const IMAGE_STUDIO_POINTS = 40;
 export const IMAGE_QUEUE_JUMP_POINTS = 60;
 
 export type ImageQuality = "standard" | "hd";
