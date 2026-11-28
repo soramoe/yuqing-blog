@@ -545,7 +545,7 @@ async function generateWithColab(
       if (!response.ok) {
         throw new ImageProviderError(
           response.status === 429
-            ? "Colab GPU 一次只能画一张，请稍等几秒再试。"
+            ? "排队已满或 GPU 忙，请稍等几秒再试。"
             : response.status === 401
               ? "Colab 上游密钥不匹配。"
               : `Colab 生图服务返回 HTTP ${response.status}。`,
