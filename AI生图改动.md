@@ -49,6 +49,7 @@
 **UI 坑修复**：`8ba46de` 公告管理选择器崩溃 → `2343468` 动态元素样式全局化 → `015a2b5` 安全响应头 + functions 独立 tsconfig + `english_prompt` 落库
 **大重构**：`9611e70` **生图页重做为左右布局工作台**（模型卡片 / 参考图 img2img / 批量 1-4 并发+槽位进度 / 1K·2K / 7 种比例含 auto / 可上传站内图库 / 计时器 / 历史区）
 **收尾修复**：`b23f0e5` auto 比例下三个云端适配器 size 缺省 1024×1024（修掉 `"undefinedxundefined"` 非法参数）
+**下午追加**：`5637896` 模型选择改为**下拉框**（模型卡片 UI 崩坏弃用）；火山方舟按官方 API 重写——`seedreamSize` 总像素守卫 [921600(1280x720), 8294400(2880x2880)]、参考图走 `image:[Base64]`（Seedream 5.x 单图生图语义）；新增智谱 **GLM 适配器** `bigmodel-image`（`POST https://open.bigmodel.cn/api/paas/v4/images/generations`、Bearer、返回 URL 由 `fetchProviderImage` 二次下载、`glmSize` 512–2048 且 32 倍数、prompt≤1000）；0027 迁移建 `glm-image` 供应商行 → `8d91b1d` 方舟 `SetLimitExceeded` 映射为「安全体验模式额度上限」明确提示
 
 > 同日另有 deals 数据巡检合并（PR #2 等），与生图无关。
 
@@ -74,6 +75,7 @@
 | siliconflow-image | openai-images | Qwen/Qwen-Image | **0** | story_chapter, admin_test | EMPTY |
 | colab-sdxl | colab-sdxl | sd_xl_base_1.0 | 1 | **image_studio**, admin_test | EMPTY（走 `IMAGE_COLAB_URL`/`IMAGE_COLAB_KEY` 环境变量） |
 | ark-seedream | ark-images | doubao-seedream-5-5-261028 | 1 | **image_studio**, admin_test | **SET** ✅ |
+| glm-image | bigmodel-image | glm-image | 1 | **image_studio**, admin_test | EMPTY（待站长绑定智谱密钥） |
 
 `image_setting`（id=global）：`enabled=1`，`studio_points=500`，`standard_points=500`，`hd_points=1000`，`queue_jump_points=60`，`daily_job_limit=100`，`monthly_budget_cents=5000`，`point_value_cents=1`。
 
@@ -91,6 +93,8 @@
 2. **v3 从未实际跑过** → 额度恢复后除自检外，补一次带参考图的端到端生图验证（`init_image` + `strength`）。
 3. **旧公告「关闭生图…暂时还没调试好」仍在站内横幅展示** → 到公告管理下线，避免误导。
 4. `IMAGE_COLAB_URL` / `IMAGE_COLAB_KEY` 走环境变量而非 provider 行绑定（colab-sdxl 行 api_key 为空是**正常**的）；如迁移到后台绑定，在 AI 配置页填入即可。
+5. **火山方舟「安全体验模式」额度上限**（2026-11-28 直测确认 `SetLimitExceeded`，模型服务已被暂停）→ 站长到方舟控制台「模型激活」页调整或关闭该模式后生图即恢复；站点侧错误提示已映射为明确文案。
+6. **GLM 待绑密钥** → 后台 AI 配置页在 `glm-image` 行粘贴智谱 API Key 即可用（密钥也可走环境变量 `IMAGE_BIGMODEL_API_KEY`）。
 
 ## 8. 文件地图（全部相对仓库根）
 
