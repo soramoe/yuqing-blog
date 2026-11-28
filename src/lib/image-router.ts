@@ -262,12 +262,38 @@ export async function routeImageGeneration(
     throw new ImageRoutingError("生图功能当前未开放。", 0);
   }
 
+  // 用户指定模型时：先单独校验该模型的状态，给出精确的错误提示
+  if (request.providerId) {
+    const chosen = providers.find((p) => p.id === request.providerId);
+    if (!chosen || !chosen.enabled) {
+      throw new ImageRoutingError("所选模型不存在或已下线。", 0);
+    }
+    if (
+      chosen.cooldownUntil &&
+      chosen.cooldownUntil > Date.now()
+    ) {
+      throw new ImageRoutingError(
+        "所选模型冷却中（连续失败保护），请稍后再试或更换模型。",
+        0,
+      );
+    }
+    if (!isProviderConfigured(env, chosen)) {
+      throw new ImageRoutingError("所选模型尚未绑定 API，请联系站长配置。", 0);
+    }
+  }
+
   const now = Date.now();
   let attempted = 0;
   const errors: string[] = [];
   for (const provider of providers) {
     if (!provider.enabled) continue;
     if (!providerSupportsFeature(provider, request.feature)) continue;
+    if (
+      request.providerId &&
+      provider.id !== request.providerId
+    ) {
+      continue; // 用户指定了模型：只调用所选的
+    }
     if (provider.cooldownUntil && provider.cooldownUntil > now) continue;
     if (!isProviderConfigured(env, provider)) continue;
 
@@ -314,9 +340,11 @@ export async function routeImageGeneration(
   }
 
   throw new ImageRoutingError(
-    errors.length > 0
-      ? `所有图片模型均不可用：${errors.join("；")}`
-      : "没有可用的图片模型。",
+    request.providerId
+      ? "所选模型暂时不可用，请稍后再试或更换模型。"
+      : errors.length > 0
+        ? `所有图片模型均不可用：${errors.join("；")}`
+        : "没有可用的图片模型。",
     attempted,
   );
 }

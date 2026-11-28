@@ -16,6 +16,8 @@ export interface CreateImageJobInput {
   requestId: string;
   feature: ImageFeature;
   sourceId?: string;
+  /** 用户自选的模型（provider id） */
+  providerId?: string;
   prompt: string;
   englishPrompt?: string;
   /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
@@ -409,6 +411,7 @@ export async function createAndRunImageJob(
   try {
     const generated = await routeImageGeneration(env, jobId, {
       feature: input.feature,
+      providerId: input.providerId,
       prompt,
       englishPrompt: englishPrompt ?? undefined,
       prompt2: input.prompt2?.trim().slice(0, 2000),

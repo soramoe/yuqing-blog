@@ -1,6 +1,7 @@
 import type { PagesFunction } from "@cloudflare/workers-types";
 import { createAuth } from "../../../../src/lib/auth";
 import { isCommentAdmin } from "../../../../src/lib/comment-admin";
+import { chinaDateKey } from "../../../../src/lib/points";
 import {
   getImageSettings,
   listImageProviders,
@@ -34,16 +35,24 @@ const authorize = async (request: Request, env: Env) => {
   return { session };
 };
 
+const maskKey = (value: string) =>
+  value ? `${value.slice(0, 4)}***（${value.length} 字符）` : "";
+
 const providerStatus = (
   env: Env,
   provider: ImageProviderConfig,
-) => ({
-  ...provider,
-  configured: isProviderConfigured(env, provider),
-  cooldownActive: Boolean(
-    provider.cooldownUntil && provider.cooldownUntil > Date.now(),
-  ),
-});
+) => {
+  const { apiKey, ...rest } = provider;
+  return {
+    ...rest,
+    configured: isProviderConfigured(env, provider),
+    cooldownActive: Boolean(
+      provider.cooldownUntil && provider.cooldownUntil > Date.now(),
+    ),
+    hasApiKey: Boolean(apiKey?.trim()),
+    apiKeyMasked: maskKey(apiKey ?? ""),
+  };
+};
 
 const listUsage = async (db: D1Database) => {
   const result = await db
@@ -76,15 +85,51 @@ const listUsage = async (db: D1Database) => {
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const authorized = await authorize(request, env);
   if ("response" in authorized) return authorized.response;
-  const [settings, providers, usage] = await Promise.all([
+  const [settings, providers, usage, todayStats] = await Promise.all([
     getImageSettings(env.DB),
     listImageProviders(env.DB),
     listUsage(env.DB),
+    (async () => {
+      const today = chinaDateKey();
+      const jobs = await env.DB.prepare(
+        `SELECT
+           COUNT(*) AS jobs,
+           SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END) AS succeeded,
+           SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+         FROM image_job
+         WHERE date(created_at / 1000, 'unixepoch', '+8 hours') = ?`,
+      )
+        .bind(today)
+        .first();
+      const attempts = await env.DB.prepare(
+        `SELECT provider_id AS providerId,
+           COUNT(*) AS attempts,
+           SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END) AS succeeded,
+           SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+         FROM image_attempt
+         WHERE date(created_at / 1000, 'unixepoch', '+8 hours') = ?
+         GROUP BY provider_id`,
+      )
+        .bind(today)
+        .all();
+      return {
+        jobs: Number(jobs?.jobs ?? 0),
+        succeeded: Number(jobs?.succeeded ?? 0),
+        failed: Number(jobs?.failed ?? 0),
+        byProvider: attempts.results.map((row) => ({
+          ...row,
+          attempts: Number(row.attempts),
+          succeeded: Number(row.succeeded),
+          failed: Number(row.failed),
+        })),
+      };
+    })(),
   ]);
   return json({
     settings,
     providers: providers.map((provider) => providerStatus(env, provider)),
     usage,
+    today: todayStats,
   });
 };
 
@@ -228,6 +273,15 @@ export const onRequestPatch: PagesFunction<Env> = async ({
         86400,
         before.cooldownSeconds,
       ),
+      // 绑定信息：留空 = 保持当前绑定不变
+      apiKey:
+        typeof incoming.apiKey === "string" && incoming.apiKey.trim()
+          ? incoming.apiKey.trim().slice(0, 300)
+          : before.apiKey,
+      baseUrl:
+        typeof incoming.baseUrl === "string" && incoming.baseUrl.trim()
+          ? incoming.baseUrl.trim().slice(0, 300)
+          : before.baseUrl,
     };
     statements.push(
       env.DB.prepare(
@@ -236,7 +290,8 @@ export const onRequestPatch: PagesFunction<Env> = async ({
              daily_job_limit = ?, monthly_budget_cents = ?,
              reserve_cost_cents = ?, actual_cost_cents = ?,
              allow_paid_overage = ?, failure_threshold = ?,
-             cooldown_seconds = ?, updated_at = ?
+             cooldown_seconds = ?, api_key = ?, base_url = ?,
+             updated_at = ?
          WHERE id = ?`,
       ).bind(
         next.name || before.name,
@@ -250,6 +305,8 @@ export const onRequestPatch: PagesFunction<Env> = async ({
         next.allowPaidOverage ? 1 : 0,
         next.failureThreshold,
         next.cooldownSeconds,
+        next.apiKey || before.apiKey,
+        next.baseUrl || before.baseUrl,
         now,
         id,
       ),

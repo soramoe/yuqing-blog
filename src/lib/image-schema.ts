@@ -36,6 +36,10 @@ export const imageProvider = sqliteTable(
     adapter: text("adapter").notNull(),
     model: text("model").notNull(),
     features: text("features").default("").notNull(),
+    /** 供应商绑定的 API 密钥（后台可改，留空回退环境变量） */
+    apiKey: text("api_key").default("").notNull(),
+    /** 供应商自定义接入地址（留空回退默认/环境变量） */
+    baseUrl: text("base_url").default("").notNull(),
     enabled: integer("enabled", { mode: "boolean" }).default(true).notNull(),
     priority: integer("priority").default(100).notNull(),
     dailyJobLimit: integer("daily_job_limit").default(100).notNull(),

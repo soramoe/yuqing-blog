@@ -4,16 +4,17 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <BaseLayout
   title="AI 生图"
-  description="输入中文提示词，自动翻译成英文后交给站长的 SDXL 模型生成图片。消耗积分。"
+  description="选择模型，输入中文提示词，自动翻译成英文后生成图片。消耗积分。"
+  bodyClass="page-ai-image"
+  noindex
 >
   <main class="ai-shell">
-    <p class="eyebrow">AI IMAGE LAB</p>
+    <p class="eyebrow">AI IMAGE STUDIO</p>
     <h1>AI 生图</h1>
     <p class="ai-lead">
-      中文会自动翻译成英文，交给站长自建的 SDXL 模型。每次生成消耗积分，生成失败自动退回。
+      中文自动翻译成英文。选择模型、填写提示词即可生成，失败自动退积分。
     </p>
 
-    <!-- 未登录：引导登录 -->
     <div id="login-card" class="ai-card" hidden>
       <h2>登录后才能使用</h2>
       <p class="ai-muted">
@@ -25,25 +26,30 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       </div>
     </div>
 
-    <!-- 已登录：主体 -->
     <div id="app" hidden>
       <div class="ai-statusbar">
-        <span id="service-badge" class="ai-badge" data-state="checking">
-          检查服务…
-        </span>
+        <span id="service-badge" class="ai-badge" data-state="checking">检查服务…</span>
         <span id="balance-chip" class="ai-chip" hidden>
           积分余额 <strong id="balance-value">–</strong>
         </span>
         <span id="price-chip" class="ai-chip" hidden>
           本次消耗 <strong id="price-value">–</strong> 积分
         </span>
-        <a href="/my-images/" class="ai-chip">我的生图历史 →</a>
+        <a href="/my-images/" class="ai-chip ai-link">我的生图历史 →</a>
       </div>
 
-      <form id="gen-form" class="ai-form">
+      <section class="ai-section">
+        <div class="ai-section-head">
+          <p class="ai-section-label">选择模型</p>
+          <span id="service-badge-mini" class="ai-mini-status"></span>
+        </div>
+        <div id="model-grid" class="ai-model-grid" hidden></div>
+      </section>
+
+      <form id="gen-form" class="ai-form ai-card">
         <label>
           主体描述（必填）
-          <input id="prompt" maxlength="800" placeholder="例如：一只在太空里的橘猫宇航员" required />
+          <input id="prompt" maxlength="800" placeholder="例如：一只橘白色的猫穿着古代官服，站在雪后的江南石桥上" required />
         </label>
         <label>
           第二提示词（可选，写给 SDXL 的第二个文本编码器）
@@ -77,13 +83,13 @@ import BaseLayout from "../layouts/BaseLayout.astro";
             <span class="ai-muted">生成失败自动退回</span>）
           </span>
         </label>
-        <button id="submit" class="button button-primary" type="submit">
-          生成
-        </button>
+        <div class="ai-submit-row">
+          <button id="submit" class="button button-primary" type="submit">生成</button>
+          <span id="queue-line" class="ai-queue" hidden></span>
+        </div>
       </form>
 
       <p id="status" class="ai-status">正在检查服务状态…</p>
-      <p id="queue-line" class="ai-queue" hidden></p>
       <p id="translated-line" class="ai-translated" hidden></p>
 
       <div id="result" class="ai-result" hidden>
@@ -92,7 +98,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       </div>
 
       <div id="history-wrap" hidden>
-        <p class="ai-history-title">本次会话的生成记录</p>
+        <p class="ai-section-label">
+          本次会话
+          <a href="/my-images/" class="ai-history-link">全部历史 →</a>
+        </p>
         <div id="history" class="ai-history"></div>
       </div>
     </div>
@@ -101,16 +110,16 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 
 <style>
   .ai-shell {
-    max-width: 760px;
+    max-width: 780px;
     margin: 0 auto;
     padding: 0 1.25rem 4rem;
   }
   .eyebrow {
-    font-size: 0.75rem;
+    color: var(--accent);
+    font-size: 0.68rem;
     letter-spacing: 0.12em;
-    color: var(--muted);
     text-transform: uppercase;
-    margin-bottom: 0.5rem;
+    margin: 0 0 0.4rem;
   }
   h1 {
     font-size: 2rem;
@@ -118,7 +127,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
   .ai-lead {
     color: var(--muted);
-    margin-bottom: 1.5rem;
+    margin: 0 0 1.4rem;
   }
   .ai-card {
     border: 1px solid var(--border);
@@ -140,6 +149,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .ai-statusbar {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 0.5rem;
     margin-bottom: 1.2rem;
   }
@@ -159,16 +169,105 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     color: #7ec699;
     border-color: rgb(83 160 112 / 45%);
   }
+  .ai-badge[data-state="cooldown"],
   .ai-badge[data-state="busy"] {
     color: #e2a355;
     border-color: rgb(205 125 54 / 45%);
   }
-  .ai-badge[data-state="cooldown"] {
-    color: #e2a355;
-    border-color: rgb(205 125 54 / 45%);
+  .ai-badge[data-state="offline"] {
+    color: var(--bad, #e07a5f);
+    border-color: rgb(224 122 95 / 45%);
   }
   .ai-chip strong {
     color: var(--text);
+  }
+  .ai-link {
+    text-decoration: none;
+    color: var(--accent);
+  }
+  .ai-section {
+    margin-bottom: 1.2rem;
+  }
+  .ai-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.55rem;
+  }
+  .ai-section-label {
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+  .ai-mini-status {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .ai-model-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.7rem;
+  }
+  .ai-model-card {
+    text-align: left;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+    display: grid;
+    gap: 0.3rem;
+    color: var(--text);
+    font: inherit;
+  }
+  .ai-model-card:hover {
+    border-color: var(--text);
+  }
+  .ai-model-card.selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .ai-model-card:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ai-model-card .ai-model-name {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-weight: 650;
+    font-size: 0.9rem;
+  }
+  .ai-model-card .ai-model-id {
+    font-size: 0.7rem;
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ai-model-status {
+    padding: 0.1rem 0.45rem;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .ai-model-status[data-state="ready"] {
+    color: #7ec699;
+    border-color: rgb(83 160 112 / 45%);
+  }
+  .ai-model-status[data-state="cooldown"] {
+    color: #e2a355;
+    border-color: rgb(205 125 54 / 45%);
+  }
+  .ai-model-status[data-state="offline"],
+  .ai-model-status[data-state="unconfigured"] {
+    color: var(--bad, #e07a5f);
+    border-color: rgb(224 122 95 / 45%);
   }
   .ai-form {
     display: grid;
@@ -177,7 +276,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     border-radius: 14px;
     background: var(--surface);
     padding: 1.4rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.8rem;
   }
   .ai-form label {
     display: grid;
@@ -204,25 +303,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     grid-template-columns: 1fr 1fr;
     gap: 0.9rem;
   }
-  .ai-form button {
-    justify-self: start;
-    cursor: pointer;
-    min-width: 8rem;
-  }
-  .ai-form button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-  .ai-status {
-    color: var(--muted);
-    min-height: 1.5em;
-  }
-  .ai-queue {
-    color: #e2a355;
-    font-size: 0.82rem;
-    min-height: 1.2em;
-    margin-top: -0.3rem;
-  }
   .ai-jump {
     display: flex !important;
     flex-direction: row !important;
@@ -238,11 +318,33 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   .ai-jump[hidden] {
     display: none !important;
   }
+  .ai-submit-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .ai-submit-row button {
+    cursor: pointer;
+    min-width: 8rem;
+  }
+  .ai-submit-row button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .ai-queue {
+    color: #e2a355;
+    font-size: 0.8rem;
+  }
+  .ai-status {
+    color: var(--muted);
+    min-height: 1.5em;
+  }
   .ai-translated {
     color: var(--muted);
     font-size: 0.78rem;
     line-height: 1.6;
-    margin-top: -0.4rem;
+    margin: -0.3rem 0 0.8rem;
   }
   .ai-result {
     margin-top: 1.2rem;
@@ -266,12 +368,19 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     color: var(--muted);
     font-size: 0.85rem;
   }
-  .ai-history-title {
-    margin: 1.6rem 0 0.6rem;
+  .ai-section-label {
     font-size: 0.78rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
+    margin: 1.6rem 0 0.6rem;
+  }
+  .ai-history-link {
+    color: var(--accent);
+    text-decoration: none;
+    text-transform: none;
+    letter-spacing: 0;
+    margin-left: 0.4rem;
   }
   .ai-history {
     display: flex;
@@ -293,20 +402,24 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 </style>
 
 <script>
+  interface ModelInfo {
+    id: string;
+    name: string;
+    model: string;
+    adapter: string;
+    status: "ready" | "cooldown" | "offline" | "unconfigured";
+  }
+
   const $ = (id: string) => document.getElementById(id);
   const loginCard = $("login-card") as HTMLElement;
   const app = $("app") as HTMLElement;
-  const statusEl = $("status") as HTMLElement;
-  const translatedLine = $("translated-line") as HTMLElement;
-  const queueLine = $("queue-line") as HTMLElement;
-  const jumpWrap = $("jump-wrap") as HTMLElement;
-  const jumpCheckbox = $("jump") as HTMLInputElement;
-  const jumpFeeEl = jumpWrap.querySelector("[data-jump-fee]") as HTMLElement;
   const badge = $("service-badge") as HTMLElement;
+  const miniStatus = $("service-badge-mini") as HTMLElement;
   const balanceChip = $("balance-chip") as HTMLElement;
   const balanceValue = $("balance-value") as HTMLElement;
   const priceChip = $("price-chip") as HTMLElement;
   const priceValue = $("price-value") as HTMLElement;
+  const modelGrid = $("model-grid") as HTMLElement;
   const form = document.getElementById("gen-form") as HTMLFormElement;
   const btn = $("submit") as HTMLButtonElement;
   const promptInput = $("prompt") as HTMLInputElement;
@@ -314,6 +427,12 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   const negativeInput = $("negative") as HTMLInputElement;
   const qualitySelect = $("quality") as HTMLSelectElement;
   const ratioSelect = $("ratio") as HTMLSelectElement;
+  const jumpWrap = $("jump-wrap") as HTMLElement;
+  const jumpCheckbox = $("jump") as HTMLInputElement;
+  const jumpFeeEl = jumpWrap.querySelector("[data-jump-fee]") as HTMLElement;
+  const queueLine = $("queue-line") as HTMLElement;
+  const statusEl = $("status") as HTMLElement;
+  const translatedLine = $("translated-line") as HTMLElement;
   const resultWrap = $("result") as HTMLElement;
   const resultImg = $("result-img") as HTMLImageElement;
   const resultMeta = $("result-meta") as HTMLElement;
@@ -324,12 +443,16 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   let balance: number | null = null;
   let pointsCost: number | null = null;
   let jumpFee: number | null = null;
+  let models: ModelInfo[] = [];
+  let selectedModelId: string | null = null;
   let generating = false;
   let genTimer: number | undefined;
+  let tunnelOk = false;
 
   const setStatus = (text: string) => {
     statusEl.textContent = text;
   };
+
   const setBalance = (value: number | null) => {
     if (value === null) return;
     balance = value;
@@ -337,17 +460,160 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     balanceChip.hidden = false;
   };
 
-  function setBadge(state: "online" | "busy" | "checking", text: string) {
+  const setBadge = (
+    state: "online" | "cooldown" | "busy" | "offline" | "checking",
+    text: string,
+  ) => {
     badge.dataset.state = state;
     badge.textContent = text;
+    if (miniStatus) {
+      miniStatus.textContent = state === "online" ? "● 在线" : state === "cooldown" ? "● 冷却中" : state === "busy" ? "● 忙碌" : "● 检查中";
+    }
+  };
+
+  const statusLabel: Record<string, string> = {
+    ready: "在线",
+    cooldown: "冷却中",
+    offline: "离线",
+    unconfigured: "未配置",
+  };
+
+  function renderModels() {
+    modelGrid.replaceChildren();
+    const usable = models.filter((m) => m.status !== "unconfigured");
+    if (!usable.length) {
+      modelGrid.hidden = true;
+      setBadge("offline", "● 服务离线");
+      setStatus("暂无可用模型，请联系站长配置。");
+      return;
+    }
+    modelGrid.hidden = false;
+    // 当前选择的模型若已不在列表中，回退到第一个可用模型
+    if (!models.some((m) => m.id === selectedModelId)) {
+      const firstReady = models.find((m) => m.status === "ready");
+      selectedModelId = (firstReady ?? usable[0]).id;
+    }
+    for (const m of models) {
+      if (m.status === "unconfigured") continue;
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "ai-model-card" + (m.id === selectedModelId ? " selected" : "");
+      card.disabled = m.status === "offline";
+
+      const nameRow = document.createElement("span");
+      nameRow.className = "ai-model-name";
+      const name = document.createElement("span");
+      name.textContent = m.name;
+      const st = document.createElement("span");
+      st.className = "ai-model-status";
+      st.dataset.state = m.status;
+      st.textContent = statusLabel[m.status] ?? m.status;
+      nameRow.append(name, st);
+
+      const idRow = document.createElement("span");
+      idRow.className = "ai-model-id";
+      idRow.textContent = m.model;
+      card.append(nameRow, idRow);
+
+      card.addEventListener("click", () => {
+        selectedModelId = m.id;
+        renderModels();
+      });
+      modelGrid.appendChild(card);
+    }
+    updateJumpVisibility();
   }
 
-  const ERROR_TEXT: Record<string, string> = {
-    insufficient: "积分不足啦 — 每日签到可以攒积分。",
-    unavailable: "服务正忙（GPU 可能掉线了），积分没有扣。",
-    processing: "这个请求正在处理中，别着急。",
-    duplicate: "刚才已经提交过一样的请求了。",
-  };
+  function updateJumpVisibility() {
+    const usingColab = selectedModelId === "colab-sdxl";
+    jumpWrap.hidden = !usingColab || generating || (jumpFee ?? 0) <= 0;
+  }
+
+  // 排队状态：仅 Colab 模型有队列
+  async function refreshQueue() {
+    if (selectedModelId !== "colab-sdxl") {
+      queueLine.hidden = true;
+      jumpWrap.hidden = true;
+      return;
+    }
+    try {
+      const response = await fetch("/api/ai-image/queue", {
+        headers: { Accept: "application/json" },
+      });
+      const data = (await response.json()) as {
+        offline?: boolean;
+        busy?: boolean;
+        waiting?: number;
+        vip?: number;
+      };
+      const crowded = !data.offline && (data.busy || (data.waiting ?? 0) > 0);
+      if (crowded) {
+        const vipNote = (data.vip ?? 0) > 0 ? `（含 ${data.vip} 位插队）` : "";
+        const jumpPrice =
+          (jumpFee ?? 0) > 0 ? ` · 插队 ${jumpFee} 积分可优先` : "";
+        queueLine.textContent =
+          `🎨 GPU 忙碌中 · 前方排队 ${data.waiting ?? 0} 人${vipNote}${jumpPrice}`;
+        queueLine.hidden = false;
+      } else {
+        queueLine.hidden = true;
+      }
+      updateJumpVisibility();
+    } catch {
+      queueLine.hidden = true;
+    }
+  }
+
+  // 服务状态 + 模型列表：30 秒自动刷新
+  async function refreshService() {
+    try {
+      const response = await fetch("/api/ai-image/generate", {
+        headers: { Accept: "application/json" },
+      });
+      const data = (await response.json()) as {
+        ok: boolean;
+        enabled: boolean;
+        points: number;
+        queueJumpPoints?: number;
+        cooldownSeconds?: number;
+        models?: ModelInfo[];
+      };
+      pointsCost = data.points;
+      priceValue.textContent = String(data.points);
+      priceChip.hidden = false;
+      if (typeof data.queueJumpPoints === "number") {
+        jumpFee = data.queueJumpPoints;
+        jumpFeeEl.textContent = String(data.queueJumpPoints);
+      }
+      models = data.models ?? [];
+      tunnelOk = data.ok;
+      renderModels();
+      void refreshQueue();
+      if (!data.enabled) {
+        setBadge("busy", "● 生图未开放");
+        setStatus("站长暂时关闭了生图功能。");
+        return;
+      }
+      const anyReady = models.some((m) => m.status === "ready");
+      const allCooldown =
+        models.length > 0 && models.every((m) => m.status === "cooldown");
+      if (anyReady) {
+        setBadge("online", "● 服务在线");
+        setStatus("选择模型，填好提示词，点「生成」开始。");
+      } else if (allCooldown && models.length > 0) {
+        const secs = data.cooldownSeconds ?? 0;
+        setBadge(
+          "cooldown",
+          `● 冷却中${secs ? `（约 ${Math.ceil(secs / 60)} 分钟）` : ""}`,
+        );
+        setStatus("模型连续失败进入冷却保护，稍后自动恢复，可让站长在后台重置。");
+      } else {
+        setBadge("busy", "● 服务正忙");
+        setStatus("模型暂时都不可用，稍后再来看看（积分不会白扣）。");
+      }
+    } catch {
+      setBadge("busy", "● 服务正忙");
+    }
+  }
 
   function addToHistory(url: string) {
     history.push(url);
@@ -355,22 +621,22 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     const img = document.createElement("img");
     img.src = url;
     img.alt = "历史生成";
-    img.addEventListener("click", () => {
-      resultImg.src = url;
-      resultWrap.hidden = false;
-    });
+    img.loading = "lazy";
+    img.title = "点击查看原图";
+    img.addEventListener("click", () => window.open(url, "_blank"));
     historyEl.prepend(img);
   }
 
-  // 1) 登录态：未登录显示登录引导；2) 已登录并行拉取余额与服务状态
-  void (async () => {
-    const session = await fetch("/api/auth/get-session", {
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .catch(() => null);
+  // 会话门：未登录显示登录引导
+  const sessionPromise = fetch("/api/auth/get-session", {
+    credentials: "same-origin",
+    headers: { Accept: "application/json" },
+  })
+    .then((response) => (response.ok ? response.json() : null))
+    .catch(() => null);
 
+  async function init() {
+    const session = await sessionPromise;
     if (!session?.user) {
       loginCard.hidden = false;
       statusEl.hidden = true;
@@ -386,165 +652,106 @@ import BaseLayout from "../layouts/BaseLayout.astro";
       .then((data) => setBalance(data?.balance ?? null))
       .catch(() => undefined);
 
-    // 服务状态：30 秒自动刷新一次，徽章会如实反映 在线/冷却/掉线
-    const refreshService = async () => {
-      try {
-        const response = await fetch("/api/ai-image/generate", {
-          headers: { Accept: "application/json" },
-        });
-        const data = (await response.json()) as {
-          ok: boolean;
-          enabled: boolean;
-          points: number;
-          queueJumpPoints?: number;
-          cooldownSeconds?: number;
-        };
-        pointsCost = data.points;
-        priceValue.textContent = String(data.points);
-        priceChip.hidden = false;
-        if (typeof data.queueJumpPoints === "number") {
-          jumpFee = data.queueJumpPoints;
-          jumpFeeEl.textContent = String(data.queueJumpPoints);
-        }
-        if (!data.enabled) {
-          setBadge("busy", "● 生图未开放");
-          setStatus("站长暂时关闭了生图功能。");
-        } else if ((data.cooldownSeconds ?? 0) > 0) {
-          const minutes = Math.ceil((data.cooldownSeconds ?? 0) / 60);
-          setBadge("cooldown", "● 冷却中");
-          setStatus(
-            `GPU 刚经历失败，冷却约 ${minutes} 分钟后自动恢复；` +
-              "也可以让站长在后台点「重置生图冷却」。",
-          );
-        } else if (data.ok) {
-          setBadge("online", "● 服务在线");
-          setStatus("填好提示词，点「生成」开始。");
-        } else {
-          setBadge("busy", "● 服务正忙");
-          setStatus("GPU 服务暂时掉线，稍后再来看看（积分不会白扣）。");
-        }
-      } catch {
-        setBadge("busy", "● 服务正忙");
-      }
-    };
-
     await refreshService();
     window.setInterval(() => void refreshService(), 30_000);
-
-    // 排队状态：5 秒轮询一次，有人在画时显示队列并开放插队入口
-    const refreshQueue = async () => {
-      try {
-        const response = await fetch("/api/ai-image/queue", {
-          headers: { Accept: "application/json" },
-        });
-        const data = (await response.json()) as {
-          offline?: boolean;
-          busy?: boolean;
-          waiting?: number;
-          vip?: number;
-        };
-        const crowded = !data.offline && (data.busy || (data.waiting ?? 0) > 0);
-        if (crowded) {
-          const vipNote = (data.vip ?? 0) > 0 ? `（含 ${data.vip} 位插队）` : "";
-          const jumpPrice = (jumpFee ?? 0) > 0 ? ` · 插队 ${jumpFee} 积分可优先` : "";
-          queueLine.textContent =
-            `🎨 GPU 忙碌中 · 前方排队 ${data.waiting ?? 0} 人${vipNote}${jumpPrice}`;
-          queueLine.hidden = false;
-        } else {
-          queueLine.hidden = true;
-        }
-        jumpWrap.hidden =
-          !crowded || generating || (jumpFee ?? 0) <= 0;
-      } catch {
-        queueLine.hidden = true;
-        jumpWrap.hidden = true;
-      }
-    };
-
-    await refreshQueue();
     window.setInterval(() => void refreshQueue(), 5000);
+  }
 
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const prompt = promptInput.value.trim();
-      if (prompt.length < 6) {
-        setStatus("主体描述至少 6 个字。");
+  void init();
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const prompt = promptInput.value.trim();
+    if (prompt.length < 6) {
+      setStatus("主体描述至少 6 个字。");
+      return;
+    }
+    if (!selectedModelId) {
+      setStatus("先选择一个模型。");
+      return;
+    }
+    btn.disabled = true;
+    generating = true;
+    const startedAt = Date.now();
+    genTimer = window.setInterval(() => {
+      const elapsed = Math.round((Date.now() - startedAt) / 1000);
+      setStatus(
+        `🎨 生成中… 已等待 ${elapsed} 秒` +
+          (selectedModelId === "colab-sdxl" ? "（含排队）" : ""),
+      );
+    }, 1000);
+    translatedLine.hidden = true;
+    resultWrap.hidden = true;
+    const usingColab = selectedModelId === "colab-sdxl";
+    try {
+      const response = await fetch("/api/ai-image/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          requestId: crypto.randomUUID(),
+          model: selectedModelId,
+          prompt,
+          prompt_2: prompt2Input.value.trim(),
+          negative_prompt: negativeInput.value.trim(),
+          quality: qualitySelect.value,
+          aspectRatio: ratioSelect.value,
+          jump: usingColab && jumpCheckbox.checked,
+        }),
+      });
+      const data = (await response.json()) as {
+        error?: string;
+        code?: string;
+        balance?: number;
+        pointsCost?: number;
+        jobId?: string;
+        url?: string;
+        translated?: string;
+        providerName?: string;
+        jumpFee?: number;
+      };
+      if (response.status === 401) {
+        app.hidden = true;
+        loginCard.hidden = false;
         return;
       }
-      btn.disabled = true;
-      generating = true;
-      const startedAt = Date.now();
-      genTimer = window.setInterval(() => {
-        const elapsed = Math.round((Date.now() - startedAt) / 1000);
-        setStatus(`🎨 生成中… 已等待 ${elapsed} 秒`);
-      }, 1000);
-      setStatus("🎨 翻译 + 生成中…");
-      translatedLine.hidden = true;
-      resultWrap.hidden = true;
-      try {
-        const response = await fetch("/api/ai-image/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({
-            requestId: crypto.randomUUID(),
-            prompt,
-            prompt_2: prompt2Input.value.trim(),
-            negative_prompt: negativeInput.value.trim(),
-            quality: qualitySelect.value,
-            aspectRatio: ratioSelect.value,
-            jump: jumpCheckbox.checked,
-          }),
-        });
-        const data = (await response.json()) as {
-          error?: string;
-          code?: string;
-          balance?: number;
-          pointsCost?: number;
-          jobId?: string;
-          url?: string;
-          translated?: string;
-          jumpFee?: number;
-        };
-        if (response.status === 401) {
-          app.hidden = true;
-          loginCard.hidden = false;
-          return;
-        }
-        if (!response.ok) {
-          setStatus(
-            ERROR_TEXT[data.code ?? ""] ??
-              data.error ??
-              "生成失败，稍后再试。",
-          );
-          if (typeof data.balance === "number") setBalance(data.balance);
-          void refreshService(); // 失败后立刻刷新徽章，让冷却状态可见
-          return;
-        }
-        // 成功
+      if (!response.ok) {
+        setStatus(
+          {
+            insufficient: "积分不足啦 — 每日签到可以攒积分。",
+            unavailable: "所选模型暂时不可用（积分没有扣），可换个模型试试。",
+            bad_model: "所选模型不存在或未开放。",
+          }[data.code ?? ""] ??
+            data.error ??
+            "生成失败，稍后再试。",
+        );
         if (typeof data.balance === "number") setBalance(data.balance);
-        if (data.translated) {
-          translatedLine.textContent = "已翻译为：" + data.translated;
-          translatedLine.hidden = false;
-        }
-        if (typeof data.url === "string") {
-          resultImg.src = data.url;
-          resultWrap.hidden = false;
-          addToHistory(data.url);
-          resultMeta.textContent =
-            `消耗 ${data.pointsCost ?? pointsCost ?? "–"} 积分` +
-            (data.jumpFee ? ` · 插队 ${data.jumpFee} 积分` : "") +
-            ` · 余额 ${data.balance ?? "–"} · ${data.width}×${data.height}`;
-        }
-        setStatus("✅ 完成");
-      } catch {
-        setStatus("😞 生成失败，稍后再试。");
-      } finally {
-        btn.disabled = false;
-        generating = false;
-        window.clearInterval(genTimer);
-        genTimer = undefined;
+        void refreshService();
+        return;
       }
-    });
-  })();
+      if (typeof data.balance === "number") setBalance(data.balance);
+      if (data.translated) {
+        translatedLine.textContent = "已翻译为：" + data.translated;
+        translatedLine.hidden = false;
+      }
+      if (typeof data.url === "string") {
+        resultImg.src = data.url;
+        resultWrap.hidden = false;
+        addToHistory(data.url);
+        resultMeta.textContent =
+          `${data.providerName ?? ""} · 消耗 ${data.pointsCost ?? "–"} 积分` +
+          (data.jumpFee ? ` · 插队 ${data.jumpFee} 积分` : "") +
+          ` · 余额 ${data.balance ?? "–"}`;
+      }
+      setStatus("✅ 完成");
+    } catch {
+      setStatus("😞 生成失败，稍后再试。");
+    } finally {
+      btn.disabled = false;
+      generating = false;
+      window.clearInterval(genTimer);
+      genTimer = undefined;
+      void refreshQueue();
+    }
+  });
 </script>

@@ -30,6 +30,8 @@ export interface ImageProviderEnv {
 
 export interface ImageGenerationRequest {
   feature: string;
+  /** 用户自选的模型（provider id）；指定时路由只调用该模型 */
+  providerId?: string;
   prompt: string;
   englishPrompt?: string;
   /** SDXL 第二文本编码器提示词，仅 colab-sdxl 适配器使用 */
@@ -72,12 +74,19 @@ export function isProviderConfigured(
 ) {
   if (provider.adapter === "workers-ai") return Boolean(env.AI);
   if (provider.adapter === "dashscope-images") {
-    return Boolean(env.IMAGE_QWEN_API_KEY?.trim());
+    return Boolean(
+      provider.apiKey?.trim() || env.IMAGE_QWEN_API_KEY?.trim(),
+    );
   }
   if (provider.adapter === "colab-sdxl") {
     return Boolean(env.IMAGE_COLAB_URL?.trim());
   }
-  return Boolean(env.IMAGE_SILICONFLOW_API_KEY?.trim());
+  if (provider.adapter === "openai-images") {
+    return Boolean(
+      provider.apiKey?.trim() || env.IMAGE_SILICONFLOW_API_KEY?.trim(),
+    );
+  }
+  return false;
 }
 
 const arrayBufferBytes = (value: ArrayBuffer | ArrayBufferView) => {
@@ -274,7 +283,9 @@ async function generateWithDashScope(
   provider: ImageProviderConfig,
   request: ImageGenerationRequest,
 ) {
-  const apiKey = env.IMAGE_QWEN_API_KEY?.trim();
+  // 密钥与接入地址：优先用后台绑定的供应商配置，留空回退环境变量
+  const apiKey =
+    provider.apiKey?.trim() || env.IMAGE_QWEN_API_KEY?.trim();
   if (!apiKey) {
     throw new ImageProviderError(
       "千问图片 API Key 尚未配置。",
@@ -283,6 +294,7 @@ async function generateWithDashScope(
     );
   }
   const baseUrl =
+    provider.baseUrl?.trim() ||
     env.IMAGE_QWEN_BASE_URL?.trim() ||
     "https://dashscope.aliyuncs.com";
   const endpoint = baseUrl.endsWith("/multimodal-generation/generation")
@@ -397,7 +409,9 @@ async function generateWithOpenAiImages(
   provider: ImageProviderConfig,
   request: ImageGenerationRequest,
 ) {
-  const apiKey = env.IMAGE_SILICONFLOW_API_KEY?.trim();
+  // 密钥与接入地址：优先用后台绑定的供应商配置，留空回退环境变量
+  const apiKey =
+    provider.apiKey?.trim() || env.IMAGE_SILICONFLOW_API_KEY?.trim();
   if (!apiKey) {
     throw new ImageProviderError(
       "硅基流动 API Key 尚未配置。",
@@ -406,6 +420,7 @@ async function generateWithOpenAiImages(
     );
   }
   const baseUrl =
+    provider.baseUrl?.trim() ||
     env.IMAGE_SILICONFLOW_BASE_URL?.trim() ||
     "https://api.siliconflow.cn/v1";
   const endpoint = baseUrl.endsWith("/images/generations")

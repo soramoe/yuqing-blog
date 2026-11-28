@@ -90,6 +90,32 @@ import "../../styles/admin-story.css";
         </form>
       </section>
 
+      <section class="admin-story-settings admin-usage-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">USAGE ANALYTICS</p>
+            <h2>用量数据</h2>
+          </div>
+          <span>今日 / 本月累计</span>
+        </div>
+        <div class="usage-cards">
+          <div class="usage-card">
+            <strong data-usage-today-jobs>–</strong>
+            <span>今日任务</span>
+          </div>
+          <div class="usage-card">
+            <strong data-usage-today-ok>–</strong>
+            <span>今日成功</span>
+          </div>
+          <div class="usage-card">
+            <strong data-usage-today-fail>–</strong>
+            <span>今日失败</span>
+          </div>
+        </div>
+        <p class="usage-bar-title">各供应商累计（全部周期合并）</p>
+        <div class="usage-bars" data-usage-bars></div>
+      </section>
+
       <section class="admin-story-settings admin-image-test-panel">
         <div class="admin-story-section-heading">
           <div>
@@ -141,10 +167,14 @@ import "../../styles/admin-story.css";
     name: string;
     adapter: string;
     model: string;
+    features: string;
+    baseUrl: string;
     enabled: boolean;
     priority: number;
     configured: boolean;
     cooldownActive: boolean;
+    hasApiKey: boolean;
+    apiKeyMasked: string;
   }
 
   interface AdminImageConfig {
@@ -229,6 +259,27 @@ import "../../styles/admin-story.css";
   );
   let imageConfigProviders: AdminImageProvider[] = [];
 
+  interface UsageRow {
+    providerId: string;
+    period: string;
+    jobs: number;
+    successes: number;
+    failures: number;
+    spentCents: number;
+  }
+
+  interface UsageToday {
+    jobs: number;
+    succeeded: number;
+    failed: number;
+    byProvider: Array<{
+      providerId: string;
+      attempts: number;
+      succeeded: number;
+      failed: number;
+    }>;
+  }
+
   const setImageConfigMessage = (
     message = "",
     state: "idle" | "error" | "success" = "idle",
@@ -289,15 +340,107 @@ import "../../styles/admin-story.css";
       priorityInput.value = String(provider.priority);
       priorityInput.dataset.imageProviderPriority = "";
       priorityLabel.append(prioritySpan, priorityInput);
+
+      // API 绑定：仅云端适配器需要密钥；Colab 走隧道、Workers AI 走绑定
+      if (
+        provider.adapter === "dashscope-images" ||
+        provider.adapter === "openai-images"
+      ) {
+        const keyLabel = document.createElement("label");
+        const keySpan = document.createElement("span");
+        keySpan.textContent = "API 密钥绑定";
+        const keyInput = document.createElement("input");
+        keyInput.type = "password";
+        keyInput.maxLength = 300;
+        keyInput.placeholder = provider.hasApiKey
+          ? `已绑定（${provider.apiKeyMasked}），留空保持不变`
+          : "未绑定，粘贴该服务商的密钥";
+        keyInput.dataset.imageProviderKey = "";
+        keyLabel.append(keySpan, keyInput);
+
+        const urlLabel = document.createElement("label");
+        const urlSpan = document.createElement("span");
+        urlSpan.textContent = "接入地址（可选）";
+        const urlInput = document.createElement("input");
+        urlInput.type = "text";
+        urlInput.maxLength = 300;
+        urlInput.value = provider.baseUrl ?? "";
+        urlInput.placeholder = "留空使用官方默认地址";
+        urlInput.dataset.imageProviderBaseurl = "";
+        urlLabel.append(urlSpan, urlInput);
+        fields.append(keyLabel, urlLabel);
+      }
+
       fields.append(modelLabel, priorityLabel);
       card.append(heading, fields);
       imageProviderList.append(card);
     }
   };
 
+  const renderUsage = (
+    today: UsageToday | null,
+    usage: UsageRow[],
+    providers: AdminImageProvider[],
+  ) => {
+    const set = (selector: string, value: number) => {
+      const el = document.querySelector<HTMLElement>(selector);
+      if (el) el.textContent = String(value);
+    };
+    set("[data-usage-today-jobs]", today?.jobs ?? 0);
+    set("[data-usage-today-ok]", today?.succeeded ?? 0);
+    set("[data-usage-today-fail]", today?.failed ?? 0);
+
+    const bars = document.querySelector("[data-usage-bars]");
+    if (!bars) return;
+    bars.replaceChildren();
+    const nameOf = (id: string) =>
+      providers.find((p) => p.id === id)?.name ?? id;
+    const byProvider = new Map<
+      string,
+      { jobs: number; ok: number; fail: number; spent: number }
+    >();
+    for (const row of usage) {
+      const cur = byProvider.get(row.providerId) ?? {
+        jobs: 0,
+        ok: 0,
+        fail: 0,
+        spent: 0,
+      };
+      cur.jobs += row.jobs;
+      cur.ok += row.successes;
+      cur.fail += row.failures;
+      cur.spent += row.spentCents;
+      byProvider.set(row.providerId, cur);
+    }
+    const entries = Array.from(byProvider.entries()).sort(
+      (a, b) => b[1].jobs - a[1].jobs,
+    );
+    const maxJobs = Math.max(1, ...entries.map(([, v]) => v.jobs));
+    for (const [id, v] of entries) {
+      const row = document.createElement("div");
+      row.className = "usage-bar-row";
+      const label = document.createElement("span");
+      label.className = "usage-bar-label";
+      label.textContent = nameOf(id);
+      const track = document.createElement("div");
+      track.className = "usage-bar-track";
+      const fill = document.createElement("div");
+      fill.className = "usage-bar-fill";
+      fill.style.width = `${Math.round((v.jobs / maxJobs) * 100)}%`;
+      track.appendChild(fill);
+      const num = document.createElement("span");
+      num.className = "usage-bar-num";
+      num.textContent = `${v.jobs} 次 · 成功 ${v.ok} · 失败 ${v.fail}`;
+      row.append(label, track, num);
+      bars.appendChild(row);
+    }
+  };
+
   const fillImageConfig = (
     settings: AdminImageConfig,
     providers: AdminImageProvider[],
+    today?: UsageToday | null,
+    usage?: UsageRow[],
   ) => {
     imageConfigProviders = providers;
     if (imageEnabledInput) imageEnabledInput.checked = settings.enabled;
@@ -358,12 +501,19 @@ import "../../styles/admin-story.css";
     const payload = (await response.json()) as {
       settings?: AdminImageConfig;
       providers?: AdminImageProvider[];
+      usage?: UsageRow[];
+      today?: UsageToday;
       error?: string;
     };
     if (!response.ok || !payload.settings) {
       throw new Error(payload.error || "生图设置读取失败。");
     }
-    fillImageConfig(payload.settings, payload.providers ?? []);
+    fillImageConfig(
+      payload.settings,
+      payload.providers ?? [],
+      payload.today ?? null,
+      payload.usage ?? [],
+    );
   };
 
   imageTestForm?.addEventListener("submit", async (event) => {
@@ -441,6 +591,12 @@ import "../../styles/admin-story.css";
           "[data-image-provider-priority]",
         )?.value ?? 100,
       ),
+      apiKey:
+        card.querySelector<HTMLInputElement>("[data-image-provider-key]")
+          ?.value.trim() ?? "",
+      baseUrl:
+        card.querySelector<HTMLInputElement>("[data-image-provider-baseurl]")
+          ?.value.trim() ?? "",
     }));
     try {
       const response = await fetch("/api/admin/image", {
@@ -468,12 +624,19 @@ import "../../styles/admin-story.css";
       const payload = (await response.json()) as {
         settings?: AdminImageConfig;
         providers?: AdminImageProvider[];
+        usage?: UsageRow[];
+        today?: UsageToday;
         error?: string;
       };
       if (!response.ok || !payload.settings) {
         throw new Error(payload.error || "生图控制保存失败。");
       }
-      fillImageConfig(payload.settings, payload.providers ?? []);
+      fillImageConfig(
+        payload.settings,
+        payload.providers ?? [],
+        payload.today ?? null,
+        payload.usage ?? [],
+      );
       setImageConfigMessage("生图控制已保存。", "success");
     } catch (error) {
       setImageConfigMessage(
@@ -524,3 +687,66 @@ import "../../styles/admin-story.css";
       gate?.removeAttribute("hidden");
     });
 </script>
+
+<style>
+  .usage-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+  }
+  .usage-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 0.9rem 1rem;
+    display: grid;
+    gap: 0.2rem;
+  }
+  .usage-card strong {
+    font-size: 1.5rem;
+    color: var(--text);
+  }
+  .usage-card span {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .usage-bar-title {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 0.9rem 0 0.5rem;
+  }
+</style>
+
+<style is:global>
+  /* 用量条由 JS 动态创建，样式需全局生效 */
+  .usage-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.4rem 0;
+  }
+  .usage-bar-label {
+    min-width: 120px;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+  .usage-bar-track {
+    flex: 1;
+    height: 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--border) 55%, transparent);
+    overflow: hidden;
+  }
+  .usage-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+  .usage-bar-num {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    white-space: nowrap;
+  }
+</style>

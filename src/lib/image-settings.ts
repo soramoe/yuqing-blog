@@ -33,6 +33,10 @@ export interface ImageProviderConfig {
   model: string;
   /** 逗号分隔的功能白名单；为空表示对所有生图功能可用 */
   features: string;
+  /** 供应商绑定的 API 密钥（后台可改；留空回退环境变量） */
+  apiKey: string;
+  /** 供应商自定义接入地址（留空回退默认值） */
+  baseUrl: string;
   enabled: boolean;
   priority: number;
   dailyJobLimit: number;
@@ -174,6 +178,8 @@ export async function listImageProviders(db: D1Database) {
         adapter,
         model,
         features,
+        api_key AS apiKey,
+        base_url AS baseUrl,
         enabled,
         priority,
         daily_job_limit AS dailyJobLimit,
@@ -195,6 +201,8 @@ export async function listImageProviders(db: D1Database) {
       adapter: string;
       model: string;
       features: string;
+      apiKey: string;
+      baseUrl: string;
       enabled: number;
       priority: number;
       dailyJobLimit: number;
@@ -222,6 +230,8 @@ export async function listImageProviders(db: D1Database) {
               : "dashscope-images",
       model: row.model,
       features: row.features ?? "",
+      apiKey: row.apiKey ?? "",
+      baseUrl: row.baseUrl ?? "",
       enabled: Boolean(row.enabled),
       priority: Number(row.priority),
       dailyJobLimit: Number(row.dailyJobLimit),

@@ -4,7 +4,8 @@ import {
   createAndRunImageJob,
   ImageServiceError,
 } from "../../../src/lib/image-service";
-import { getImageSettings } from "../../../src/lib/image-settings";
+import { getImageSettings, listImageProviders } from "../../../src/lib/image-settings";
+import { isProviderConfigured } from "../../../src/lib/image-providers";
 import { notifyColabDown } from "../../../src/lib/system-notify";
 import { gtxTranslate, translateImagePrompt } from "../../../src/lib/translate";
 
@@ -119,9 +120,10 @@ async function refundQueueJump(
   return Number(updated.balance);
 }
 
-// 探活 + 配置：页面据此显示「服务在线/冷却中/正忙」和本次生图的积分价格
+// 探活 + 配置：返回可用模型列表（含各自状态），供页面渲染模型选择卡片
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   const settings = await getImageSettings(env.DB);
+  const providers = await listImageProviders(env.DB);
   const base = colabBase(env);
   let ok = false;
   if (base) {
@@ -139,12 +141,38 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       clearTimeout(timeout);
     }
   }
-  // 顺带返回 provider 冷却状态：隧道活着但冷却没过时，页面能如实显示
+  const now = Date.now();
+  const models = providers
+    .filter((p) => {
+      if (!p.enabled) return false;
+      const list = p.features.split(",").map((s) => s.trim());
+      return list.includes("image_studio");
+    })
+    .map((p) => {
+      let status = "ready";
+      if (p.adapter === "colab-sdxl") {
+        status = ok
+          ? p.cooldownUntil && p.cooldownUntil > now
+            ? "cooldown"
+            : "ready"
+          : "offline";
+      } else if (!isProviderConfigured(env, p)) {
+        status = "unconfigured";
+      } else if (p.cooldownUntil && p.cooldownUntil > now) {
+        status = "cooldown";
+      }
+      return {
+        id: p.id,
+        name: p.name,
+        model: p.model,
+        adapter: p.adapter,
+        status,
+      };
+    });
   const provider = await env.DB.prepare(
     `SELECT consecutive_failures AS failures, cooldown_until AS cooldownUntil
      FROM image_provider WHERE id = 'colab-sdxl'`,
   ).first<{ failures: number; cooldownUntil: number | null }>();
-  const now = Date.now();
   const cooldownUntil = provider?.cooldownUntil
     ? Number(provider.cooldownUntil)
     : 0;
@@ -158,6 +186,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     queueJumpPoints: settings.queueJumpPoints,
     failures: Number(provider?.failures ?? 0),
     cooldownSeconds,
+    models,
   });
 };
 
@@ -203,6 +232,24 @@ export const onRequestPost: PagesFunction<Env> = async ({
     return json({ error: "主体描述至少 6 个字。" }, 400);
   }
 
+  // 用户自选模型：校验其存在且对生图开放
+  const model = safeText(input.model, 80);
+  if (model) {
+    const providers = await listImageProviders(env.DB);
+    const chosen = providers.find(
+      (p) =>
+        p.id === model &&
+        p.enabled &&
+        p.features.split(",").map((s) => s.trim()).includes("image_studio"),
+    );
+    if (!chosen) {
+      return json(
+        { error: "所选模型不存在或未开放。", code: "bad_model" },
+        400,
+      );
+    }
+  }
+
   // 插队：预扣插队积分（生成失败自动退回），并在请求头标记 VIP 通道
   const jump = input.jump === true;
   const settings = await getImageSettings(env.DB);
@@ -233,6 +280,7 @@ export const onRequestPost: PagesFunction<Env> = async ({
       userId: session.user.id,
       requestId,
       feature: "image_studio",
+      providerId: model || undefined,
       prompt,
       englishPrompt: enPrompt,
       prompt2: enPrompt2,
@@ -250,6 +298,8 @@ export const onRequestPost: PagesFunction<Env> = async ({
         balance: result.balance,
         width: result.width,
         height: result.height,
+        providerId: result.providerId,
+        providerName: result.providerName,
         translated: enPrompt,
         jumpFee: jumpFee || undefined,
       },
