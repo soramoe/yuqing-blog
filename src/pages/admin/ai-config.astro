@@ -676,7 +676,7 @@ import "../../styles/admin-story.css";
           ?.value.trim() ?? "";
       if (baseUrlVal) payload.baseUrl = baseUrlVal;
       return payload;
-    }));
+    });
     try {
       const response = await fetch("/api/admin/image", {
         method: "PATCH",

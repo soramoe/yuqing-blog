@@ -183,9 +183,6 @@ export const onRequestPatch: PagesFunction<Env> = async ({
   // 拆分更新：settings（生图运营参数）与 providers（模型绑定）可分别提交
   const statements: D1PreparedStatement[] = [];
   const hasSettings = input.settings !== undefined;
-  const providerInputs = Array.isArray(input.providers)
-    ? input.providers
-    : [];
   const beforeSettings = await getImageSettings(env.DB);
   const beforeProviders = await listImageProviders(env.DB);
   const now = Date.now();
