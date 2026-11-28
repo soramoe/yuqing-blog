@@ -6,16 +6,16 @@ import "../../styles/admin-story.css";
 
 <BaseLayout
   title="生图管理"
-  description="管理全站生图开关、积分定价、供应商优先级与冷却重置。"
+  description="生图总开关、积分定价与配额管理。"
   bodyClass="page-admin-image"
   noindex
 >
   <div class="container admin-story-shell">
     <header class="admin-story-header">
       <div>
-        <p class="eyebrow">AI IMAGE OPERATIONS</p>
+        <p class="eyebrow">IMAGE OPERATIONS</p>
         <h1>生图管理</h1>
-        <p>生图总开关、各类积分定价、供应商优先级与冷却重置。保存后立即生效。</p>
+        <p>生图总开关、积分定价与配额。模型与 API 绑定在「AI 配置」页。</p>
       </div>
     </header>
 
@@ -35,7 +35,7 @@ import "../../styles/admin-story.css";
     </div>
 
     <div class="admin-story-content" data-image-admin-content hidden>
-      <section class="admin-story-settings admin-image-control-panel">
+      <section class="admin-story-settings">
         <div class="admin-story-section-heading">
           <div>
             <p class="eyebrow">IMAGE CONTROL</p>
@@ -48,16 +48,16 @@ import "../../styles/admin-story.css";
             <input type="checkbox" data-image-enabled />
             <span>
               <strong>开放生图能力</strong>
-              <small>总开关关闭时，管理员测试也不会调用图片模型。</small>
+              <small>总开关关闭时，所有生图功能（含互动小说插画）都不会调用图片模型。</small>
             </span>
           </label>
           <label>
-            <span>标准图积分</span>
+            <span>标准图积分（章节插画）</span>
             <input type="number" min="1" max="1000" data-image-standard-points required />
             <small>互动小说章节插画的标准图价格，推荐 20 积分。</small>
           </label>
           <label>
-            <span>高清图积分</span>
+            <span>高清图积分（章节插画）</span>
             <input type="number" min="1" max="1000" data-image-hd-points required />
             <small>互动小说章节插画的高清图价格，推荐 32 积分。</small>
           </label>
@@ -81,117 +81,24 @@ import "../../styles/admin-story.css";
             <input type="number" min="0" max="10000" data-image-monthly-budget required />
             <small>只统计付费供应商的保守成本。</small>
           </label>
-          <div class="admin-image-provider-list" data-image-provider-list></div>
           <div class="admin-story-form-actions">
             <button type="submit" data-image-config-submit>保存生图控制</button>
             <button type="button" data-image-cooldown-reset>重置生图冷却</button>
           </div>
           <p data-image-config-message aria-live="polite"></p>
         </form>
-      </section>
-
-      <section class="admin-story-settings admin-usage-panel">
-        <div class="admin-story-section-heading">
-          <div>
-            <p class="eyebrow">USAGE ANALYTICS</p>
-            <h2>用量数据</h2>
-          </div>
-          <span>今日 / 本月累计</span>
-        </div>
-        <div class="usage-cards">
-          <div class="usage-card">
-            <strong data-usage-today-jobs>–</strong>
-            <span>今日任务</span>
-          </div>
-          <div class="usage-card">
-            <strong data-usage-today-ok>–</strong>
-            <span>今日成功</span>
-          </div>
-          <div class="usage-card">
-            <strong data-usage-today-fail>–</strong>
-            <span>今日失败</span>
-          </div>
-        </div>
-        <p class="usage-bar-title">各供应商累计（全部周期合并）</p>
-        <div class="usage-bars" data-usage-bars></div>
-      </section>
-
-      <section class="admin-story-settings admin-recent-panel">
-        <div class="admin-story-section-heading">
-          <div>
-            <p class="eyebrow">LIVE CALLS</p>
-            <h2>最近调用（实时）</h2>
-          </div>
-          <span data-usage-updated>–</span>
-        </div>
-        <table class="recent-attempts-table">
-          <thead>
-            <tr><th>时间</th><th>供应商</th><th>模型</th><th>结果</th><th>耗时</th></tr>
-          </thead>
-          <tbody data-recent-attempts></tbody>
-        </table>
-      </section>
-
-      <section class="admin-story-settings admin-image-test-panel">
-        <div class="admin-story-section-heading">
-          <div>
-            <p class="eyebrow">IMAGE PROVIDER TEST</p>
-            <h2>生图模型测试</h2>
-          </div>
-          <span>仅管理员可见</span>
-        </div>
-        <form data-image-test-form>
-          <label>
-            <span>测试提示词</span>
-            <textarea
-              rows="3"
-              maxlength="1000"
-              data-image-test-prompt
-              required
-            >雨夜中的中式旧城，一名撑伞的旅人站在河桥边，电影感，水墨与霓虹交织，无文字</textarea>
-            <small>会按后台供应商顺序调用，并产生一次测试任务。</small>
-          </label>
-          <label>
-            <span>图片质量</span>
-            <select data-image-test-quality>
-              <option value="standard">标准图</option>
-              <option value="hd">高清图</option>
-            </select>
-            <small>测试任务按对应档位计价，从站长余额扣除。</small>
-          </label>
-          <div class="admin-story-form-actions">
-            <button type="submit" data-image-test-submit>开始测试</button>
-          </div>
-          <p data-image-test-status aria-live="polite"></p>
-        </form>
+        <p class="admin-story-empty">
+          模型与 API 绑定、实时消耗监控在
+          <a href="/admin/ai-config/">AI 配置</a>
+          页面管理。
+        </p>
       </section>
     </div>
   </div>
 </BaseLayout>
 
-<style>
-  .admin-story-header {
-    margin-bottom: 0.6rem;
-  }
-</style>
-
 <script>
   import { authClient } from "../../lib/auth-client";
-
-  interface AdminImageProvider {
-    id: string;
-    name: string;
-    adapter: string;
-    model: string;
-    features: string;
-    baseUrl: string;
-    enabled: boolean;
-    priority: number;
-    configured: boolean;
-    cooldownActive: boolean;
-    hasApiKey: boolean;
-    apiKeyMasked: string;
-  }
 
   interface AdminImageConfig {
     enabled: boolean;
@@ -243,9 +150,6 @@ import "../../styles/admin-story.css";
   const imageBudgetInput = document.querySelector<HTMLInputElement>(
     "[data-image-monthly-budget]",
   );
-  const imageProviderList = document.querySelector<HTMLElement>(
-    "[data-image-provider-list]",
-  );
   const imageConfigSubmit = document.querySelector<HTMLButtonElement>(
     "[data-image-config-submit]",
   );
@@ -258,54 +162,6 @@ import "../../styles/admin-story.css";
   const imageCooldownReset = document.querySelector<HTMLButtonElement>(
     "[data-image-cooldown-reset]",
   );
-  const imageTestForm = document.querySelector<HTMLFormElement>(
-    "[data-image-test-form]",
-  );
-  const imageTestPrompt = document.querySelector<HTMLTextAreaElement>(
-    "[data-image-test-prompt]",
-  );
-  const imageTestQuality = document.querySelector<HTMLSelectElement>(
-    "[data-image-test-quality]",
-  );
-  const imageTestSubmit = document.querySelector<HTMLButtonElement>(
-    "[data-image-test-submit]",
-  );
-  const imageTestStatus = document.querySelector<HTMLElement>(
-    "[data-image-test-status]",
-  );
-  let imageConfigProviders: AdminImageProvider[] = [];
-
-  interface UsageRow {
-    providerId: string;
-    period: string;
-    jobs: number;
-    successes: number;
-    failures: number;
-    spentCents: number;
-  }
-
-  interface UsageToday {
-    jobs: number;
-    succeeded: number;
-    failed: number;
-    byProvider: Array<{
-      providerId: string;
-      attempts: number;
-      succeeded: number;
-      failed: number;
-    }>;
-  }
-
-  interface RecentAttempt {
-    providerId: string;
-    providerName: string | null;
-    model: string | null;
-    status: string;
-    errorCode: string | null;
-    errorMessage: string | null;
-    durationMs: number;
-    createdAt: number;
-  }
 
   const setImageConfigMessage = (
     message = "",
@@ -316,195 +172,7 @@ import "../../styles/admin-story.css";
     imageConfigMessage.dataset.state = state;
   };
 
-  const renderImageProviders = () => {
-    if (!imageProviderList) return;
-    imageProviderList.replaceChildren();
-    for (const provider of imageConfigProviders) {
-      const card = document.createElement("article");
-      card.className = "admin-image-provider";
-      card.dataset.imageProviderId = provider.id;
-
-      const heading = document.createElement("header");
-      const active = document.createElement("label");
-      active.className = "admin-image-provider-toggle";
-      const enabled = document.createElement("input");
-      enabled.type = "checkbox";
-      enabled.checked = provider.enabled;
-      enabled.dataset.imageProviderEnabled = "";
-      const name = document.createElement("span");
-      const strong = document.createElement("strong");
-      strong.textContent = provider.name;
-      const state = document.createElement("small");
-      state.textContent = provider.configured
-        ? provider.cooldownActive
-          ? "冷却中"
-          : "已配置"
-        : "缺少密钥";
-      state.dataset.configured = String(provider.configured);
-      name.append(strong, state);
-      active.append(enabled, name);
-      heading.append(active);
-
-      const fields = document.createElement("div");
-      fields.className = "admin-image-provider-fields";
-      const modelLabel = document.createElement("label");
-      const modelSpan = document.createElement("span");
-      modelSpan.textContent = "模型";
-      const modelInput = document.createElement("input");
-      modelInput.type = "text";
-      modelInput.maxLength = 160;
-      modelInput.value = provider.model;
-      modelInput.dataset.imageProviderModel = "";
-      modelLabel.append(modelSpan, modelInput);
-
-      const priorityLabel = document.createElement("label");
-      const prioritySpan = document.createElement("span");
-      prioritySpan.textContent = "优先级";
-      const priorityInput = document.createElement("input");
-      priorityInput.type = "number";
-      priorityInput.min = "0";
-      priorityInput.max = "10000";
-      priorityInput.value = String(provider.priority);
-      priorityInput.dataset.imageProviderPriority = "";
-      priorityLabel.append(prioritySpan, priorityInput);
-
-      // API 绑定：仅云端适配器需要密钥；Colab 走隧道、Workers AI 走绑定
-      if (
-        provider.adapter === "dashscope-images" ||
-        provider.adapter === "openai-images"
-      ) {
-        const keyLabel = document.createElement("label");
-        const keySpan = document.createElement("span");
-        keySpan.textContent = "API 密钥绑定";
-        const keyInput = document.createElement("input");
-        keyInput.type = "password";
-        keyInput.maxLength = 300;
-        keyInput.placeholder = provider.hasApiKey
-          ? `已绑定（${provider.apiKeyMasked}），留空保持不变`
-          : "未绑定，粘贴该服务商的密钥";
-        keyInput.dataset.imageProviderKey = "";
-        keyLabel.append(keySpan, keyInput);
-
-        const urlLabel = document.createElement("label");
-        const urlSpan = document.createElement("span");
-        urlSpan.textContent = "接入地址（可选）";
-        const urlInput = document.createElement("input");
-        urlInput.type = "text";
-        urlInput.maxLength = 300;
-        urlInput.value = provider.baseUrl ?? "";
-        urlInput.placeholder = "留空使用官方默认地址";
-        urlInput.dataset.imageProviderBaseurl = "";
-        urlLabel.append(urlSpan, urlInput);
-        fields.append(keyLabel, urlLabel);
-      }
-
-      fields.append(modelLabel, priorityLabel);
-      card.append(heading, fields);
-      imageProviderList.append(card);
-    }
-  };
-
-  const renderUsage = (
-    today: UsageToday | null,
-    usage: UsageRow[],
-    providers: AdminImageProvider[],
-  ) => {
-    const set = (selector: string, value: number) => {
-      const el = document.querySelector<HTMLElement>(selector);
-      if (el) el.textContent = String(value);
-    };
-    set("[data-usage-today-jobs]", today?.jobs ?? 0);
-    set("[data-usage-today-ok]", today?.succeeded ?? 0);
-    set("[data-usage-today-fail]", today?.failed ?? 0);
-
-    const bars = document.querySelector("[data-usage-bars]");
-    if (!bars) return;
-    bars.replaceChildren();
-    const nameOf = (id: string) =>
-      providers.find((p) => p.id === id)?.name ?? id;
-    const byProvider = new Map<
-      string,
-      { jobs: number; ok: number; fail: number; spent: number }
-    >();
-    for (const row of usage) {
-      const cur = byProvider.get(row.providerId) ?? {
-        jobs: 0,
-        ok: 0,
-        fail: 0,
-        spent: 0,
-      };
-      cur.jobs += row.jobs;
-      cur.ok += row.successes;
-      cur.fail += row.failures;
-      cur.spent += row.spentCents;
-      byProvider.set(row.providerId, cur);
-    }
-    const entries = Array.from(byProvider.entries()).sort(
-      (a, b) => b[1].jobs - a[1].jobs,
-    );
-    const maxJobs = Math.max(1, ...entries.map(([, v]) => v.jobs));
-    for (const [id, v] of entries) {
-      const row = document.createElement("div");
-      row.className = "usage-bar-row";
-      const label = document.createElement("span");
-      label.className = "usage-bar-label";
-      label.textContent = nameOf(id);
-      const track = document.createElement("div");
-      track.className = "usage-bar-track";
-      const fill = document.createElement("div");
-      fill.className = "usage-bar-fill";
-      fill.style.width = `${Math.round((v.jobs / maxJobs) * 100)}%`;
-      track.appendChild(fill);
-      const num = document.createElement("span");
-      num.className = "usage-bar-num";
-      num.textContent = `${v.jobs} 次 · 成功 ${v.ok} · 失败 ${v.fail}`;
-      row.append(label, track, num);
-      bars.appendChild(row);
-    }
-  };
-
-  const renderRecentAttempts = (rows: RecentAttempt[]) => {
-    const table = document.querySelector("[data-recent-attempts]");
-    if (!table) return;
-    table.replaceChildren();
-    if (!rows.length) {
-      const empty = document.createElement("tr");
-      const cell = document.createElement("td");
-      cell.colSpan = 5;
-      cell.textContent = "还没有调用记录。";
-      empty.appendChild(cell);
-      table.appendChild(empty);
-      return;
-    }
-    for (const row of rows) {
-      const tr = document.createElement("tr");
-      tr.className = "recent-row " + (row.status === "succeeded" ? "ok" : "bad");
-      const time = document.createElement("td");
-      time.textContent = new Date(row.createdAt).toLocaleString("zh-CN");
-      const provider = document.createElement("td");
-      provider.textContent = row.providerName ?? row.providerId;
-      const model = document.createElement("td");
-      model.textContent = row.model ?? "–";
-      const state = document.createElement("td");
-      state.textContent =
-        row.status === "succeeded"
-          ? "✅ 成功"
-          : `❌ ${(row.errorMessage ?? "失败").slice(0, 50)}`;
-      const duration = document.createElement("td");
-      duration.textContent = `${(row.durationMs / 1000).toFixed(1)}s`;
-      tr.append(time, provider, model, state, duration);
-      table.appendChild(tr);
-    }
-  };
-
-  const fillImageConfig = (
-    settings: AdminImageConfig,
-    providers: AdminImageProvider[],
-    today?: UsageToday | null,
-    usage?: UsageRow[],
-    recentAttempts?: RecentAttempt[],
-  ) => {
-    imageConfigProviders = providers;
+  const fillImageConfig = (settings: AdminImageConfig) => {
     if (imageEnabledInput) imageEnabledInput.checked = settings.enabled;
     if (imageStandardInput) {
       imageStandardInput.value = String(settings.standardPoints);
@@ -525,9 +193,28 @@ import "../../styles/admin-story.css";
     if (imageConfigStatus) {
       imageConfigStatus.textContent = settings.enabled ? "生图已开启" : "生图已关闭";
     }
-    renderImageProviders();
-    renderUsage(today ?? null, usage ?? [], providers);
-    renderRecentAttempts(recentAttempts ?? []);
+  };
+
+  const loadImageConfig = async () => {
+    const response = await fetch("/api/admin/image", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (response.status === 401 || response.status === 403) {
+      const requestError = new Error("权限校验失败。") as Error & {
+        status?: number;
+      };
+      requestError.status = response.status;
+      throw requestError;
+    }
+    const payload = (await response.json()) as {
+      settings?: AdminImageConfig;
+      error?: string;
+    };
+    if (!payload.settings) {
+      throw new Error(payload.error || "生图设置读取失败。");
+    }
+    fillImageConfig(payload.settings);
   };
 
   // Colab 重启恢复后，清零所有图片供应商的失败计数与冷却锁，立刻恢复可用
@@ -546,7 +233,6 @@ import "../../styles/admin-story.css";
         throw new Error(payload.error || "重置失败。");
       }
       setImageConfigMessage("生图服务冷却已重置，可以立即重新生图。", "success");
-      void loadImageConfig();
     } catch (error) {
       setImageConfigMessage(
         error instanceof Error ? error.message : "重置失败，请稍后重试。",
@@ -557,112 +243,11 @@ import "../../styles/admin-story.css";
     }
   });
 
-  const loadImageConfig = async () => {
-    const response = await fetch("/api/admin/image", {
-      credentials: "same-origin",
-      headers: { Accept: "application/json" },
-    });
-    const payload = (await response.json()) as {
-      settings?: AdminImageConfig;
-      providers?: AdminImageProvider[];
-      usage?: UsageRow[];
-      today?: UsageToday;
-      error?: string;
-    };
-    if (!response.ok || !payload.settings) {
-      throw new Error(payload.error || "生图设置读取失败。");
-    }
-    fillImageConfig(
-      payload.settings,
-      payload.providers ?? [],
-      payload.today ?? null,
-      payload.usage ?? [],
-      payload.recentAttempts ?? [],
-    );
-  };
-
-  imageTestForm?.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const prompt = imageTestPrompt?.value.trim() ?? "";
-    if (prompt.length < 6 || !imageTestSubmit) {
-      if (imageTestStatus) imageTestStatus.textContent = "测试提示词过短。";
-      return;
-    }
-    imageTestSubmit.disabled = true;
-    if (imageTestStatus) imageTestStatus.textContent = "正在生成测试图片…";
-    try {
-      const response = await fetch("/api/admin/image/test", {
-        method: "POST",
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          quality: imageTestQuality?.value === "hd" ? "hd" : "standard",
-          aspectRatio: "1:1",
-          requestId: crypto.randomUUID(),
-        }),
-      });
-      const payload = (await response.json()) as {
-        job?: {
-          providerName?: string;
-          model?: string;
-          r2Key?: string;
-          width?: number;
-          height?: number;
-          pointsCost?: number;
-          balance?: number;
-        };
-        error?: string;
-      };
-      if (!response.ok || !payload.job) {
-        throw new Error(payload.error || "生图测试失败。");
-      }
-      if (imageTestStatus) {
-        imageTestStatus.textContent = `成功：${payload.job.providerName} / ${payload.job.model} / ${payload.job.width}×${payload.job.height} / 扣 ${payload.job.pointsCost} 积分 / 余额 ${payload.job.balance} / ${payload.job.r2Key}`;
-      }
-    } catch (error) {
-      if (imageTestStatus) {
-        imageTestStatus.textContent =
-          error instanceof Error ? error.message : "生图测试失败。";
-      }
-    } finally {
-      imageTestSubmit.disabled = false;
-    }
-  });
-
   imageConfigForm?.addEventListener("submit", async (event) => {
     event.preventDefault();
     if (!imageConfigSubmit) return;
     imageConfigSubmit.disabled = true;
     setImageConfigMessage("正在保存生图控制…");
-    const providers = Array.from(
-      imageProviderList?.querySelectorAll<HTMLElement>(
-        "[data-image-provider-id]",
-      ) ?? [],
-    ).map((card) => ({
-      id: card.dataset.imageProviderId,
-      enabled:
-        card.querySelector<HTMLInputElement>(
-          "[data-image-provider-enabled]",
-        )?.checked ?? false,
-      model:
-        card.querySelector<HTMLInputElement>("[data-image-provider-model]")
-          ?.value.trim() ?? "",
-      priority: Number(
-        card.querySelector<HTMLInputElement>(
-          "[data-image-provider-priority]",
-        )?.value ?? 100,
-      ),
-      apiKey:
-        card.querySelector<HTMLInputElement>("[data-image-provider-key]")
-          ?.value.trim() ?? "",
-      baseUrl:
-        card.querySelector<HTMLInputElement>("[data-image-provider-baseurl]")
-          ?.value.trim() ?? "",
-    }));
     try {
       const response = await fetch("/api/admin/image", {
         method: "PATCH",
@@ -683,26 +268,16 @@ import "../../styles/admin-story.css";
               Number(imageBudgetInput?.value ?? 0) * 100,
             ),
           },
-          providers,
         }),
       });
       const payload = (await response.json()) as {
         settings?: AdminImageConfig;
-        providers?: AdminImageProvider[];
-        usage?: UsageRow[];
-        today?: UsageToday;
         error?: string;
       };
       if (!response.ok || !payload.settings) {
         throw new Error(payload.error || "生图控制保存失败。");
       }
-      fillImageConfig(
-        payload.settings,
-        payload.providers ?? [],
-        payload.today ?? null,
-        payload.usage ?? [],
-        payload.recentAttempts ?? [],
-      );
+      fillImageConfig(payload.settings);
       setImageConfigMessage("生图控制已保存。", "success");
     } catch (error) {
       setImageConfigMessage(
@@ -727,20 +302,6 @@ import "../../styles/admin-story.css";
         await loadImageConfig();
         gate?.setAttribute("hidden", "");
         content?.removeAttribute("hidden");
-        // 实时监控：每 15 秒自动刷新用量与最近调用；正在编辑输入框时跳过
-        window.setInterval(() => {
-          const active = document.activeElement;
-          const editing =
-            active instanceof HTMLInputElement ||
-            active instanceof HTMLTextAreaElement ||
-            active instanceof HTMLSelectElement;
-          if (editing) return;
-          void loadImageConfig().catch(() => undefined);
-          const updated = document.querySelector("[data-usage-updated]");
-          if (updated) {
-            updated.textContent = `数据更新于 ${new Date().toLocaleTimeString("zh-CN")}`;
-          }
-        }, 15_000);
       } catch (error) {
         const requestError = error as Error & { status?: number };
         if (requestError.status === 403) {
@@ -750,7 +311,7 @@ import "../../styles/admin-story.css";
           if (gateTitle) gateTitle.textContent = "登录已过期";
           if (gateCopy) gateCopy.textContent = "请重新登录后再试。";
         } else {
-          if (gateTitle) gateTitle.textContent = "暂时无法读取生图设置";
+          if (gateTitle) gateTitle.textContent = "暂时无法读取设置";
           if (gateCopy) {
             gateCopy.textContent =
               error instanceof Error ? error.message : "请稍后重试。";
@@ -767,100 +328,3 @@ import "../../styles/admin-story.css";
       gate?.removeAttribute("hidden");
     });
 </script>
-
-<style>
-  .usage-cards {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0.8rem;
-    margin-bottom: 1.2rem;
-  }
-  .usage-card {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--surface);
-    padding: 0.9rem 1rem;
-    display: grid;
-    gap: 0.2rem;
-  }
-  .usage-card strong {
-    font-size: 1.5rem;
-    color: var(--text);
-  }
-  .usage-card span {
-    font-size: 0.75rem;
-    color: var(--muted);
-  }
-  .usage-bar-title {
-    font-size: 0.78rem;
-    color: var(--muted);
-    margin: 0.9rem 0 0.5rem;
-  }
-</style>
-
-<style is:global>
-  /* 用量条由 JS 动态创建，样式需全局生效 */
-  .usage-bar-row {
-    display: flex;
-    align-items: center;
-    gap: 0.7rem;
-    padding: 0.4rem 0;
-  }
-  .usage-bar-label {
-    min-width: 120px;
-    font-size: 0.8rem;
-    color: var(--text);
-  }
-  .usage-bar-track {
-    flex: 1;
-    height: 10px;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--border) 55%, transparent);
-    overflow: hidden;
-  }
-  .usage-bar-fill {
-    height: 100%;
-    border-radius: 999px;
-    background: var(--accent);
-  }
-  .usage-bar-num {
-    font-size: 0.72rem;
-    color: var(--muted);
-    font-family: Consolas, monospace;
-    white-space: nowrap;
-  }
-</style>
-
-<style is:global>
-  /* 最近调用表由 JS 动态创建，样式需全局生效 */
-  .recent-attempts-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.78rem;
-  }
-  .recent-attempts-table th {
-    text-align: left;
-    padding: 0.4rem 0.5rem;
-    color: var(--muted);
-    border-bottom: 1px solid var(--border);
-    font-weight: 600;
-  }
-  .recent-attempts-table td {
-    padding: 0.4rem 0.5rem;
-    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
-    color: var(--muted);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 220px;
-  }
-  .recent-row.bad td {
-    color: #e2a355;
-  }
-  .recent-row.bad td:nth-child(4) {
-    color: var(--bad, #e07a5f);
-  }
-  .recent-row.ok td:nth-child(4) {
-    color: #7ec699;
-  }
-</style>

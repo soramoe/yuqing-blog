@@ -180,53 +180,62 @@ export const onRequestPatch: PagesFunction<Env> = async ({
     payload && typeof payload === "object" && !Array.isArray(payload)
       ? (payload as Record<string, unknown>)
       : {};
+  // 拆分更新：settings（生图运营参数）与 providers（模型绑定）可分别提交
+  const statements: D1PreparedStatement[] = [];
+  const hasSettings = input.settings !== undefined;
+  const providerInputs = Array.isArray(input.providers)
+    ? input.providers
+    : [];
   const beforeSettings = await getImageSettings(env.DB);
   const beforeProviders = await listImageProviders(env.DB);
-  const nextSettings = sanitizeImageSettings(input.settings);
   const now = Date.now();
-  const statements: D1PreparedStatement[] = [
-    env.DB.prepare(
-      `INSERT INTO image_setting
-        (id, enabled, point_value_cents, standard_points, hd_points,
-         studio_points, queue_jump_points, daily_job_limit,
-         monthly_budget_cents, updated_by, updated_at)
-       VALUES ('global', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET
-         enabled = excluded.enabled,
-         point_value_cents = excluded.point_value_cents,
-         standard_points = excluded.standard_points,
-         hd_points = excluded.hd_points,
-         studio_points = excluded.studio_points,
-         queue_jump_points = excluded.queue_jump_points,
-         daily_job_limit = excluded.daily_job_limit,
-         monthly_budget_cents = excluded.monthly_budget_cents,
-         updated_by = excluded.updated_by,
-         updated_at = excluded.updated_at`,
-    ).bind(
-      nextSettings.enabled ? 1 : 0,
-      nextSettings.pointValueCents,
-      nextSettings.standardPoints,
-      nextSettings.hdPoints,
-      nextSettings.studioPoints,
-      nextSettings.queueJumpPoints,
-      nextSettings.dailyJobLimit,
-      nextSettings.monthlyBudgetCents,
-      authorized.session.user.id,
-      now,
-    ),
-    env.DB.prepare(
-      `INSERT INTO image_config_audit
-        (id, user_id, config_type, config_id, before_json,
-         after_json, created_at)
-       VALUES (?, ?, 'settings', 'global', ?, ?, ?)`,
-    ).bind(
-      crypto.randomUUID(),
-      authorized.session.user.id,
-      JSON.stringify(beforeSettings),
-      JSON.stringify(nextSettings),
-      now,
-    ),
-  ];
+
+  if (hasSettings) {
+    const nextSettings = sanitizeImageSettings(input.settings);
+    statements.push(
+      env.DB.prepare(
+        `INSERT INTO image_setting
+          (id, enabled, point_value_cents, standard_points, hd_points,
+           studio_points, queue_jump_points, daily_job_limit,
+           monthly_budget_cents, updated_by, updated_at)
+         VALUES ('global', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           enabled = excluded.enabled,
+           point_value_cents = excluded.point_value_cents,
+           standard_points = excluded.standard_points,
+           hd_points = excluded.hd_points,
+           studio_points = excluded.studio_points,
+           queue_jump_points = excluded.queue_jump_points,
+           daily_job_limit = excluded.daily_job_limit,
+           monthly_budget_cents = excluded.monthly_budget_cents,
+           updated_by = excluded.updated_by,
+           updated_at = excluded.updated_at`,
+      ).bind(
+        nextSettings.enabled ? 1 : 0,
+        nextSettings.pointValueCents,
+        nextSettings.standardPoints,
+        nextSettings.hdPoints,
+        nextSettings.studioPoints,
+        nextSettings.queueJumpPoints,
+        nextSettings.dailyJobLimit,
+        nextSettings.monthlyBudgetCents,
+        authorized.session.user.id,
+        now,
+      ),
+      env.DB.prepare(
+        `INSERT INTO image_config_audit
+          (id, user_id, config_type, config_id, before_json,
+           after_json, created_at)
+         VALUES (?, ?, 'settings', 'global', ?, ?, ?)`,
+      ).bind(
+        crypto.randomUUID(),
+        authorized.session.user.id,
+        JSON.stringify(beforeSettings),
+        JSON.stringify(nextSettings),
+        now,
+      ),
+    );
+  }
 
   const providerInputs = Array.isArray(input.providers)
     ? input.providers
@@ -344,21 +353,79 @@ export const onRequestPatch: PagesFunction<Env> = async ({
     );
   }
 
+  if (statements.length === 0) {
+    return json({ error: "没有需要保存的变更。" }, 400);
+  }
+
   try {
     await env.DB.batch(statements);
   } catch {
     return json({ error: "生图设置保存失败，请稍后重试。" }, 500);
   }
-  const [settings, providers, usage] = await Promise.all([
-    getImageSettings(env.DB),
-    listImageProviders(env.DB),
-    listUsage(env.DB),
-  ]);
+  const [settings, providers, usage, todayStats, recentAttempts] =
+    await Promise.all([
+      getImageSettings(env.DB),
+      listImageProviders(env.DB),
+      listUsage(env.DB),
+      (async () => {
+        const today = chinaDateKey();
+        const jobs = await env.DB.prepare(
+          `SELECT
+             COUNT(*) AS jobs,
+             SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END) AS succeeded,
+             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+           FROM image_job
+           WHERE date(created_at / 1000, 'unixepoch', '+8 hours') = ?`,
+        )
+          .bind(today)
+          .first();
+        const attempts = await env.DB.prepare(
+          `SELECT provider_id AS providerId, COUNT(*) AS attempts,
+             SUM(CASE WHEN status = 'succeeded' THEN 1 ELSE 0 END) AS succeeded,
+             SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed
+           FROM image_attempt
+           WHERE date(created_at / 1000, 'unixepoch', '+8 hours') = ?
+           GROUP BY provider_id`,
+        )
+          .bind(today)
+          .all();
+        return {
+          jobs: Number(jobs?.jobs ?? 0),
+          succeeded: Number(jobs?.succeeded ?? 0),
+          failed: Number(jobs?.failed ?? 0),
+          byProvider: attempts.results.map((row) => ({
+            ...row,
+            attempts: Number(row.attempts),
+            succeeded: Number(row.succeeded),
+            failed: Number(row.failed),
+          })),
+        };
+      })(),
+      (async () => {
+        const rows = await env.DB.prepare(
+          `SELECT a.provider_id AS providerId, p.name AS providerName,
+             a.model, a.status, a.error_code AS errorCode,
+             substr(a.error_message, 1, 120) AS errorMessage,
+             a.duration_ms AS durationMs, a.created_at AS createdAt
+           FROM image_attempt a
+           LEFT JOIN image_provider p ON p.id = a.provider_id
+           ORDER BY a.created_at DESC
+           LIMIT 12`,
+        ).all();
+        return rows.results.map((row) => ({
+          ...row,
+          durationMs: Number(row.durationMs),
+          createdAt: Number(row.createdAt),
+        }));
+      })(),
+    ]);
   return json({
     ok: true,
     settings,
     providers: providers.map((provider) => providerStatus(env, provider)),
     usage,
+    today: todayStats,
+    recentAttempts,
   });
 };
 

@@ -1,0 +1,812 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AdminNav from "../../components/AdminNav.astro";
+import "../../styles/admin-story.css";
+---
+
+<BaseLayout
+  title="AI 配置"
+  description="模型与 API 绑定、实时消耗监控、模型测试。"
+  bodyClass="page-admin-ai-config"
+  noindex
+>
+  <div class="container admin-story-shell">
+    <header class="admin-story-header">
+      <div>
+        <p class="eyebrow">AI CONFIGURATION</p>
+        <h1>AI 配置</h1>
+        <p>各模型的 API 绑定与参数，以及实时的 API 消耗监控。保存后立即生效。</p>
+      </div>
+    </header>
+
+    <AdminNav />
+
+    <p class="admin-story-status" data-ai-status aria-live="polite">
+      正在验证权限…
+    </p>
+
+    <div class="admin-story-denied" data-ai-gate hidden>
+      <p class="eyebrow">ACCESS REQUIRED</p>
+      <strong data-ai-gate-title>请先登录</strong>
+      <p data-ai-gate-copy>登录站长账号后才能管理 AI 配置。</p>
+      <a href="/login/?next=%2Fadmin%2Fai-config%2F" data-ai-gate-link>
+        登录站长账号
+      </a>
+    </div>
+
+    <div class="admin-story-content" data-ai-content hidden>
+      <section class="admin-story-settings admin-binding-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">MODELS &amp; API BINDING</p>
+            <h2>模型与 API 绑定</h2>
+          </div>
+          <span data-ai-config-status>正在读取…</span>
+        </div>
+        <form data-ai-binding-form>
+          <div class="admin-image-provider-list" data-ai-provider-list></div>
+          <div class="admin-story-form-actions">
+            <button type="submit" data-ai-binding-submit>保存模型绑定</button>
+          </div>
+          <p data-ai-binding-message aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section class="admin-story-settings admin-usage-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">USAGE MONITOR</p>
+            <h2>实时消耗监控</h2>
+          </div>
+          <span data-usage-updated>–</span>
+        </div>
+        <div class="usage-cards">
+          <div class="usage-card">
+            <strong data-usage-today-jobs>–</strong>
+            <span>今日任务</span>
+          </div>
+          <div class="usage-card">
+            <strong data-usage-today-ok>–</strong>
+            <span>今日成功</span>
+          </div>
+          <div class="usage-card">
+            <strong data-usage-today-fail>–</strong>
+            <span>今日失败</span>
+          </div>
+        </div>
+        <p class="usage-bar-title">各模型累计消耗（全部周期合并）</p>
+        <div class="usage-bars" data-usage-bars></div>
+        <p class="usage-bar-title">最近调用（每 15 秒自动刷新）</p>
+        <table class="recent-attempts-table">
+          <thead>
+            <tr><th>时间</th><th>模型</th><th>结果</th><th>耗时</th></tr>
+          </thead>
+          <tbody data-usage-recent></tbody>
+        </table>
+      </section>
+
+      <section class="admin-story-settings admin-image-test-panel">
+        <div class="admin-story-section-heading">
+          <div>
+            <p class="eyebrow">MODEL TEST</p>
+            <h2>模型测试</h2>
+          </div>
+          <span>走管理员测试通道，消耗测试积分</span>
+        </div>
+        <form data-ai-test-form>
+          <label>
+            <span>测试提示词</span>
+            <textarea
+              rows="3"
+              maxlength="1000"
+              data-ai-test-prompt
+              required
+            >雨夜中的中式旧城，一名撑伞的旅人站在河桥边，电影感，水墨与霓虹交织，无文字</textarea>
+            <small>会按所选模型调用（Colab 模型需在线），产生一次测试任务。</small>
+          </label>
+          <label>
+            <span>测试模型</span>
+            <select data-ai-test-model></select>
+            <small>仅列出已启用的模型。</small>
+          </label>
+          <label>
+            <span>图片质量</span>
+            <select data-ai-test-quality>
+              <option value="standard">标准图</option>
+              <option value="hd">高清图</option>
+            </select>
+          </label>
+          <div class="admin-story-form-actions">
+            <button type="submit" data-ai-test-submit>开始测试</button>
+          </div>
+          <p data-ai-test-status aria-live="polite"></p>
+        </form>
+      </section>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .admin-story-header {
+    margin-bottom: 0.6rem;
+  }
+  .usage-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.8rem;
+    margin-bottom: 1.2rem;
+  }
+  .usage-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 0.9rem 1rem;
+    display: grid;
+    gap: 0.2rem;
+  }
+  .usage-card strong {
+    font-size: 1.5rem;
+    color: var(--text);
+  }
+  .usage-card span {
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .usage-bar-title {
+    font-size: 0.78rem;
+    color: var(--muted);
+    margin: 0.9rem 0 0.5rem;
+  }
+  .recent-attempts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .recent-attempts-table th {
+    text-align: left;
+    padding: 0.4rem 0.5rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  .recent-attempts-table td {
+    padding: 0.4rem 0.5rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+    color: var(--muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 240px;
+  }
+</style>
+
+<style is:global>
+  /* 供应商卡片与调用表由 JS 动态创建，样式需全局生效 */
+  .admin-ai-provider {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--background);
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.8rem;
+    display: grid;
+    gap: 0.7rem;
+  }
+  .admin-ai-provider header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+  }
+  .admin-ai-provider-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+  }
+  .admin-ai-provider-toggle strong {
+    color: var(--text);
+  }
+  .admin-ai-provider small[data-configured="true"] {
+    color: #7ec699;
+  }
+  .admin-ai-provider small[data-configured="false"] {
+    color: var(--color-danger, #e07a5f);
+  }
+  .admin-ai-provider small[data-cooldown="true"] {
+    color: #e2a355;
+  }
+  .admin-ai-provider-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.7rem;
+  }
+  .admin-ai-provider-fields label {
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .admin-ai-provider-fields input,
+  .admin-ai-provider-fields select {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+  }
+  .admin-ai-provider-fields input:focus,
+  .admin-ai-provider-fields select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .usage-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0.4rem 0;
+  }
+  .usage-bar-label {
+    min-width: 120px;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+  .usage-bar-track {
+    flex: 1;
+    height: 10px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--border) 55%, transparent);
+    overflow: hidden;
+  }
+  .usage-bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+  .usage-bar-num {
+    font-size: 0.72rem;
+    color: var(--muted);
+    font-family: Consolas, monospace;
+    white-space: nowrap;
+  }
+</style>
+
+<script>
+  import { authClient } from "../../lib/auth-client";
+
+  interface AdminAIProvider {
+    id: string;
+    name: string;
+    adapter: string;
+    model: string;
+    enabled: boolean;
+    priority: number;
+    configured: boolean;
+    cooldownActive: boolean;
+    hasApiKey: boolean;
+    apiKeyMasked: string;
+    baseUrl: string;
+  }
+
+  interface UsageRow {
+    providerId: string;
+    period: string;
+    jobs: number;
+    successes: number;
+    failures: number;
+    spentCents: number;
+  }
+
+  interface UsageToday {
+    jobs: number;
+    succeeded: number;
+    failed: number;
+    byProvider: Array<{
+      providerId: string;
+      attempts: number;
+      succeeded: number;
+      failed: number;
+    }>;
+  }
+
+  interface RecentAttempt {
+    providerId: string;
+    providerName: string | null;
+    model: string | null;
+    status: string;
+    errorCode: string | null;
+    errorMessage: string | null;
+    durationMs: number;
+    createdAt: number;
+  }
+
+  const status = document.querySelector<HTMLElement>("[data-ai-status]");
+  const gate = document.querySelector<HTMLElement>("[data-ai-gate]");
+  const content = document.querySelector<HTMLElement>("[data-ai-content]");
+  const gateTitle = document.querySelector<HTMLElement>(
+    "[data-ai-gate-title]",
+  );
+  const gateCopy = document.querySelector<HTMLElement>("[data-ai-gate-copy]");
+  const gateLink = document.querySelector<HTMLAnchorElement>(
+    "[data-ai-gate-link]",
+  );
+  const bindingForm = document.querySelector<HTMLFormElement>(
+    "[data-ai-binding-form]",
+  );
+  const providerList = document.querySelector<HTMLElement>(
+    "[data-ai-provider-list]",
+  );
+  const bindingSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-ai-binding-submit]",
+  );
+  const bindingMessage = document.querySelector<HTMLElement>(
+    "[data-ai-binding-message]",
+  );
+  const testForm = document.querySelector<HTMLFormElement>(
+    "[data-ai-test-form]",
+  );
+  const testModel = document.querySelector<HTMLSelectElement>(
+    "[data-ai-test-model]",
+  );
+  const testPrompt = document.querySelector<HTMLTextAreaElement>(
+    "[data-ai-test-prompt]",
+  );
+  const testQuality = document.querySelector<HTMLSelectElement>(
+    "[data-ai-test-quality]",
+  );
+  const testSubmit = document.querySelector<HTMLButtonElement>(
+    "[data-ai-test-submit]",
+  );
+  const testStatus = document.querySelector<HTMLElement>(
+    "[data-ai-test-status]",
+  );
+  const usageUpdated = document.querySelector<HTMLElement>(
+    "[data-usage-updated]",
+  );
+
+  let aiProviders: AdminAIProvider[] = [];
+
+  const setStatus = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!status) return;
+    status.textContent = message;
+    status.hidden = !message;
+    status.dataset.state = state;
+  };
+
+  const setBindingMessage = (
+    message = "",
+    state: "idle" | "error" | "success" = "idle",
+  ) => {
+    if (!bindingMessage) return;
+    bindingMessage.textContent = message;
+    bindingMessage.dataset.state = state;
+  };
+
+  function renderProviders() {
+    if (!providerList) return;
+    providerList.replaceChildren();
+    for (const provider of aiProviders) {
+      const card = document.createElement("article");
+      card.className = "admin-ai-provider";
+      card.dataset.aiProviderId = provider.id;
+
+      const header = document.createElement("header");
+      const toggle = document.createElement("label");
+      toggle.className = "admin-ai-provider-toggle";
+      const enabledInput = document.createElement("input");
+      enabledInput.type = "checkbox";
+      enabledInput.checked = provider.enabled;
+      enabledInput.dataset.aiProviderEnabled = "";
+      const name = document.createElement("span");
+      const strong = document.createElement("strong");
+      strong.textContent = provider.name;
+      name.appendChild(strong);
+
+      const state = document.createElement("small");
+      state.textContent = provider.configured
+        ? provider.cooldownActive
+          ? "冷却中"
+          : "已配置"
+        : "缺少密钥";
+      state.dataset.configured = String(provider.configured);
+      state.dataset.cooldown = String(provider.cooldownActive);
+      name.appendChild(state);
+      toggle.append(enabledInput, name);
+
+      const modelBadge = document.createElement("small");
+      modelBadge.textContent = provider.adapter;
+      header.append(toggle, modelBadge);
+
+      const fields = document.createElement("div");
+      fields.className = "admin-ai-provider-fields";
+
+      const modelLabel = document.createElement("label");
+      const modelSpan = document.createElement("span");
+      modelSpan.textContent = "模型名";
+      const modelInput = document.createElement("input");
+      modelInput.type = "text";
+      modelInput.maxLength = 160;
+      modelInput.value = provider.model;
+      modelInput.dataset.aiProviderModel = "";
+      modelLabel.append(modelSpan, modelInput);
+
+      fields.append(modelLabel);
+
+      if (
+        provider.adapter === "dashscope-images" ||
+        provider.adapter === "openai-images"
+      ) {
+        const keyLabel = document.createElement("label");
+        const keySpan = document.createElement("span");
+        keySpan.textContent = "API 密钥绑定";
+        const keyInput = document.createElement("input");
+        keyInput.type = "password";
+        keyInput.maxLength = 300;
+        keyInput.placeholder = provider.hasApiKey
+          ? `已绑定（${provider.apiKeyMasked}），留空保持不变`
+          : "未绑定，粘贴该服务商的密钥";
+        keyInput.dataset.aiProviderKey = "";
+        keyLabel.append(keySpan, keyInput);
+
+        const urlLabel = document.createElement("label");
+        const urlSpan = document.createElement("span");
+        urlSpan.textContent = "接入地址（可选）";
+        const urlInput = document.createElement("input");
+        urlInput.type = "text";
+        urlInput.maxLength = 300;
+        urlInput.value = provider.baseUrl ?? "";
+        urlInput.placeholder = "留空使用官方默认地址";
+        urlInput.dataset.aiProviderBaseurl = "";
+        urlLabel.append(urlSpan, urlInput);
+        fields.append(keyLabel, urlLabel);
+      }
+
+      const priorityLabel = document.createElement("label");
+      const prioritySpan = document.createElement("span");
+      prioritySpan.textContent = "优先级（数字越小越优先）";
+      const priorityInput = document.createElement("input");
+      priorityInput.type = "number";
+      priorityInput.min = "0";
+      priorityInput.max = "10000";
+      priorityInput.value = String(provider.priority);
+      priorityInput.dataset.aiProviderPriority = "";
+      priorityLabel.append(prioritySpan, priorityInput);
+
+      const failLabel = document.createElement("label");
+      const failSpan = document.createElement("span");
+      failSpan.textContent = "冷却阈值（连续失败次数）";
+      const failInput = document.createElement("input");
+      failInput.type = "number";
+      failInput.min = "1";
+      failInput.max = "100";
+      failInput.value = String(provider.failureThreshold);
+      failInput.dataset.aiProviderFail = "";
+      failLabel.append(failSpan, failInput);
+
+      const cdLabel = document.createElement("label");
+      const cdSpan = document.createElement("span");
+      cdSpan.textContent = "冷却时长（秒）";
+      const cdInput = document.createElement("input");
+      cdInput.type = "number";
+      cdInput.min = "0";
+      cdInput.max = "86400";
+      cdInput.value = String(provider.cooldownSeconds);
+      cdInput.dataset.aiProviderCooldown = "";
+      cdLabel.append(cdSpan, cdInput);
+
+      fields.append(failLabel, cdLabel);
+      card.append(header, fields);
+      providerList.appendChild(card);
+    }
+  }
+
+  function fillTestModelOptions() {
+    if (!testModel) return;
+    testModel.replaceChildren();
+    for (const provider of aiProviders) {
+      if (!provider.enabled) continue;
+      const option = document.createElement("option");
+      option.value = provider.id;
+      option.textContent = `${provider.name}（${provider.model}）`;
+      testModel.appendChild(option);
+    }
+  }
+
+  const renderUsage = (
+    today: UsageToday | null,
+    usage: UsageRow[],
+    providers: AdminAIProvider[],
+  ) => {
+    const set = (selector: string, value: number) => {
+      const el = document.querySelector<HTMLElement>(selector);
+      if (el) el.textContent = String(value);
+    };
+    set("[data-usage-today-jobs]", today?.jobs ?? 0);
+    set("[data-usage-today-ok]", today?.succeeded ?? 0);
+    set("[data-usage-today-fail]", today?.failed ?? 0);
+
+    const bars = document.querySelector("[data-usage-bars]");
+    if (!bars) return;
+    bars.replaceChildren();
+    const nameOf = (id: string) =>
+      providers.find((p) => p.id === id)?.name ?? id;
+    const byProvider = new Map<
+      string,
+      { jobs: number; ok: number; fail: number; spent: number }
+    >();
+    for (const row of usage) {
+      const cur = byProvider.get(row.providerId) ?? {
+        jobs: 0,
+        ok: 0,
+        fail: 0,
+        spent: 0,
+      };
+      cur.jobs += row.jobs;
+      cur.ok += row.successes;
+      cur.fail += row.failures;
+      cur.spent += row.spentCents;
+      byProvider.set(row.providerId, cur);
+    }
+    const entries = Array.from(byProvider.entries()).sort(
+      (a, b) => b[1].jobs - a[1].jobs,
+    );
+    const maxJobs = Math.max(1, ...entries.map(([, v]) => v.jobs));
+    for (const [id, v] of entries) {
+      const row = document.createElement("div");
+      row.className = "usage-bar-row";
+      const label = document.createElement("span");
+      label.className = "usage-bar-label";
+      label.textContent = nameOf(id);
+      const track = document.createElement("div");
+      track.className = "usage-bar-track";
+      const fill = document.createElement("div");
+      fill.className = "usage-bar-fill";
+      fill.style.width = `${Math.round((v.jobs / maxJobs) * 100)}%`;
+      track.appendChild(fill);
+      const num = document.createElement("span");
+      num.className = "usage-bar-num";
+      num.textContent = `${v.jobs} 次 · 成功 ${v.ok} · 失败 ${v.fail}`;
+      row.append(label, track, num);
+      bars.appendChild(row);
+    }
+  };
+
+  const renderRecentAttempts = (rows: RecentAttempt[]) => {
+    const table = document.querySelector("[data-usage-recent]");
+    if (!table) return;
+    table.replaceChildren();
+    if (!rows.length) {
+      const empty = document.createElement("tr");
+      const cell = document.createElement("td");
+      cell.colSpan = 4;
+      cell.textContent = "还没有调用记录。";
+      empty.appendChild(cell);
+      table.appendChild(empty);
+      return;
+    }
+    for (const row of rows) {
+      const tr = document.createElement("tr");
+      tr.className = row.status === "succeeded" ? "ok" : "bad";
+      const time = document.createElement("td");
+      time.textContent = new Date(row.createdAt).toLocaleString("zh-CN");
+      const model = document.createElement("td");
+      model.textContent = row.model ?? "–";
+      const state = document.createElement("td");
+      state.textContent =
+        row.status === "succeeded"
+          ? "✅ 成功"
+          : `❌ ${(row.errorMessage ?? "失败").slice(0, 50)}`;
+      const duration = document.createElement("td");
+      duration.textContent = `${(row.durationMs / 1000).toFixed(1)}s`;
+      tr.append(time, model, state, duration);
+      table.appendChild(tr);
+    }
+  };
+
+  const loadImageConfig = async () => {
+    const response = await fetch("/api/admin/image", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" },
+    });
+    if (response.status === 401 || response.status === 403) {
+      const requestError = new Error("权限校验失败。") as Error & {
+        status?: number;
+      };
+      requestError.status = response.status;
+      throw requestError;
+    }
+    const payload = (await response.json()) as {
+      providers?: AdminAIProvider[];
+      usage?: UsageRow[];
+      today?: UsageToday;
+      recentAttempts?: RecentAttempt[];
+      error?: string;
+    };
+    aiProviders = payload.providers ?? [];
+    renderProviders();
+    fillTestModelOptions();
+    renderUsage(payload.today ?? null, payload.usage ?? [], aiProviders);
+    renderRecentAttempts(payload.recentAttempts ?? []);
+    if (usageUpdated) {
+      usageUpdated.textContent = `数据更新于 ${new Date().toLocaleTimeString("zh-CN")}`;
+    }
+  };
+
+  bindingForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    if (!bindingSubmit) return;
+    bindingSubmit.disabled = true;
+    setBindingMessage("正在保存模型绑定…");
+    const providers = Array.from(
+      providerList?.querySelectorAll<HTMLElement>(
+        "[data-ai-provider-id]",
+      ) ?? [],
+    ).map((card) => {
+      const payload: Record<string, unknown> = {
+        id: card.dataset.aiProviderId,
+        enabled:
+          card.querySelector<HTMLInputElement>("[data-ai-provider-enabled]")
+            ?.checked ?? false,
+        model:
+          card.querySelector<HTMLInputElement>("[data-ai-provider-model]")
+            ?.value.trim() ?? "",
+        priority: Number(
+          card.querySelector<HTMLInputElement>("[data-ai-provider-priority]")
+            ?.value ?? 100,
+        ),
+        failureThreshold: Number(
+          card.querySelector<HTMLInputElement>("[data-ai-provider-fail]")
+            ?.value ?? 3,
+        ),
+        cooldownSeconds: Number(
+          card.querySelector<HTMLInputElement>("[data-ai-provider-cooldown]")
+            ?.value ?? 600,
+        ),
+      };
+      const keyVal =
+        card.querySelector<HTMLInputElement>("[data-ai-provider-key]")
+          ?.value.trim() ?? "";
+      if (keyVal) payload.apiKey = keyVal;
+      const baseUrlVal =
+        card.querySelector<HTMLInputElement>("[data-ai-provider-baseurl]")
+          ?.value.trim() ?? "";
+      if (baseUrlVal) payload.baseUrl = baseUrlVal;
+      return payload;
+    }));
+    try {
+      const response = await fetch("/api/admin/image", {
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ providers }),
+      });
+      const payload = (await response.json()) as {
+        providers?: AdminAIProvider[];
+        error?: string;
+      };
+      if (!response.ok) {
+        throw new Error(payload.error || "模型绑定保存失败。");
+      }
+      aiProviders = payload.providers ?? [];
+      renderProviders();
+      fillTestModelOptions();
+      setBindingMessage("模型绑定已保存，立即生效。", "success");
+    } catch (error) {
+      setBindingMessage(
+        error instanceof Error ? error.message : "模型绑定保存失败。",
+        "error",
+      );
+    } finally {
+      bindingSubmit.disabled = false;
+    }
+  });
+
+  testForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const prompt = testPrompt?.value.trim() ?? "";
+    const modelId = testModel?.value ?? "";
+    if (prompt.length < 6 || !testSubmit) {
+      if (testStatus) testStatus.textContent = "测试提示词过短。";
+      return;
+    }
+    testSubmit.disabled = true;
+    if (testStatus) testStatus.textContent = "正在生成测试图片…";
+    try {
+      const response = await fetch("/api/admin/image/test", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          quality: testQuality?.value === "hd" ? "hd" : "standard",
+          aspectRatio: "1:1",
+          requestId: crypto.randomUUID(),
+          providerId: modelId,
+        }),
+      });
+      const payload = (await response.json()) as {
+        job?: {
+          providerName?: string;
+          model?: string;
+          width?: number;
+          height?: number;
+          pointsCost?: number;
+          balance?: number;
+        };
+        error?: string;
+      };
+      if (!response.ok || !payload.job) {
+        throw new Error(payload.error || "生图测试失败。");
+      }
+      if (testStatus) {
+        testStatus.textContent = `成功：${payload.job.providerName} / ${payload.job.model} / ${payload.job.width}×${payload.job.height} / 扣 ${payload.job.pointsCost} 积分 / 余额 ${payload.job.balance}`;
+      }
+    } catch (error) {
+      if (testStatus) {
+        testStatus.textContent =
+          error instanceof Error ? error.message : "生图测试失败。";
+      }
+    } finally {
+      testSubmit.disabled = false;
+    }
+  });
+
+  void authClient
+    .getSession()
+    .then(async ({ data }) => {
+      if (!data?.user) {
+        if (gateTitle) gateTitle.textContent = "请先登录";
+        if (gateCopy) gateCopy.textContent = "登录站长账号后才能管理 AI 配置。";
+        gate?.removeAttribute("hidden");
+        return;
+      }
+      try {
+        await loadImageConfig();
+        gate?.setAttribute("hidden", "");
+        content?.removeAttribute("hidden");
+        // 实时监控：每 15 秒自动刷新；正在编辑输入框时跳过
+        window.setInterval(() => {
+          const active = document.activeElement;
+          const editing =
+            active instanceof HTMLInputElement ||
+            active instanceof HTMLTextAreaElement ||
+            active instanceof HTMLSelectElement;
+          if (editing) return;
+          void loadImageConfig().catch(() => undefined);
+        }, 15_000);
+      } catch (error) {
+        const requestError = error as Error & { status?: number };
+        if (requestError.status === 403) {
+          if (gateTitle) gateTitle.textContent = "没有管理权限";
+          if (gateCopy) gateCopy.textContent = "当前账号不是站长。";
+        } else if (requestError.status === 401) {
+          if (gateTitle) gateTitle.textContent = "登录已过期";
+          if (gateCopy) gateCopy.textContent = "请重新登录后再试。";
+        } else {
+          if (gateTitle) gateTitle.textContent = "暂时无法读取配置";
+          if (gateCopy) {
+            gateCopy.textContent =
+              error instanceof Error ? error.message : "请稍后重试。";
+          }
+          if (gateLink) gateLink.hidden = true;
+        }
+        gate?.removeAttribute("hidden");
+        setStatus("");
+      }
+    })
+    .catch(() => {
+      if (gateTitle) gateTitle.textContent = "无法验证登录状态";
+      if (gateCopy) gateCopy.textContent = "请刷新页面后重试。";
+      gate?.removeAttribute("hidden");
+    });
+</script>
