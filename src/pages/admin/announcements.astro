@@ -232,68 +232,6 @@ import AdminNav from "../../components/AdminNav.astro";
     display: grid;
     gap: 0.7rem;
   }
-  .ann-item {
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--background);
-    padding: 0.85rem 1rem;
-    display: grid;
-    gap: 0.35rem;
-  }
-  .ann-item header {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-  }
-  .ann-item strong {
-    font-size: 0.92rem;
-  }
-  .ann-tag {
-    padding: 0.12rem 0.5rem;
-    border-radius: 999px;
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-size: 0.68rem;
-  }
-  .ann-item[data-state="live"] .ann-tag[data-role="state"] {
-    color: #7ec699;
-    border-color: rgb(83 160 112 / 45%);
-  }
-  .ann-item p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 0.83rem;
-    line-height: 1.6;
-  }
-  .ann-item time {
-    color: var(--muted);
-    font-size: 0.72rem;
-    opacity: 0.8;
-  }
-  .ann-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-    margin-top: 0.3rem;
-  }
-  .ann-actions button {
-    padding: 0.3rem 0.7rem;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: transparent;
-    color: var(--text);
-    font-size: 0.75rem;
-    cursor: pointer;
-  }
-  .ann-actions button:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-  .ann-actions button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
 </style>
 
 <script>
@@ -621,3 +559,69 @@ import AdminNav from "../../components/AdminNav.astro";
       gate.hidden = false;
     });
 </script>
+
+<style is:global>
+  /* 公告列表条目由 JS 动态创建，样式需全局生效 */
+  .ann-item {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--background);
+    padding: 0.85rem 1rem;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .ann-item header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .ann-item strong {
+    font-size: 0.92rem;
+  }
+  .ann-tag {
+    padding: 0.12rem 0.5rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 0.68rem;
+  }
+  .ann-item[data-state="live"] .ann-tag[data-role="state"] {
+    color: #7ec699;
+    border-color: rgb(83 160 112 / 45%);
+  }
+  .ann-item p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 0.83rem;
+    line-height: 1.6;
+  }
+  .ann-item time {
+    color: var(--muted);
+    font-size: 0.72rem;
+    opacity: 0.8;
+  }
+  .ann-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.3rem;
+  }
+  .ann-actions button {
+    padding: 0.3rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text);
+    font-size: 0.75rem;
+    cursor: pointer;
+  }
+  .ann-actions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .ann-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+</style>

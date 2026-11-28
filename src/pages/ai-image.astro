@@ -278,6 +278,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
     flex-wrap: wrap;
     gap: 0.5rem;
   }
+</style>
+
+<style is:global>
+  /* 历史缩略图由 JS 动态创建，样式需全局生效 */
   .ai-history img {
     width: 72px;
     height: 72px;
