@@ -1,0 +1,13 @@
+name = "yuqing-probe"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+# 每 15 分钟探活一次 Colab 隧道
+[triggers]
+crons = ["*/15 * * * *"]
+
+# 与博客共用同一张通知表（yuanqing-auth 库）
+[[d1_databases]]
+binding = "DB"
+database_name = "yuqing-auth"
+database_id = "4b91b2b2-2830-4676-8292-911ada646157"

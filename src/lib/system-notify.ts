@@ -14,6 +14,12 @@ interface SystemNotification {
   link?: string;
 }
 
+interface EmailResult {
+  sent: boolean;
+  recipients: string[];
+  reason?: string;
+}
+
 const DEDUP_WINDOW_MS = 30 * 60 * 1000; // 同类提醒 30 分钟内只发一次
 
 function adminUserIds(env: SystemNotifyEnv) {
@@ -23,8 +29,14 @@ function adminUserIds(env: SystemNotifyEnv) {
     .filter(Boolean);
 }
 
-// 给所有站长发一条站内信；相同 type 在冷却窗口内只发一次，成功后顺便发邮件。
-// 返回 true 表示本次确实创建了新提醒。
+const maskEmail = (email: string) => {
+  const at = email.indexOf("@");
+  if (at <= 0) return "***";
+  return `${email.slice(0, Math.min(4, at))}***${email.slice(at)}`;
+};
+
+// 给所有站长发一条站内信；相同 type 在冷却窗口内只发一次。
+// 邮件的发送结果会写进站内信正文，方便追溯「邮件到底发没发」。
 export async function notifyAdmins(
   env: SystemNotifyEnv,
   input: SystemNotification,
@@ -43,6 +55,14 @@ export async function notifyAdmins(
     .first<{ id: string }>();
   if (recent) return false;
 
+  const email = await emailAdmins(env, admins, input);
+  const emailNote = email.sent
+    ? `📧 邮件已同步发送至 ${email.recipients.map(maskEmail).join("、")}`
+    : email.reason
+      ? `⚠️ 邮件未能发送：${email.reason}`
+      : "";
+  const body = emailNote ? `${input.body}\n\n${emailNote}` : input.body;
+
   try {
     await env.DB.batch(
       admins.map((userId) =>
@@ -55,7 +75,7 @@ export async function notifyAdmins(
           userId,
           input.type,
           input.title,
-          input.body,
+          body,
           input.link ?? null,
           now,
         ),
@@ -64,8 +84,6 @@ export async function notifyAdmins(
   } catch {
     return false;
   }
-
-  await emailAdmins(env, admins, input);
   return true;
 }
 
@@ -73,8 +91,14 @@ async function emailAdmins(
   env: SystemNotifyEnv,
   admins: string[],
   input: SystemNotification,
-) {
-  if (!env.RESEND_API_KEY?.trim() || !env.EMAIL_FROM?.trim()) return;
+): Promise<EmailResult> {
+  if (!env.RESEND_API_KEY?.trim() || !env.EMAIL_FROM?.trim()) {
+    return {
+      sent: false,
+      recipients: [],
+      reason: "未配置 RESEND_API_KEY 或 EMAIL_FROM",
+    };
+  }
   const placeholders = admins.map(() => "?").join(", ");
   let recipients: string[] = [];
   try {
@@ -87,12 +111,14 @@ async function emailAdmins(
       .map((row) => row.email)
       .filter((email) => Boolean(email?.trim()));
   } catch {
-    return;
+    return { sent: false, recipients: [], reason: "查询管理员邮箱失败" };
   }
-  if (recipients.length === 0) return;
+  if (recipients.length === 0) {
+    return { sent: false, recipients: [], reason: "管理员账号未绑定邮箱" };
+  }
 
   try {
-    await fetch("https://api.resend.com/emails", {
+    const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${env.RESEND_API_KEY}`,
@@ -110,9 +136,20 @@ async function emailAdmins(
         ].join("\n"),
       }),
     });
-    // 邮件失败不影响站内信，静默处理
-  } catch {
-    // 同上
+    if (!response.ok) {
+      return {
+        sent: false,
+        recipients,
+        reason: `Resend 返回 HTTP ${response.status}`,
+      };
+    }
+    return { sent: true, recipients };
+  } catch (error) {
+    return {
+      sent: false,
+      recipients,
+      reason: error instanceof Error ? error.message.slice(0, 80) : "网络异常",
+    };
   }
 }
 
