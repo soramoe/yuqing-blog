@@ -53,6 +53,8 @@
 
 **链路补洞（交接后追加）**：`f6fafef` 生图 POST 真正接收 `init_image` 与全部 7 种比例（含 auto）——此前页面虽发了这两个字段，但 API 只白名单 3 种比例、且完全忽略 `init_image`，导致「大重构」的参考图/竖版/超宽/auto 全部静默失效（9:16 等被压成 1:1）。同时：Colab 适配器透传 `init_image`/`strength`；参考图只下发给支持 img2img 的适配器并在 note 提示；原生中文模型跳过翻译；插队只对 Colab 扣费；方舟/智谱 baseUrl 兼容完整 `/images/generations` 地址；后台新增供应商适配器白名单补 ark / GLM；模型列表按适配器拉取；未知适配器不再回落成千问。
 
+**全站生图挂掉的根因（2026-11-28 下午定位）**：`015a2b5` 给 `image_job` 的 INSERT 列清单加了 `english_prompt`，但 VALUES 没补对应的 `?` → `D1_ERROR: 15 values for 16 columns`，**从那次部署起任何模型、任何用户都在建任务时 500**，前端只显示「生图任务创建失败。」且 D1 里无任何 `image_job` / `image_attempt` 记录（所以容易误判成供应商问题）。`335b393` 先临时把底层错误透到前端用于定位，`cdbba19` 补回占位符并恢复通用文案（保留 `console.error`）。修复后已用前台「火山方舟 Seedream」真实出图验证：job `7160ae13…`、1280×720、9.2s、扣 500 积分、`image_asset` 落库成功，方舟的「安全体验模式」限制当前也已解除（直调 200）。
+
 > 同日另有 deals 数据巡检合并（PR #2 等），与生图无关。
 
 ## 4. 今天完成但不在 git 里的改动
@@ -96,8 +98,9 @@
 3. ~~旧公告「关闭生图…暂时还没调试好」仍在站内横幅展示~~ → **已处理（2026-11-28）**：远程 D1 `site_announcement` 中该行（id `a555d866…`）已置 `active=0`。恢复命令：`UPDATE site_announcement SET active=1 WHERE id='a555d866-1a4b-4641-8555-cb050d637f1d'`。
 4. `IMAGE_COLAB_URL` / `IMAGE_COLAB_KEY` 走环境变量而非 provider 行绑定（colab-sdxl 行 api_key 为空是**正常**的）；如迁移到后台绑定，在 AI 配置页填入即可。
 5. **火山方舟「安全体验模式」额度上限**（2026-11-28 直测确认 `SetLimitExceeded`，模型服务已被暂停）→ 站长到方舟控制台「模型激活」页调整或关闭该模式后生图即恢复；站点侧错误提示已映射为明确文案。
-6. ~~GLM 待绑密钥~~ → **已绑定（2026-11-28 复核 `hasKey=1`）**；仍缺一次真实出图验证（需在后台「测试」或前台选 GLM 模型跑一张）。
-7. **本地提交 `f6fafef` 尚未推送** → 推送 main 才会触发 Pages 部署；部署后前台参考图/全量比例/插队修复才在线上生效。
+6. ~~GLM 待绑密钥~~ → **已绑定（2026-11-28 复核 `hasKey=1`）**；直调 BigModel 接口 200 返回图片 URL，但**还没有走过站内生图的端到端**（适配器会二次下载 URL）。入库占位符修复后可直接在前台选 GLM 验证。
+7. ~~本地提交尚未推送~~ → `f6fafef`、`cdbba19` 等均已推送并部署。
+8. **后台「模型测试」面板不按所选模型调用**：`/admin/ai-config/` 会提交 `providerId`，但 `functions/api/admin/image/test.ts` 没有读取它，永远按优先级路由（当前会先撞 Colab）。属独立小 bug，尚未修。
 
 ## 8. 文件地图（全部相对仓库根）
 
@@ -135,6 +138,8 @@ C:\Users\14055\.zcode\workspace\default\colab-probe-worker\    定时探活 Work
 - **火山方舟**：原生中文 prompt 直传（不走翻译）、`response_format:"b64_json"`、`watermark:false`；错误详情读取必须 `(await response.text().catch(()=>"")).slice(0,100)`（括号别丢）。
 - **SDXL 拟人陷阱**：拟人动物提示词必须带 anthropomorphic 类关键词，负面词要有默认值。
 - **前后端字段脱节**：页面新增字段（`init_image`、新比例）必须同步改 `functions/api/ai-image/generate.ts` 的白名单/解析，脚本层 `image-service.ts` 支持不代表 API 层会转发——曾因此让参考图和 6 种比例静默失效。改页面表单时先看 API 的入参白名单。
+- **SQL 占位符与列数**：给 `INSERT` 加列时务必同步补 `?`（`015a2b5` 加 `english_prompt` 漏了一个，导致全站生图 500 且无任何日志行）。现象：前端「生图任务创建失败。」、D1 无 job/attempt——先数 VALUES 个数，别怀疑供应商。
+- **排障入口**：D1 `image_job`/`image_attempt` 无记录 = 请求没走到路由（常见于入库失败、参数 400、401/403）；有 attempt 无 asset = 供应商侧失败。`console.error` 已加在入库 catch 里。
 - **云端供应商 base_url**：后台可能填基础地址，也可能填完整 `/images/generations`（方舟行就是完整地址）；适配器统一走 `imagesEndpoint()` 拼接，别再手写 `${base}/images/generations`。
 
 ## 10. 常用验证命令
