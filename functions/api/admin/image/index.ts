@@ -151,6 +151,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   });
 };
 
+const parseBody = async (request: Request) => {
+  try {
+    return (await request.json()) as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+};
+
 const integer = (
   value: unknown,
   minimum: number,

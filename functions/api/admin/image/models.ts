@@ -46,7 +46,7 @@ async function pullModelList(
     }
     const payload = (await response.json()) as {
       data?: Array<{ id?: string; owned_by?: string }>;
-      models?: Array<{ id?: string }>;
+      models?: Array<{ id?: string; owned_by?: string }>;
     };
     const rows = payload.data ?? payload.models ?? [];
     const models = rows
