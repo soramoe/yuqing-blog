@@ -58,6 +58,8 @@
 
 **互动小说生图独立开关（2026-11-28 下午）**：`e4d303e` + 迁移 `0028`。`image_setting` 新增 `story_enabled`（默认 1）；后台「生图控制」页新增「互动小说生图」开关（总开关关闭时置灰）。关闭后：`/api/story/illustration` 在 LLM 场景改写之前就 503、服务层对 `story_chapter` 二次校验、`/api/story/status` 的 `imageGenerationEnabled` 置 false（前台隐藏插画选项）。迁移同时给现有的 `image_studio` 供应商补了 `story_chapter` 能力——此前白名单里**没有任何启用的 story_chapter 供应商**，小说插画本来是无模型可用的。
 
+**后台首页仪表盘（2026-11-28 傍晚）**：`ddd5ae7` + `29960af`。去掉与 AdminNav 重复的 8 张入口卡片，改为运行状态：站点在线+API 延迟、生图总开关、互动小说插画开关、Colab 探活；生图面板（今日任务/成功失败、1K·2K 单价、本月预算、供应商状态）；互动小说面板（站点 Key、回合积分/上限、试玩额度）；最近 8 次生图调用。数据来自 `/api/admin/status`、`/api/admin/image`、`/api/ai-image/generate`、`/api/story/status`，60 秒自动刷新。注意动态 DOM 样式必须写在 `<style is:global>`。
+
 > 同日另有 deals 数据巡检合并（PR #2 等），与生图无关。
 
 ## 4. 今天完成但不在 git 里的改动
@@ -113,8 +115,9 @@
 src/pages/ai-image.astro          生图页（左右布局工作台，~860 行）
 src/pages/my-images.astro         我的生图历史
 src/pages/notifications.astro     站内信
+src/pages/admin/index.astro       后台首页仪表盘（站点/生图/Colab/小说状态 + 最近调用，60s 自动刷新）
 src/pages/admin/ai-config.astro   AI 配置面板（绑定/新增/拉模型/监控/测试）
-src/pages/admin/image.astro       生图管理（运营参数页：开关/定价/上限/预算/冷却）
+src/pages/admin/image.astro       生图管理（分组：开关 / AI 生图 1K·2K 定价 / 插画定价 / 限额预算）
 src/components/AdminNav.astro     后台统一导航
 src/lib/image-service.ts          任务编排：扣费/翻译/尺寸/落库/退款
 src/lib/image-router.ts           features 白名单路由 + 指定模型精确报错
