@@ -18,7 +18,7 @@
 | features 白名单 | `image_provider.features` 决定能力：`image_studio`=AI 生图页可用，`story_chapter`=互动小说可用，`admin_test`=后台可测试。路由时只挑 `enabled=1` 且含目标 feature 的供应商 |
 | 开关层级 | `image_setting.enabled` 是总开关（所有生图）；`image_setting.story_enabled` 是**互动小说插画独立开关**，仅在总开关开启时生效。关闭后 `/api/story/illustration` 在调用场景改写 LLM 前直接 503，`/api/story/status` 的 `imageGenerationEnabled` 变为 false（前台隐藏插画选项）。后台在「生图控制」页单独勾选 |
 | 指定模型 | 前端传 `model`（即 provider id）时**只**调用该供应商，并给出精确错误（不存在 / 冷却中 / 未绑定密钥） |
-| 积分 | 每张图按 `image_setting.studio_points` 扣（当前 500）；VIP 插队另扣 `queue_jump_points`（当前 60）；`chargeImageJob` / `refundImageJob` 原子扣退（point_account + point_transaction） |
+| 积分 | 「AI 生图」按清晰度分别计价：1K = `studio_points`（当前 500），2K = `studio_hd_points`（当前 1000）；互动小说插画 1K/2K = `standard_points`/`hd_points`；VIP 插队另扣 `queue_jump_points`（60）。`chargeImageJob` / `refundImageJob` 原子扣退（point_account + point_transaction） |
 | 翻译 | `src/lib/translate.ts` 三级级联：Workers AI llama-3.3-70b 智能改写 → DeepSeek（`IMAGE_TRANSLATE_API_KEY`，与 `STORY_AI_API_KEY` 隔离）→ gtx 直译兜底。系统提示含 **anthropomorphic 拟人动物保护规则**（防止把猫画成人）。只有 `providerNeedsEnglishPrompt`（colab-sdxl / workers-ai）才翻译，原生中文模型直接用原文 |
 | Colab API 契约 | `POST {colab}/generate`，header `x-api-key` + `x-queue-jump`（"1"=VIP）；请求体 `{prompt, prompt_2, init_image, strength, negative_prompt, width, height, steps, guidance, seed}`；响应 `{images:[base64]}`；3 次重试仅针对 <15s 的快速失败 |
 | Colab 排队 | 侧 GenQueue `max_queue=4`，VIP 优先；`GET {colab}/queue` 返回 `{busy,waiting,vip}`，经 `/api/ai-image/queue` 透传给前端 |
@@ -84,7 +84,7 @@
 | ark-seedream | ark-images | doubao-seedream-5-5-261028 | 1 | **image_studio**, admin_test | **SET** ✅（`base_url` 直接填了完整 `/api/v3/images/generations`） |
 | glm-image | bigmodel-image | glm-image | 1 | **image_studio**, admin_test | **SET** ✅（已绑定智谱密钥） |
 
-`image_setting`（id=global）：`enabled=1`，`story_enabled=1`，`studio_points=500`，`standard_points=500`，`hd_points=1000`，`queue_jump_points=60`，`daily_job_limit=100`，`monthly_budget_cents=5000`，`point_value_cents=1`。
+`image_setting`（id=global）：`enabled=1`，`story_enabled=0`（站长已在后台关闭互动小说插画），`studio_points=500`，`studio_hd_points=1000`，`standard_points=500`，`hd_points=1000`，`queue_jump_points=60`，`daily_job_limit=100`，`monthly_budget_cents=5000`，`point_value_cents=1`。
 
 已开放的三个供应商（colab-sdxl / ark-seedream / glm-image）features 均已追加 `story_chapter`（0028 迁移），互动小说插画会按优先级依次尝试 Colab → 方舟 → GLM。
 
@@ -126,7 +126,7 @@ src/types/worker-env.d.ts         functions 用的全局 Env（无 astro 类型�
 functions/api/ai-image/*.ts       generate / mine / queue
 functions/api/admin/image/*.ts    index（CRUD）/ models（拉列表）/ cooldown（清零）
 functions/tsconfig.json           functions 独立类型检查（ES2022 + workers-types，无 DOM）
-migrations/0023-0028*.sql         notification、english_prompt、api_key/base_url/features、ark/GLM 行、story_enabled + story_chapter
+migrations/0023-0029*.sql         notification、english_prompt、api_key/base_url/features、ark/GLM 行、story_enabled + story_chapter、studio_hd_points
 public/_headers                   安全响应头（X-Frame-Options 等）
 C:\Users\14055\.zcode\workspace\default\generate.py            本地生图客户端（调 /api/ai-image/generate）
 C:\Users\14055\.zcode\workspace\default\colab-oneclick-v3.py   Colab v3 格子备份
