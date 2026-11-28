@@ -773,6 +773,9 @@ import AdminNav from "../../components/AdminNav.astro";
       }
 
       updatedEl.textContent = `最后更新 ${formatTime(new Date())} · 每 60 秒自动刷新`;
+    } catch (error) {
+      console.error("[admin] dashboard load failed", error);
+      updatedEl.textContent = "运行状态读取失败，请稍后点「刷新」重试。";
     } finally {
       refreshing = false;
       refreshBtn.disabled = false;
