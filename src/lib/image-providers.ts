@@ -667,7 +667,9 @@ async function generateWithArk(
       }),
     });
     if (!response.ok) {
-      const detail = await response.text().catch(() => "").slice(0, 100);
+      const detail = (
+        await response.text().catch(() => "")
+      ).slice(0, 100);
       throw new ImageProviderError(
         response.status === 429
           ? "火山方舟请求过于频繁或额度不足。"
