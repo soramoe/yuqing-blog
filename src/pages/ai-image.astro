@@ -34,6 +34,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         </span>
         <span id="price-chip" class="ai-chip" hidden>
           单张 <strong id="price-value">–</strong> 积分
+          <span id="price-hd-hint" class="ai-price-muted"></span>
         </span>
         <a href="/my-images/" class="ai-chip ai-link">我的生图历史 →</a>
       </div>
@@ -231,6 +232,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   }
   .ai-chip strong {
     color: var(--text);
+  }
+  .ai-price-muted {
+    color: var(--muted);
+    font-size: 0.72em;
   }
   .ai-link {
     text-decoration: none;
@@ -565,6 +570,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   const balanceValue = $("balance-value") as HTMLElement;
   const priceChip = $("price-chip") as HTMLElement;
   const priceValue = $("price-value") as HTMLElement;
+  const priceHdHint = $("price-hd-hint") as HTMLElement;
   const modelSelect = $("model-select") as HTMLSelectElement;
   const modelHint = $("model-hint") as HTMLElement;
   const form = document.getElementById("gen-form") as HTMLFormElement;
@@ -595,12 +601,28 @@ import BaseLayout from "../layouts/BaseLayout.astro";
   const history: string[] = [];
   let balance: number | null = null;
   let pointsCost: number | null = null;
+  let pointsHd: number | null = null;
   let jumpFee: number | null = null;
   let models: ModelInfo[] = [];
   let selectedModelId: string | null = null;
   let refDataUrl: string | null = null;
   let generating = false;
   let genTimer: number | undefined;
+
+  // 1K/2K 分别计价：清晰度切换时同步更新价格提示
+  const renderPrice = () => {
+    const hd = qualitySelect.value === "hd";
+    const base = pointsCost ?? 0;
+    const high = pointsHd ?? base;
+    priceValue.textContent = String(hd ? high : base);
+    priceHdHint.textContent = hd
+      ? "（2K 高清）"
+      : high > base
+        ? `（2K ${high}）`
+        : "";
+    priceChip.hidden = false;
+  };
+  qualitySelect.addEventListener("change", renderPrice);
 
   const setStatus = (text: string) => {
     statusEl.textContent = text;
@@ -733,13 +755,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
         ok: boolean;
         enabled: boolean;
         points: number;
+        pointsHd?: number;
         queueJumpPoints?: number;
         cooldownSeconds?: number;
         models?: ModelInfo[];
       };
       pointsCost = data.points;
-      priceValue.textContent = String(data.points);
-      priceChip.hidden = false;
+      pointsHd =
+        typeof data.pointsHd === "number" ? data.pointsHd : data.points;
+      renderPrice();
       if (typeof data.queueJumpPoints === "number") {
         jumpFee = data.queueJumpPoints;
         jumpFeeEl.textContent = String(data.queueJumpPoints);

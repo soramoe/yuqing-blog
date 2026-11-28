@@ -6,7 +6,7 @@ import "../../styles/admin-story.css";
 
 <BaseLayout
   title="生图管理"
-  description="生图总开关、积分定价与配额管理。"
+  description="生图开关、AI 生图 1K/2K 定价、互动小说插画定价与配额管理。"
   bodyClass="page-admin-image"
   noindex
 >
@@ -15,7 +15,7 @@ import "../../styles/admin-story.css";
       <div>
         <p class="eyebrow">IMAGE OPERATIONS</p>
         <h1>生图管理</h1>
-        <p>生图总开关、积分定价与配额。模型与 API 绑定在「AI 配置」页。</p>
+        <p>开关、AI 生图 1K/2K 定价、互动小说插画定价与限额。模型与 API 绑定在「AI 配置」页。</p>
       </div>
     </header>
 
@@ -44,6 +44,7 @@ import "../../styles/admin-story.css";
           <span data-image-config-status>正在读取…</span>
         </div>
         <form data-image-config-form>
+          <h3 class="admin-image-section-title">开关</h3>
           <label class="admin-story-toggle admin-image-master-toggle">
             <input type="checkbox" data-image-enabled />
             <span>
@@ -58,26 +59,37 @@ import "../../styles/admin-story.css";
               <small>独立开关：关闭后互动小说不再生成章节插画，但「AI 生图」页面不受影响；需总开关同时开启。</small>
             </span>
           </label>
+
+          <h3 class="admin-image-section-title">「AI 生图」定价</h3>
           <label>
-            <span>标准图积分（章节插画）</span>
-            <input type="number" min="1" max="1000" data-image-standard-points required />
-            <small>互动小说章节插画的标准图价格，推荐 20 积分。</small>
-          </label>
-          <label>
-            <span>高清图积分（章节插画）</span>
-            <input type="number" min="1" max="1000" data-image-hd-points required />
-            <small>互动小说章节插画的高清图价格，推荐 32 积分。</small>
-          </label>
-          <label>
-            <span>AI 生图积分（Colab SDXL）</span>
+            <span>1K 积分</span>
             <input type="number" min="1" max="10000" data-image-studio-points required />
-            <small>「AI 生图」页面每次生成的消耗，走站长自己的 Colab GPU。</small>
+            <small>「AI 生图」页面选择 1K 标准时的单张价格。</small>
+          </label>
+          <label>
+            <span>2K 积分</span>
+            <input type="number" min="1" max="10000" data-image-studio-hd-points required />
+            <small>选择 2K 高清时的单张价格；自动比例也会按该清晰度出图。</small>
           </label>
           <label>
             <span>插队积分</span>
             <input type="number" min="0" max="10000" data-image-jump-points required />
-            <small>有人在生图时，其他用户可付此积分插队；0 = 关闭插队。生成失败自动退回。</small>
+            <small>Colab 排队时可付费插队；0 = 关闭。生成失败自动退回。</small>
           </label>
+
+          <h3 class="admin-image-section-title">互动小说插画定价</h3>
+          <label>
+            <span>1K 积分（标准图）</span>
+            <input type="number" min="1" max="1000" data-image-standard-points required />
+            <small>互动小说章节插画的 1K 单张价格。</small>
+          </label>
+          <label>
+            <span>2K 积分（高清图）</span>
+            <input type="number" min="1" max="1000" data-image-hd-points required />
+            <small>互动小说章节插画的 2K 单张价格。</small>
+          </label>
+
+          <h3 class="admin-image-section-title">限额与预算</h3>
           <label>
             <span>每日全站任务上限</span>
             <input type="number" min="1" max="5000" data-image-daily-limit required />
@@ -88,9 +100,10 @@ import "../../styles/admin-story.css";
             <input type="number" min="0" max="10000" data-image-monthly-budget required />
             <small>只统计付费供应商的保守成本。</small>
           </label>
+
           <div class="admin-story-form-actions">
-            <button type="submit" data-image-config-submit>保存生图控制</button>
-            <button type="button" data-image-cooldown-reset>重置生图冷却</button>
+            <button type="button" data-image-cooldown-reset>重置模型冷却</button>
+            <button type="submit" data-image-config-submit>保存设置</button>
           </div>
           <p data-image-config-message aria-live="polite"></p>
         </form>
@@ -113,6 +126,7 @@ import "../../styles/admin-story.css";
     standardPoints: number;
     hdPoints: number;
     studioPoints: number;
+    studioHdPoints: number;
     queueJumpPoints: number;
     dailyJobLimit: number;
     monthlyBudgetCents: number;
@@ -151,6 +165,9 @@ import "../../styles/admin-story.css";
   );
   const imageStudioInput = document.querySelector<HTMLInputElement>(
     "[data-image-studio-points]",
+  );
+  const imageStudioHdInput = document.querySelector<HTMLInputElement>(
+    "[data-image-studio-hd-points]",
   );
   const imageJumpInput = document.querySelector<HTMLInputElement>(
     "[data-image-jump-points]",
@@ -195,6 +212,9 @@ import "../../styles/admin-story.css";
     if (imageHdInput) imageHdInput.value = String(settings.hdPoints);
     if (imageStudioInput) {
       imageStudioInput.value = String(settings.studioPoints);
+    }
+    if (imageStudioHdInput) {
+      imageStudioHdInput.value = String(settings.studioHdPoints);
     }
     if (imageJumpInput) {
       imageJumpInput.value = String(settings.queueJumpPoints);
@@ -289,6 +309,7 @@ import "../../styles/admin-story.css";
             standardPoints: Number(imageStandardInput?.value),
             hdPoints: Number(imageHdInput?.value),
             studioPoints: Number(imageStudioInput?.value),
+            studioHdPoints: Number(imageStudioHdInput?.value),
             queueJumpPoints: Number(imageJumpInput?.value),
             dailyJobLimit: Number(imageDailyInput?.value),
             monthlyBudgetCents: Math.round(

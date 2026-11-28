@@ -711,6 +711,8 @@ async function generateWithArk(
     provider.baseUrl,
     "https://ark.cn-beijing.volces.com/api/v3",
   );
+  // auto 比例不传宽高：1K 用 1024²，2K 用 1536²，保证清晰度选择真实生效
+  const fallbackSize = request.quality === "hd" ? 1536 : 1024;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 300_000);
@@ -731,7 +733,10 @@ async function generateWithArk(
           ? { image: [stripDataUrl(request.initImage)] }
           : {}),
         response_format: "b64_json",
-        size: seedreamSize(request.width, request.height),
+        size: seedreamSize(
+          request.width ?? fallbackSize,
+          request.height ?? fallbackSize,
+        ),
         watermark: false,
       }),
     });
@@ -817,6 +822,8 @@ async function generateWithBigModel(
     provider.baseUrl,
     "https://open.bigmodel.cn/api/paas/v4",
   );
+  // auto 比例不传宽高：1K 用 1024²，2K 用 1536²
+  const fallbackSize = request.quality === "hd" ? 1536 : 1024;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 300_000);
@@ -832,7 +839,10 @@ async function generateWithBigModel(
         model: provider.model,
         // GLM-Image 原生中文；官方文档 prompt 上限 1000 字符
         prompt: request.prompt.slice(0, 1000),
-        size: glmSize(request.width, request.height),
+        size: glmSize(
+          request.width ?? fallbackSize,
+          request.height ?? fallbackSize,
+        ),
       }),
     });
     if (!response.ok) {

@@ -371,9 +371,12 @@ export async function createAndRunImageJob(
 
   const jobId = crypto.randomUUID();
   // image_studio 走站长自己的 Colab GPU，单独计价；其余沿用标准/高清价
+  // AI 生图按清晰度分别计价（1K/2K）；章节插画沿用标准/高清价
   const pointsCost =
     input.feature === "image_studio"
-      ? settings.studioPoints
+      ? quality === "hd"
+        ? settings.studioHdPoints
+        : settings.studioPoints
       : quality === "hd"
         ? settings.hdPoints
         : settings.standardPoints;

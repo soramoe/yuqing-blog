@@ -207,6 +207,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
     configured: Boolean(base),
     enabled: settings.enabled,
     points: settings.studioPoints,
+    pointsHd: settings.studioHdPoints,
     queueJumpPoints: settings.queueJumpPoints,
     failures: Number(provider?.failures ?? 0),
     cooldownSeconds,
