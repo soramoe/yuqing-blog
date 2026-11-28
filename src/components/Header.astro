@@ -85,8 +85,54 @@ const isActive = (href: string) =>
   }
 
   if (authNav && authLabel) {
-    // 不再按 PROD 跳过：本地 dev 也要能显示登录态。
-    // 静态站没有 /api 时请求会立刻 404，或超时被 abort，两种情况都保持「登录」。
+    // 登录态与未读数缓存：导航瞬间就按上次状态呈现，消除「消失再出现」的闪烁；
+    // 随后用 get-session 异步校准（在别处退出登录等场景会自动纠正）。
+    const AUTH_CACHE_KEY = "yq-auth-logged-in";
+    const UNREAD_CACHE_KEY = "yq-notif-unread";
+
+    const cacheGet = (name: string) => {
+      try {
+        return window.localStorage.getItem(name);
+      } catch {
+        return null;
+      }
+    };
+    const cacheSet = (name: string, value: string) => {
+      try {
+        window.localStorage.setItem(name, value);
+      } catch {
+        // 隐私模式等场景下忽略
+      }
+    };
+
+    const applyAuthState = (loggedIn: boolean, unread?: number) => {
+      if (!authNav || !authLabel) return;
+      const notifNav = document.querySelector<HTMLElement>("[data-notif-nav]");
+      const badge = document.querySelector<HTMLElement>("[data-notif-badge]");
+      if (loggedIn) {
+        authNav.href = "/account/";
+        authLabel.textContent = "账户";
+        if (notifNav) notifNav.hidden = false;
+        if (badge && typeof unread === "number" && unread > 0) {
+          badge.hidden = false;
+          badge.textContent = unread > 9 ? "9+" : String(unread);
+        }
+      } else {
+        authNav.href = "/login/";
+        authLabel.textContent = "登录";
+        if (notifNav) notifNav.hidden = true;
+        if (badge) badge.hidden = true;
+      }
+    };
+
+    // 1) 缓存优先呈现
+    if (cacheGet(AUTH_CACHE_KEY) === "1") {
+      const cachedUnread = Number(cacheGet(UNREAD_CACHE_KEY) ?? "0");
+      applyAuthState(true, Number.isFinite(cachedUnread) ? cachedUnread : 0);
+    }
+
+    // 2) 后台校准真实状态
+    // 静态站没有 /api 时请求会立刻 404，或超时被 abort，两种情况都保持当前显示。
     const controller = new AbortController();
     const timer = window.setTimeout(() => controller.abort(), 4000);
 
@@ -97,26 +143,25 @@ const isActive = (href: string) =>
     })
       .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
-        if (!data?.user) return;
-        authNav.href = "/account/";
-        authLabel.textContent = "账户";
-        // 登录后拉取未读站内信数量，点亮铃铛
+        if (!data?.user) {
+          // 未登录（或已在别处退出）：清缓存并恢复「登录」
+          window.localStorage.removeItem(AUTH_CACHE_KEY);
+          window.sessionStorage.removeItem(UNREAD_CACHE_KEY);
+          applyAuthState(false);
+          return;
+        }
+        cacheSet(AUTH_CACHE_KEY, "1");
+        applyAuthState(true);
+        // 登录后拉取未读站内信数量
         fetch("/api/notifications", {
           credentials: "same-origin",
           headers: { Accept: "application/json" },
         })
           .then((response) => (response.ok ? response.json() : null))
           .then((payload) => {
-            if (!payload) return;
-            const bell = document.querySelector<HTMLElement>("[data-notif-nav]");
-            const badge = document.querySelector<HTMLElement>("[data-notif-badge]");
-            if (!bell || !badge) return;
-            bell.hidden = false;
-            const unread = Number(payload.unread ?? 0);
-            if (unread > 0) {
-              badge.hidden = false;
-              badge.textContent = unread > 9 ? "9+" : String(unread);
-            }
+            const unread = Number(payload?.unread ?? 0);
+            window.sessionStorage.setItem(UNREAD_CACHE_KEY, String(unread));
+            applyAuthState(true, unread);
           })
           .catch(() => undefined);
       })
